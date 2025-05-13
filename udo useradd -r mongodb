@@ -1,0 +1,10 @@
+[0;1;31m●[0m mongodb.service - High-performance, schema-free document-oriented database
+     Loaded: loaded (/etc/systemd/system/mongodb.service; enabled; vendor preset: enabled)
+     Active: [0;1;31mfailed[0m (Result: exit-code) since Fri 2025-01-24 14:16:40 EAT; 28s ago
+   Main PID: 63902 (code=exited, status=217/USER)
+
+Jan 24 14:16:40 DESKTOP-VM8V6VP systemd[1]: Started High-performance, schema-free document-oriented database.
+Jan 24 14:16:40 DESKTOP-VM8V6VP systemd[63902]: [0;1;31m[0;1;39m[0;1;31mmongodb.service: Failed to determine user credentials: No such process[0m
+Jan 24 14:16:40 DESKTOP-VM8V6VP systemd[63902]: [0;1;31m[0;1;39m[0;1;31mmongodb.service: Failed at step USER spawning /usr/bin/mongod: No such process[0m
+Jan 24 14:16:40 DESKTOP-VM8V6VP systemd[1]: [0;1;39m[0;1;31m[0;1;39mmongodb.service: Main process exited, code=exited, status=217/USER[0m
+Jan 24 14:16:40 DESKTOP-VM8V6VP systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mmongodb.service: Failed with result 'exit-code'.[0m

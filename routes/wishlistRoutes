@@ -1,0 +1,72 @@
+const express = require('express');
+const Wishlist = require('../Models/Wishlist'); // Import Wishlist schema
+const Plan = require('../Models/Plan'); // Import Plan schema for validation
+const router = express.Router();
+
+// Get wishlist for a specific user
+router.get('/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const wishlist = await Wishlist.findOne({ user: userId }).populate('plans');
+    if (!wishlist) {
+      return res.status(404).json({ message: 'Wishlist not found for this user' });
+    }
+    res.status(200).json(wishlist);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add a plan to the wishlist
+router.post('/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { planId } = req.body;
+
+  try {
+    // Ensure the plan exists
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+
+    // Check if the user already has a wishlist
+    let wishlist = await Wishlist.findOne({ user: userId });
+
+    if (!wishlist) {
+      // Create a new wishlist if none exists
+      wishlist = new Wishlist({ user: userId, plans: [planId] });
+    } else {
+      // Add the plan to the existing wishlist if not already added
+      if (!wishlist.plans.includes(planId)) {
+        wishlist.plans.push(planId);
+      }
+    }
+
+    const updatedWishlist = await wishlist.save();
+    res.status(201).json(updatedWishlist);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Remove a plan from the wishlist
+router.delete('/:userId/:planId', async (req, res) => {
+  const { userId, planId } = req.params;
+
+  try {
+    const wishlist = await Wishlist.findOne({ user: userId });
+    if (!wishlist) {
+      return res.status(404).json({ message: 'Wishlist not found for this user' });
+    }
+
+    // Remove the plan from the wishlist
+    wishlist.plans = wishlist.plans.filter((id) => id.toString() !== planId);
+
+    const updatedWishlist = await wishlist.save();
+    res.status(200).json(updatedWishlist);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+module.exports = router;

@@ -3,3 +3,5 @@ git-lfs/
 node_modules/
 .env
 *.log
+**/next-swc-*.node
+node_modules/

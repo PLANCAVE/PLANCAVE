@@ -1,19 +1,22 @@
 // pages/api/auth/[...nextauth].js
-import dotenv from 'dotenv';
-import path from 'path';
-
-// Load .env.local from the parent directory (adjust path as needed)
-dotenv.config({ path: path.resolve(process.cwd(), '../.env.local') });
-
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import axios from 'axios';
+import GoogleProvider from 'next-auth/providers/google';
+import GitHubProvider from 'next-auth/providers/github';
+import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
+import clientPromise from '../../../lib/mongodb';
+import { hash, compare } from 'bcryptjs';
 
-// Use const for API_URL declaration
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-console.log('API URL being used:', API_URL);
-
-export default NextAuth({ 
+export default NextAuth({
+  adapter: MongoDBAdapter(clientPromise),
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  jwt: {
+    encryption: true,
+    secret: process.env.JWT_SECRET,
+  },
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -22,84 +25,43 @@ export default NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        try {
-          console.log('Attempting to authenticate with backend at:', `${API_URL}/api/admin/login`);
-          
-          // Updated endpoint to match your backend API
-          const response = await axios.post(`${API_URL}/api/admin/login`, {
-            email: credentials.email,
-            password: credentials.password
-          });
-          
-          console.log('Auth response status:', response.status);
-          
-          // Don't log full response as it may contain sensitive data
-          console.log('Auth response contains user data:', !!response.data);
-          
-          const user = response.data;
-          
-          if (user) {
-            return {
-              id: user._id || user.id,
-              name: user.name || user.user?.name,
-              email: user.email || user.user?.email,
-              role: user.role || user.user?.role || 'user',
-              accessToken: user.token
-            };
-          }
-          
-          return null;
-        } catch (error) {
-          console.error('Authentication error:', {
-            message: error.message,
-            status: error.response?.status,
-            data: error.response?.data
-          });
-          
-          // Provide more specific error messages based on status codes
-          if (error.response?.status === 401) {
-            throw new Error(error.response.data.message || 'Invalid email or password');
-          }
-          
-          throw new Error('Authentication failed. Please try again.');
-        }
+        const client = await clientPromise;
+        const db = client.db();
+        const user = await db.collection('users').findOne({ email: credentials.email });
+
+        if (!user) throw new Error('No user found');
+        if (!user.password) throw new Error('Please use the provider you used to sign up');
+
+        const isValid = await compare(credentials.password, user.password);
+        if (!isValid) throw new Error('Invalid password');
+
+        return { id: user._id, email: user.email, name: user.name };
       }
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET
     })
   ],
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Add user details and token to the JWT
-        token.accessToken = user.accessToken;
-        token.role = user.role;
-        token.userId = user.id;
+        token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
-      // Add information from token to the session
-      session.accessToken = token.accessToken;
-      
-      // Ensure user object exists
-      if (!session.user) {
-        session.user = {};
-      }
-      
-      // Add role and ID to user object
-      session.user.role = token.role;
-      session.user.id = token.userId;
-      
+      session.user.id = token.id;
       return session;
     }
   },
-  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/login',
-    error: '/login', // Go to login page on error
-  },
-  debug: process.env.NODE_ENV === 'development',
+    signOut: '/logout',
+    error: '/login'
+  }
 });

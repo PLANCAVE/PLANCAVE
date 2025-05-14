@@ -1,15 +1,12 @@
-
 "use client";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import React, { useContext, useEffect, useState } from "react";
 import { AppContext } from "../context/AppContext";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 
 const Checkout = () => {
-  const { user } = useUser();
   const { cart } = useContext(AppContext);
   const router = useRouter();
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -65,7 +62,6 @@ const Checkout = () => {
     setStep(1);
   };
 
-  // Added handlePaymentSubmit function that was missing
   const handlePaymentSubmit = (e) => {
     e.preventDefault();
     
@@ -76,9 +72,7 @@ const Checkout = () => {
     
     setIsProcessing(true);
     
-    // For PayPal, the actual payment processing happens in the PayPal buttons component
     if (paymentMethod !== "PayPal") {
-      // If we add other payment methods in the future
       showNotification("Please select a valid payment method.");
       setIsProcessing(false);
     }
@@ -270,7 +264,6 @@ const Checkout = () => {
                           type="text"
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                           placeholder="John Doe"
-                          defaultValue={user?.fullName || ""}
                           required
                         />
                       </div>
@@ -281,7 +274,6 @@ const Checkout = () => {
                           type="email"
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                           placeholder="johndoe@example.com"
-                          defaultValue={user?.primaryEmailAddress?.emailAddress || ""}
                           required
                         />
                       </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useUser, UserButton } from '@clerk/nextjs';
+
 import { useAppContext } from '../context/AppContext';
 
 // MegaDropdown component for "By size" and similar categories (desktop)
@@ -369,9 +369,17 @@ const Navbar = () => {
       {user ? (
         // If logged in, show profile dropdown
         <div className="relative group">
-          <button className="profile-icon">
-            <i className="fa fa-user"></i>
-          </button>
+         <button className="profile-icon flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-white">
+  {user.image || user.avatar ? (
+    <img
+      src={user.image || user.avatar}
+      alt="Profile"
+      className="w-10 h-10 object-cover rounded-full"
+    />
+  ) : (
+    <i className="fa fa-user text-gray-500 text-xl"></i>
+  )}
+</button>
           <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50">
             <div className="px-4 py-2 text-gray-700 border-b">
               {user.firstName || user.first_name || user.email}

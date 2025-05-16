@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
@@ -175,23 +176,22 @@ const Navbar = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  // Renamed isMobile to isTabletOrMobile for clarity
+  const [isTabletOrMobile, setIsTabletOrMobile] = useState(false); 
   const { wishlist, cart } = useAppContext();
 
-  // Check if we're on mobile
+  // Check if we're on tablet or mobile
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const checkScreenSize = () => {
+      // Updated breakpoint to 1024px for tablets
+      setIsTabletOrMobile(window.innerWidth < 1024); 
     };
     
-    // Set initial value
-    checkMobile();
-    
-    // Add event listener for window resize
-    window.addEventListener('resize', checkMobile);
+    checkScreenSize(); // Set initial value
+    window.addEventListener('resize', checkScreenSize); // Add event listener for window resize
     
     // Cleanup
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
   useEffect(() => {
@@ -222,13 +222,11 @@ const Navbar = () => {
   // Toggle mobile menu
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
-    // Prevent body scrolling when mobile menu is open
-    document.body.style.overflow = isMobileMenuOpen ? 'auto' : 'hidden';
+    document.body.style.overflow = !isMobileMenuOpen ? 'hidden' : 'auto'; // Corrected logic
   };
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Check for user in localStorage
     const storedUser = localStorage.getItem('user');
     setUser(storedUser ? JSON.parse(storedUser) : null);
   }, []);
@@ -240,7 +238,6 @@ const Navbar = () => {
     window.location.reload();
   };
 
-  // Size categories for the mega dropdown
   const sizeCategories = [
     {
       title: "Plans by area (SQM)",
@@ -278,7 +275,6 @@ const Navbar = () => {
     }
   ];
 
-  // Style items
   const styleItems = [
     { label: 'Modern house plans', value: 'modern' },
     { label: 'Contemporary plans', value: 'contemporary' },
@@ -288,7 +284,6 @@ const Navbar = () => {
     { label: 'Country plans', value: 'country' },
   ];
 
-  // Budget items
   const budgetItems = [
     { label: 'Under $100 Plans', value: 'under-100' },
     { label: '$100 - $300 Plans', value: '100-300' },
@@ -297,7 +292,6 @@ const Navbar = () => {
     { label: '$700+ Plans', value: '700-plus' },
   ];
 
-  // Learn items
   const learnItems = [
     { label: "Building Designs", path: "/learn/building-designs" },
     { label: "Design Costs", path: "/learn/design-costs" }
@@ -312,31 +306,31 @@ const Navbar = () => {
       </div>
 
       <div className="navbar-content">
-        <div className="nav-links-container">
-          <ul className="nav-links">
-            <li><Link href="/all-products">Shop</Link></li>
-            
-            {/* Mega dropdown for "By size" */}
-            <MegaDropdown title="By size" categories={sizeCategories} />
-            
-            <Dropdown
-              title="By style"
-              filterType="style"
-              items={styleItems}
-            />
-            <Dropdown
-              title="By budget"
-              filterType="budget"
-              items={budgetItems}
-            />
-            <Dropdown
-              title="Learn"
-              items={learnItems}
-              customLinks={true}
-            />
-            <li><Link href="/custom-plans">Custom plan</Link></li>
-          </ul>
-        </div>
+        {/* Show desktop nav links only if not tablet/mobile */}
+        {!isTabletOrMobile && (
+          <div className="nav-links-container">
+            <ul className="nav-links">
+              <li><Link href="/all-products">Shop</Link></li>
+              <MegaDropdown title="By size" categories={sizeCategories} />
+              <Dropdown
+                title="By style"
+                filterType="style"
+                items={styleItems}
+              />
+              <Dropdown
+                title="By budget"
+                filterType="budget"
+                items={budgetItems}
+              />
+              <Dropdown
+                title="Learn"
+                items={learnItems}
+                customLinks={true}
+              />
+              <li><Link href="/custom-plans">Custom plan</Link></li>
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="navbar-icons">
@@ -355,80 +349,79 @@ const Navbar = () => {
         </div>
 
         <div className="icon-wrapper">
-  <Link href="/Wishlist">
-    <i className="fa fa-heart"></i>
-    {wishlist.length > 0 && (
-      <span className={`badge ${wishlist.length > 9 ? 'large' : ''} ${wishlist.length > 99 ? 'very-large' : ''} ${wishlist.some(item => item.isNew) ? 'new' : ''}`}>
-        {wishlist.length > 99 ? '99' : wishlist.length}
-      </span>
-    )}
-  </Link>
-</div>
+          <Link href="/Wishlist">
+            <i className="fa fa-heart"></i>
+            {wishlist.length > 0 && (
+              <span className={`badge ${wishlist.length > 9 ? 'large' : ''} ${wishlist.length > 99 ? 'very-large' : ''} ${wishlist.some(item => item.isNew) ? 'new' : ''}`}>
+                {wishlist.length > 99 ? '99' : wishlist.length}
+              </span>
+            )}
+          </Link>
+        </div>
 
-<div className="icon-wrapper">
-      {user ? (
-        // If logged in, show profile dropdown
-        <div className="relative group">
-         <button className="profile-icon flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-white">
-  {user.image || user.avatar ? (
-    <img
-      src={user.image || user.avatar}
-      alt="Profile"
-      className="w-10 h-10 object-cover rounded-full"
-    />
-  ) : (
-    <i className="fa fa-user text-gray-500 text-xl"></i>
-  )}
-</button>
-          <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50">
-            <div className="px-4 py-2 text-gray-700 border-b">
-              {user.firstName || user.first_name || user.email}
+        <div className="icon-wrapper">
+          {user ? (
+            <div className="relative group">
+              <button className="profile-icon flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-white">
+                {user.image || user.avatar ? (
+                  <img
+                    src={user.image || user.avatar}
+                    alt="Profile"
+                    className="w-10 h-10 object-cover rounded-full"
+                  />
+                ) : (
+                  <i className="fa fa-user text-gray-500 text-xl"></i>
+                )}
+              </button>
+              <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                <div className="px-4 py-2 text-gray-700 border-b">
+                  {user.firstName || user.first_name || user.email}
+                </div>
+                <Link href="/profile" className="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                  Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
-            <Link href="/profile" className="block px-4 py-2 hover:bg-gray-100 text-gray-700">
-              Profile
+          ) : (
+            <Link href="/login">
+              <i className="fa fa-user"></i>
             </Link>
-            <button
-              onClick={handleLogout}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-            >
-              Logout
-            </button>
-          </div>
+          )}
         </div>
-      ) : (
-        // If not logged in, link to login page
-        <Link href="/login">
-          <i className="fa fa-user"></i>
-        </Link>
-      )}
-    </div>
-<div className="icon-wrapper">
-  <Link href="/Cart">
-    <i className="fa fa-shopping-cart"></i>
-    {cart.length > 0 && (
-      <span className={`badge ${cart.length > 9 ? 'large' : ''} ${cart.length > 99 ? 'very-large' : ''}`}>
-        {cart.length > 99 ? '99' : cart.length}
-      </span>
-    )}
-  </Link>
-</div>
+        
+        <div className="icon-wrapper">
+          <Link href="/Cart">
+            <i className="fa fa-shopping-cart"></i>
+            {cart.length > 0 && (
+              <span className={`badge ${cart.length > 9 ? 'large' : ''} ${cart.length > 99 ? 'very-large' : ''}`}>
+                {cart.length > 99 ? '99' : cart.length}
+              </span>
+            )}
+          </Link>
+        </div>
 
-        <div className="hamburger-wrapper" onClick={toggleMobileMenu}>
-          <div className={`hamburger-menu ${isMobileMenuOpen ? 'open' : ''}`}>
-            <i className="fa fa-bars"></i>
+        {/* Show hamburger only if tablet/mobile */}
+        {isTabletOrMobile && (
+          <div className="hamburger-wrapper" onClick={toggleMobileMenu}>
+            <div className={`hamburger-menu ${isMobileMenuOpen ? 'open' : ''}`}>
+              <i className="fa fa-bars"></i>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {isMobileMenuOpen && (
+      {/* Show mobile menu panel only if tablet/mobile AND open */}
+      {isTabletOrMobile && isMobileMenuOpen && (
         <div className="mobile-menu-container">
           <ul className="nav-links mobile">
             <li><Link href="/all-products">Shop</Link></li>
-            
-            {/* Mobile nested dropdown for "By size" */}
             <MobileNestedDropdown title="By size" categories={sizeCategories} />
-            
-            {/* Use MobileDropdown for other menu items */}
             <MobileDropdown
               title="By style"
               filterType="style"

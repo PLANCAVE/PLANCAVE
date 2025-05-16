@@ -117,17 +117,17 @@ const Home = () => {
 
   const heroSlides = [
     {
-      image: '/5.jpg',
+      image: '/36522.png',
       title: 'Find your dream home',
       subtitle: 'Discover beautifully designed house plans for every lifestyle',
     },
     {
-      image: '/2.jpg',
+      image: '/6.jpg',
       title: 'Luxury living',
       subtitle: 'Explore our premium collection of architectural masterpieces',
     },
     {
-      image: '/6.jpg',
+      image: '/493.png',
       title: 'Budget-friendly options',
       subtitle: "Quality designs that won't break the bank",
     },

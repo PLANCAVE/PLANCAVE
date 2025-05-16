@@ -401,51 +401,69 @@
   margin-left: 1px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) { /* Changed from 768px */
   .navbar {
     padding: 16px 20px;
-    height: auto;
-    min-height: 70px;
-    flex-wrap: wrap;
+    height: auto; /* Allow height to adjust if content wraps */
+    min-height: 70px; /* Maintain minimum height */
+    flex-wrap: wrap; /* Allow items to wrap if needed, though JS handles main nav hiding */
   }
 
   .logo {
-    flex-basis: 50%;
+    /* Adjust flex-basis if needed, or let it size naturally */
+    /* flex-basis: 50%; */ 
+    margin-right: auto; /* Push icons to the right */
   }
 
-  .navbar-content {
-    display: none;
-  }
+  /* 
+    The .navbar-content (desktop nav links) is now hidden by JavaScript 
+    based on the isTabletOrMobile state (window.innerWidth < 1024).
+    So, `display: none;` here for .navbar-content is redundant if JS handles it,
+    but can be kept as a fallback or if CSS-only hiding is preferred for some scenarios.
+    However, since JS is already doing it, we can rely on that.
+  */
+  /* .navbar-content {
+    display: none; 
+  } */
 
   .navbar-icons {
-    flex-basis: 50%;
+    /* Adjust flex-basis if needed, or let it size naturally */
+    /* flex-basis: 50%; */
     justify-content: flex-end;
-    gap: 15px;
+    gap: 15px; /* Adjust gap for tablet if needed */
   }
   
-  /* Show hamburger menu on mobile */
+  /* 
+    The .hamburger-menu is made visible by JavaScript by rendering it.
+    The `display: flex` here ensures it's styled correctly when rendered.
+    The initial `display: none` for .hamburger-menu (outside this media query)
+    is for desktop view.
+  */
   .hamburger-menu {
-    display: flex;
+    display: flex; 
     align-items: center;
     justify-content: center;
   }
   
-  /* Fix alignment with consistent height for all icon containers */
+  /* Ensure consistent height for all icon containers */
   .icon-wrapper, .user-button-wrapper, .hamburger-wrapper {
     height: 40px;
   }
   
-  /* Mobile menu container */
+  /* 
+    The .mobile-menu-container is made visible by JavaScript when the hamburger is clicked.
+    The `display: block` here ensures it's styled correctly when rendered.
+  */
   .mobile-menu-container {
-    display: block;
+    display: block; 
     width: 100%;
-    flex-basis: 100%;
+    flex-basis: 100%; /* Make it take full width when it appears */
     margin-top: 15px;
     padding: 10px 0;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
   
-  /* Mobile nav links */
+  /* Mobile nav links styling (applies when .nav-links.mobile is rendered) */
   .navbar .nav-links.mobile {
     flex-direction: column;
     align-items: flex-start;
@@ -466,28 +484,37 @@
   }
   
   .navbar .nav-links.mobile .dropdown-menu {
-    position: static;
+    position: static; /* Overrides absolute positioning from desktop */
     width: 100%;
     box-shadow: none;
     border: none;
     background: transparent;
-    margin-left: 15px;
+    margin-left: 15px; /* Indent dropdown items */
+    /* Resetting properties from desktop dropdown */
+    max-height: none; 
+    opacity: 1;
+    visibility: visible;
+    padding: 0; 
   }
   
   .navbar .nav-links.mobile .dropdown-menu a {
-    padding: 10px;
+    padding: 10px; /* Specific padding for mobile dropdown items */
   }
   
-  /* Adjust search container for mobile */
+  /* Adjust search container for tablet/mobile */
   .search-container {
-    width: auto;
+    margin-left: 0;
+     width: auto; /* Allow it to size based on content or specific width below */
+    /* Example: make it take more available space if desired */
+     flex-grow: 1; 
+    margin-left: 15px; 
   }
   
   #search-bar {
-    width: 100px;
+    width: 100px; /* Or adjust as needed for tablet */
   }
   
   .search-container:focus-within #search-bar {
-    width: 100px;
+    width: 100px; /* Or adjust as needed for tablet */
   }
 }

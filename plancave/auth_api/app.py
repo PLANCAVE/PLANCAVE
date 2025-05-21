@@ -18,7 +18,7 @@ jwt = JWTManager(app)
 
 def get_db():
     """
-    Establishes and returns a new connection to the PostgreSQL database using the configured DATABASE_URL.
+    Establishes and returns a new connection to the PostgreSQL database.
     """
     return psycopg2.connect(app.config['DATABASE_URL'])
 
@@ -43,7 +43,7 @@ def register_user(data, role):
         role (str): Role to assign to the new user.
 
     Returns:
-        Response: JSON response indicating success or failure of the registration.
+        Response: JSON response indicating success or failure of the registration process.
     """
     username = data.get('username')
     password = data.get('password')

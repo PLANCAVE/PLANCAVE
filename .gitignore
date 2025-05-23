@@ -5,3 +5,4 @@ node_modules/
 *.log
 **/next-swc-*.node
 node_modules/
+__pycache__/

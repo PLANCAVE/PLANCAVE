@@ -18,7 +18,7 @@ const protect = (req, res, next) => {
 
 // Admin check middleware
 const admin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) {
+  if (req.user && (req.user.isAdmin || req.user.role === 'admin')) {
     next();
   } else {
     res.status(403).json({ error: 'Access denied' });

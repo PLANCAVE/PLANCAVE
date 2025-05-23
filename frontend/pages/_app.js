@@ -13,6 +13,7 @@ import '../styles/ProductCard.module.css';
 import { AppProvider } from '../context/AppContext';
 import { CartProvider } from '../context/CartContext';
 
+
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   return (
     <SessionProvider session={session}>

@@ -1,6 +1,5 @@
-// admin/users/index.js
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { flaskApi } from '../../../axios'; // Adjust path if needed
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -9,8 +8,18 @@ const UsersPage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get('/api/admin/users');
-        setUsers(res.data);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Not authenticated');
+          return;
+        }
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        };
+        const res = await flaskApi.get('/admin/users', config);
+        setUsers(res.data.users || res.data); // Adjust according to your Flask response
       } catch (err) {
         setError('Failed to fetch users');
         console.error(err);
@@ -27,7 +36,7 @@ const UsersPage = () => {
       <table className="min-w-full border">
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-3 border">Name</th>
+            <th className="p-3 border">Username</th>
             <th className="p-3 border">Email</th>
             <th className="p-3 border">Role</th>
             <th className="p-3 border">Actions</th>
@@ -35,8 +44,8 @@ const UsersPage = () => {
         </thead>
         <tbody>
           {users.map(user => (
-            <tr key={user._id} className="border-t">
-              <td className="p-3 border">{user.name}</td>
+            <tr key={user._id || user.id} className="border-t">
+              <td className="p-3 border">{user.Username || user.username}</td>
               <td className="p-3 border">{user.email}</td>
               <td className="p-3 border capitalize">{user.role}</td>
               <td className="p-3 border">

@@ -28,7 +28,7 @@ const ContactSlider = () => {
         { 
           icon: faWhatsapp,
           text: '+254 710 208 187',
-          link: 'https://wa.me/254710208187',
+          link: 'https://wa.me/254723029566',
           animation: { y: -5, transition: { type: 'spring', stiffness: 300, delay: 0.1 } }
         },
         { 

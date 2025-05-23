@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Eye, EyeOff, UserPlus, Mail, Lock, User } from 'lucide-react';
 import { useRouter } from 'next/router';
@@ -5,7 +6,7 @@ import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,45 +18,45 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     // Validate passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
-      // Make a request to your backend API
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
+      // Use Flask backend register endpoint
+      const baseURL = process.env.DATABASE_URL || 'http://localhost:5001';
+      const response = await fetch(`${baseURL}/register/customer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name,
+          username,
           email,
           password,
         }),
       });
-      
+
       // Handle rate limiting specifically
       if (response.status === 429) {
         setError('Too many signup attempts. Please try again in a few minutes.');
         setIsLoading(false);
         return;
       }
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Registration failed');
       }
-      
+
       // Registration successful - redirect to login page
       router.push('/login?registered=true');
-      
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message || 'An error occurred during registration');
@@ -80,7 +81,7 @@ export default function RegisterPage() {
           </div>
           <p className="text-gray-600">Create your account</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-blue-500">
@@ -88,14 +89,14 @@ export default function RegisterPage() {
             </div>
             <input
               type="text"
-              placeholder="Full Name"
-              value={name}
+              placeholder="Username"
+              value={username}
               required
-              onChange={e => setName(e.target.value)}
+              onChange={e => setUsername(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-gray-50 text-gray-800 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
             />
           </div>
-          
+
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-blue-500">
               <Mail size={18} />
@@ -109,7 +110,7 @@ export default function RegisterPage() {
               className="w-full pl-10 pr-4 py-3 bg-gray-50 text-gray-800 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
             />
           </div>
-          
+
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-blue-500">
               <Lock size={18} />
@@ -130,7 +131,7 @@ export default function RegisterPage() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          
+
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-blue-500">
               <Lock size={18} />
@@ -144,7 +145,7 @@ export default function RegisterPage() {
               className="w-full pl-10 pr-4 py-3 bg-gray-50 text-gray-800 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
             />
           </div>
-          
+
           <button
             type="submit"
             disabled={isLoading}
@@ -166,7 +167,7 @@ export default function RegisterPage() {
               </div>
             )}
           </button>
-          
+
           {error && (
             <div className="py-2 px-3 bg-red-100 border border-red-300 text-red-600 rounded-md text-sm flex items-center">
               <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
@@ -174,7 +175,7 @@ export default function RegisterPage() {
             </div>
           )}
         </form>
-        
+
         <div className="mt-6 relative">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
@@ -219,7 +220,7 @@ export default function RegisterPage() {
             GitHub
           </button>
         </div>
-        
+
         <div className="mt-8 text-center">
           <p className="text-gray-600">
             Already have an account?{" "}

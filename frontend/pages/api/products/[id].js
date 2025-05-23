@@ -1,5 +1,10 @@
-import clientPromise from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL, // Set this in your .env.local
+  // Or use user, host, database, password, port individually
+});
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -14,48 +19,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Establish database connection
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB || 'theplancave');
-    const collection = db.collection('products');
-
-    // Try different ID formats
-    let product;
-
-    // First try with ObjectId (most common MongoDB ID format)
-    try {
-      if (ObjectId.isValid(id)) {
-        product = await collection.findOne({ _id: new ObjectId(id) });
-      }
-    } catch (e) {
-      console.log('Error with ObjectId:', e.message);
+    // Try to parse ID as integer (adjust if you use UUIDs)
+    const productId = parseInt(id, 10);
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: 'Invalid product ID format' });
     }
 
-    // If not found, try with original string ID
-    if (!product) {
-      product = await collection.findOne({ _id: id });
-    }
+    // Query PostgreSQL for the product
+    const query = 'SELECT * FROM products WHERE id = $1';
+    const { rows } = await pool.query(query, [productId]);
 
-    // If still not found, try with numeric ID
-    if (!product) {
-      try {
-        const numericId = parseInt(id);
-        if (!isNaN(numericId)) {
-          product = await collection.findOne({ _id: numericId });
-        }
-      } catch (e) {
-        console.log('Error with numeric ID:', e.message);
-      }
-    }
-
-    // Log the query result for debugging
-    console.log('Query result:', {
-      id,
-      found: !!product,
-      idType: typeof id
-    });
-
-    if (!product) {
+    if (rows.length === 0) {
       return res.status(404).json({ 
         message: 'Product not found',
         requestedId: id
@@ -63,7 +37,7 @@ export default async function handler(req, res) {
     }
 
     // Success response
-    return res.status(200).json(product);
+    return res.status(200).json(rows[0]);
 
   } catch (error) {
     console.error('Server error:', error);

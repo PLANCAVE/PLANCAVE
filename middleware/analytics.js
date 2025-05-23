@@ -1,10 +1,12 @@
-import { getDb } from '../lib/mongodb';
+const { Pool } = require('pg');
 
-export async function trackPageView(req, res, next) {
+// Use your DATABASE_URL environment variable
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+async function trackPageView(req, res, next) {
   try {
-    const db = await getDb();
-    
-    // Basic analytics data
     const analyticsData = {
       timestamp: new Date(),
       path: req.url,
@@ -12,38 +14,55 @@ export async function trackPageView(req, res, next) {
       userAgent: req.headers['user-agent'],
       ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
       userId: req.user?._id || null,
-      sessionId: req.session?.id || null
+      sessionId: req.session?.id || null,
     };
 
     // Asynchronously save analytics
-    db.collection('analytics').insertOne(analyticsData).catch(err => {
+    pool.query(
+      `INSERT INTO analytics (timestamp, path, method, user_agent, ip, user_id, session_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        analyticsData.timestamp,
+        analyticsData.path,
+        analyticsData.method,
+        analyticsData.userAgent,
+        analyticsData.ip,
+        analyticsData.userId,
+        analyticsData.sessionId,
+      ]
+    ).catch(err => {
       console.error('Analytics tracking error:', err);
     });
 
-    // Don't wait for analytics to complete
     next();
   } catch (error) {
     console.error('Analytics middleware error:', error);
-    // Continue even if analytics fails
     next();
   }
 }
 
-export async function trackUserAction(req, res, next) {
+async function trackUserAction(req, res, next) {
   try {
-    const db = await getDb();
-    
-    // Track specific user actions
     const actionData = {
       timestamp: new Date(),
       userId: req.user?._id || null,
       action: req.body.action || 'unknown',
       details: req.body.details || {},
-      path: req.url
+      path: req.url,
     };
 
     // Asynchronously save user action
-    db.collection('user_actions').insertOne(actionData).catch(err => {
+    pool.query(
+      `INSERT INTO user_actions (timestamp, user_id, action, details, path)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        actionData.timestamp,
+        actionData.userId,
+        actionData.action,
+        JSON.stringify(actionData.details),
+        actionData.path,
+      ]
+    ).catch(err => {
       console.error('User action tracking error:', err);
     });
 
@@ -52,4 +71,6 @@ export async function trackUserAction(req, res, next) {
     console.error('User action tracking middleware error:', error);
     next();
   }
-} 
+}
+
+module.exports = { trackPageView, trackUserAction };

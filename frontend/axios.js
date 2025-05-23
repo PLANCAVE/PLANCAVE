@@ -1,8 +1,10 @@
+// frontend/axios.js
 import axios from 'axios';
 
-const axiosInstance = axios.create({
-    baseURL: 'http://localhost:5000/',  // backend API
-    
+export const nodeApi = axios.create({
+  baseURL: 'http://localhost:5000/',
 });
 
-export default axiosInstance;
+export const flaskApi = axios.create({
+  baseURL: 'http://localhost:5001/',
+});

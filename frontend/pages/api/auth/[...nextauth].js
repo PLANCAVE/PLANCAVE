@@ -1,19 +1,19 @@
+console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET);
+console.log('JWT_SECRET:', process.env.JWT_SECRET);
+
+require('dotenv').config({ path: require('path').resolve(process.cwd(), '/home/badman/ThePlanCave/.env.local') });
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
-import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
-import clientPromise from '../../../lib/mongodb';
-import { compare } from 'bcryptjs';
-import crypto from 'crypto';
+import axios from 'axios';
 
 export default NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
-  adapter: MongoDBAdapter(clientPromise),
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days for "Remember me"
-    updateAge: 24 * 60 * 60, // 24 hours
+    maxAge: 30 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
   },
   jwt: {
     secret: process.env.JWT_SECRET,
@@ -23,68 +23,68 @@ export default NextAuth({
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials, req) {
-        const client = await clientPromise;
-        const db = client.db('theplancave');
-        const user = await db.collection('users').findOne({ email: credentials.email });
-
-        if (!user) throw new Error('No user found with this email');
-        if (!user.password) throw new Error('Please use the provider you signed up with');
-
-        const isValid = await compare(credentials.password, user.password);
-        if (!isValid) throw new Error('Invalid password');
-
-        // Handle "Remember me" from form
-        if (req.body?.remember) {
-          // Extend session duration
-          return { 
-            id: user._id.toString(), 
-            email: user.email, 
-            name: user.name,
-            maxAge: 30 * 24 * 60 * 60 // 30 days
-          };
+      async authorize(credentials) {
+        // Authenticate against Flask backend
+        try {
+          const res = await axios.post(`${process.env.FLASK_BACKEND_URL || 'http://localhost:5001'}/login`, {
+            username: credentials.username,
+            password: credentials.password
+          });
+          const user = res.data;
+          if (user && user.access_token) {
+            // Return user object with JWT
+            return {
+              id: user.id,
+              username: user.username,
+              role: user.role,
+              accessToken: user.access_token
+            };
+          }
+          return null;
+        } catch (error) {
+          throw new Error(error.response?.data?.message || 'Invalid credentials');
         }
-
-        return { id: user._id.toString(), email: user.email, name: user.name };
       }
     }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code"
-        }
-      }
     }),
     GitHubProvider({
       clientId: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      profile(profile) {
-        return {
-          id: profile.id.toString(),
-          name: profile.name || profile.login,
-          email: profile.email,
-          image: profile.avatar_url
-        }
-      }
-    })
+    }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user, account,profile }) {
+      // For CredentialsProvider (Flask), attach JWT
+      if (user?.accessToken) {
+        token.accessToken = user.accessToken;
         token.id = user.id;
-        token.maxAge = user.maxAge; // For "Remember me"
+        token.username = user.username;
+        token.role = user.role;
+      }
+      // For OAuth providers, you may want to attach their access_token
+      if (account && (account.provider === 'google' || account.provider === 'github')) {
+        token.oauthAccessToken = account.access_token;
+        // If you want to exchange this for a Flask JWT, do it here:
+         const flaskRes = await axios.post(`${process.env.FLASK_BACKEND_URL}/oauth-login`, { provider: account.provider, access_token: account.access_token });
+         token.accessToken = flaskRes.data.access_token;
       }
       return token;
     },
     async session({ session, token }) {
-      session.user.id = token.id;
+      // For Flask JWT
+      session.accessToken = token.accessToken || null;
+      session.user = session.user || {};
+      session.user.id = token.id || null;
+      session.user.username = token.username || null;
+      session.user.role = token.role || null;
+      // For OAuth tokens (not Flask JWT)
+      session.oauthAccessToken = token.oauthAccessToken || null;
       return session;
     }
   },
@@ -93,19 +93,5 @@ export default NextAuth({
     signOut: '/logout',
     error: '/login',
     forgotPassword: '/forgot-password'
-  },
-  events: {
-    async createUser(message) {
-      // Create password reset token when new user signs up
-      const client = await clientPromise;
-      const db = client.db('theplancave');
-      const token = crypto.randomBytes(32).toString('hex');
-      
-      await db.collection('passwordResets').insertOne({
-        userId: message.user.id,
-        token,
-        expires: new Date(Date.now() + 3600000) // 1 hour
-      });
-    }
   }
 });

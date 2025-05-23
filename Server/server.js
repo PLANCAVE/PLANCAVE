@@ -223,7 +223,7 @@ async function initializeApp() {
     const userRoutes = require('../routes/userRoutes')(db, authenticateToken, isAdmin);
     const fileRoutes = require('../routes/fileRoutes')(db, authenticateToken, isAdmin, bucket);
     const signupRoute = require('./routes/auth/signup');
-    const analyticsRoutes = require('../routes/analyticsRoutes');
+   
     const adminRoutes = require('../routes/adminRoutes');
     
 
@@ -239,7 +239,7 @@ async function initializeApp() {
     app.use('/api/products', productRoutes);
     app.use('/api/categories', categoriesRoutes);
     app.use('/api/auth', signupRoute);
-    app.use('/api/analytics', analyticsRoutes);
+   
     app.use('/api/admin', adminRoutes);
 
     // Profile route

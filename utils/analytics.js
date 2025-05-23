@@ -1,13 +1,12 @@
-import axios from 'axios';
 
-// Base URL for API
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { flaskApi } from '../axios';
 
 // Get user's country (using a simple IP geolocation service)
 const getUserCountry = async () => {
   try {
-    const res = await axios.get('https://ipapi.co/json/');
-    return res.data.country_name;
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    return data.country_name;
   } catch (error) {
     console.error('Error getting user country:', error);
     return null;
@@ -28,17 +27,17 @@ class AnalyticsTracker {
     this.userId = userId;
     this.country = await getUserCountry();
     this.initialized = true;
-    
+
     // Track user active event
     if (userId) {
       this.trackEvent('userActive');
     }
-    
+
     // Set up session tracking
     window.addEventListener('beforeunload', () => {
       this.trackSessionEnd();
     });
-    
+
     return this;
   }
 
@@ -69,14 +68,21 @@ class AnalyticsTracker {
       console.warn('Analytics tracker not initialized');
       return;
     }
-    
+
     try {
-      await axios.post(`${API_URL}/api/analytics/track`, {
+      // If analytics endpoint is protected, send JWT
+      const token = localStorage.getItem('flask_token');
+      const config = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : {};
+
+      // Adjust endpoint path as needed for your Flask backend
+      await flaskApi.post('/analytics/track', {
         userId: this.userId,
         event,
         country: this.country,
         ...data
-      });
+      }, config);
     } catch (error) {
       console.error('Error tracking analytics event:', error);
     }

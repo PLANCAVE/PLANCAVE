@@ -45,7 +45,7 @@ export default function FooterSection() {
             <a href="https://www.instagram.com/theplancavespaces/" target="_blank" rel="noopener noreferrer" className={styles.icon}>
               <FaInstagram />
             </a>
-            <a href="https://wa.me/+254710208187" target="_blank" rel="noopener noreferrer" className={styles.icon}>
+            <a href="https://wa.me/+254723029566" target="_blank" rel="noopener noreferrer" className={styles.icon}>
               <FaWhatsapp />
             </a>
           </div>

@@ -54,10 +54,9 @@ def get_current_user():
     Returns:
         tuple: User ID and role of the currently authenticated user.
     """
-    identity = get_jwt_identity()
-    # Try both flat and nested
-    user_id = identity.get('id') if identity.get('id') else (identity.get('sub', {}).get('id') if identity.get('sub') else None)
-    role = extract_role(identity)
+    claims = get_jwt()  # Extract all claims
+    user_id = get_jwt_identity()  # Get the user ID from the JWT
+    role = claims.get("role")  # Extract role information
     return user_id, role
 
 
@@ -205,9 +204,8 @@ def login():
         return jsonify(access_token=token)
     else:
         return jsonify(message="Invalid credentials"), 401
-   
-   
-    
+
+
 @app.route('/oauth-login', methods=['POST'])
 def oauth_login():
     data = request.json

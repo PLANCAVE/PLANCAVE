@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession, getSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
 import {
@@ -12,7 +11,8 @@ import {
   Users, ShoppingBag, DollarSign, BarChart2,
   PlusCircle, Search, Settings, Bell, ChevronDown,
   Calendar, TrendingUp, Package, User, LogOut, Menu, X,
-  UserPlus as UserPlusIcon, ShoppingCart as ShoppingCartIcon, Bell as BellIcon
+  UserPlus as UserPlusIcon, ShoppingCart as ShoppingCartIcon, Bell as BellIcon,
+  Edit, Trash2, Eye
 } from 'lucide-react';
 import { flaskApi } from '../../axios';
 
@@ -28,7 +28,7 @@ const COLORS = {
 };
 const CHART_COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c'];
 
-const Dashboard = () => {
+const Dashboard = ({ initialUsers = [], initialProducts = [] }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -43,145 +43,224 @@ const Dashboard = () => {
   const [revenueData, setRevenueData] = useState([]);
   const [usageData, setUsageData] = useState([]);
   const [productData, setProductData] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState(initialUsers);
+  const [products, setProducts] = useState(initialProducts);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [addUserForm, setAddUserForm] = useState({ username: '', password: '', role: 'customer' });
   const [addUserLoading, setAddUserLoading] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  
   const router = useRouter();
   const { data: session, status } = useSession();
 
-   const getAccessToken = () => {
-    // Try to get the token from session.user or session directly
+  const getAccessToken = () => {
     if (session?.accessToken) return session.accessToken;
     if (session?.user?.accessToken) return session.user.accessToken;
     if (session?.token) return session.token;
-    // Optionally, check localStorage fallback (not recommended)
     return null;
   };
 
+  // Initialize data on component mount
+  useEffect(() => {
+    if (initialUsers.length > 0) {
+      calculateStats(initialUsers, initialProducts);
+    }
+  }, [initialUsers, initialProducts]);
+
+  // Calculate statistics from user and product data
+  const calculateStats = (userList, productList) => {
+    const activeUsers = userList.filter(user => user.isActive || user.status === 'active').length;
+    const adminUsers = userList.filter(user => user.role === 'admin').length;
+    
+    const now = new Date();
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const newUsersThisMonth = userList.filter(user => {
+      const createdAt = user.createdAt || user.created_at;
+      return createdAt && new Date(createdAt) >= thisMonth;
+    }).length;
+
+    setStats(prevStats => ({
+      ...prevStats,
+      totalUsers: userList.length,
+      activeUsers,
+      adminUsers,
+      newUsersThisMonth,
+      totalProducts: productList.length,
+    }));
+  };
 
   // Fetch dashboard data from Flask backend
   useEffect(() => {
-console.log('Session:', session);
-const fetchData = async () => {
-  try {
-    setLoading(true);
+    const fetchData = async () => {
+      if (status === 'loading') return;
+      
+      const token = getAccessToken();
+      if (!token) {
+        setError('Authentication required. Please log in.');
+        toast.error('Authentication required. Please log in.');
+        return;
+      }
 
-    // Wait for session to be loaded
-    if (status === 'loading') return;
+      setLoading(true);
+      const config = { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      };
 
-    // Get NextAuth JWT token
-    const token = session?.accessToken;
-    console.log('Access Token:', token);
-
-    if (!token) {
-      setError('Authentication required. Please log in.');
-      toast.error('Authentication required. Please log in.');
-      //router.push('/login');
-      return;
-    }
-
-    const config = { 
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      } 
-    };
-
-        try {
-          // First verify the token is valid
-          const authCheck = await flaskApi.get(`/verify-token`, config);
-          if (!authCheck.data.valid) {
-            throw new Error('Invalid authentication token');
-          }
-        } catch (authError) {
-          console.error('Authentication error:', authError);
-          setError('Your session has expired. Please log in again.');
-          toast.error('Your session has expired. Please log in again.');
-          //router.push('/login');
-          return;
+      try {
+        // Verify token first
+        const authCheck = await flaskApi.get('/verify-token', config);
+        if (!authCheck.data.valid) {
+          throw new Error('Invalid authentication token');
         }
 
-        // If token is valid, proceed with data fetching
-        try {
-          // Users
-          const usersRes = await flaskApi.get(`/admin/users`, config);
-          setUsers(usersRes.data.users || usersRes.data);
+        // Fetch all data in parallel
+        const [usersRes, productsRes, revenueRes, usageRes, notificationsRes] = await Promise.allSettled([
+          flaskApi.get('/admin/users', config),
+          flaskApi.get('/admin/products', config),
+          flaskApi.get('/admin/revenue', config),
+          flaskApi.get('/admin/analytics/usage', config),
+          flaskApi.get('/admin/notifications', config)
+        ]);
 
-          // Products
-          const productsRes = await flaskApi.get(`/admin/products`, config);
-          setProducts(productsRes.data.products || productsRes.data);
-
-          // Revenue
-          const revenueRes = await flaskApi.get(`/admin/revenue`, config);
-          setRevenueData(revenueRes.data.monthly || []);
-          const totalRevenue = revenueRes.data.total || 0;
-          const revenueGrowth = revenueRes.data.growth || 0;
-
-          // Usage analytics
-          const usageRes = await flaskApi.get(`/admin/analytics/usage`, config);
-          setUsageData(usageRes.data.usage || []);
-          setProductData(usageRes.data.userTypes || []);
-          const dailyActiveUsers = usageRes.data.dailyActive || 0;
-
-          // Calculate stats
-          const userList = usersRes.data.users || usersRes.data || [];
-          const productList = productsRes.data.products || productsRes.data || [];
-          const activeUsers = userList.filter(user => user.isActive).length;
-          const adminUsers = userList.filter(user => user.role === 'admin').length;
-          const now = new Date();
-          const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          const newUsersThisMonth = userList.filter(user => {
-            const createdAt = user.createdAt || user.created_at;
-            return createdAt && new Date(createdAt) >= thisMonth;
-          }).length;
-
-          setStats({
-            totalUsers: userList.length,
-            activeUsers,
-            adminUsers,
-            newUsersThisMonth,
-            totalProducts: productList.length,
-            totalRevenue,
-            revenueGrowth,
-            dailyActiveUsers
-          });
-
-          setError('');
-        } catch (dataError) {
-          console.error('Data fetching error:', dataError);
-          if (dataError.response && dataError.response.status === 422) {
-            setError('Server could not process the request. Please check your permissions.');
-            toast.error('Server could not process the request. Please check your permissions.');
-          } else {
-            setError(`Failed to fetch dashboard data: ${dataError.response?.data?.message || dataError.message}`);
-            toast.error(`Failed to fetch dashboard data: ${dataError.response?.data?.message || dataError.message}`);
-          }
+        // Handle users data
+        if (usersRes.status === 'fulfilled') {
+          const userData = usersRes.value.data.users || usersRes.value.data || [];
+          setUsers(userData);
         }
+
+        // Handle products data
+        if (productsRes.status === 'fulfilled') {
+          const productData = productsRes.value.data.products || productsRes.value.data || [];
+          setProducts(productData);
+        }
+
+        // Handle revenue data
+        if (revenueRes.status === 'fulfilled') {
+          const revenue = revenueRes.value.data;
+          setRevenueData(revenue.monthly || []);
+          setStats(prevStats => ({
+            ...prevStats,
+            totalRevenue: revenue.total || 0,
+            revenueGrowth: revenue.growth || 0
+          }));
+        }
+
+        // Handle usage analytics
+        if (usageRes.status === 'fulfilled') {
+          const usage = usageRes.value.data;
+          setUsageData(usage.usage || usage.daily || []);
+          setProductData(usage.userTypes || usage.distribution || []);
+          setStats(prevStats => ({
+            ...prevStats,
+            dailyActiveUsers: usage.dailyActive || 0
+          }));
+        }
+
+        // Handle notifications
+        if (notificationsRes.status === 'fulfilled') {
+          setNotifications(notificationsRes.value.data.notifications || []);
+        }
+
+        // Recalculate stats with fresh data
+        const finalUsers = usersRes.status === 'fulfilled' ? 
+          (usersRes.value.data.users || usersRes.value.data || []) : users;
+        const finalProducts = productsRes.status === 'fulfilled' ? 
+          (productsRes.value.data.products || productsRes.value.data || []) : products;
+        
+        calculateStats(finalUsers, finalProducts);
+        setError('');
+
       } catch (err) {
         console.error('Dashboard error:', err);
-        setError(`An unexpected error occurred: ${err.message}`);
-        toast.error(`An unexpected error occurred: ${err.message}`);
+        if (err.response?.status === 401) {
+          setError('Your session has expired. Please log in again.');
+          toast.error('Your session has expired. Please log in again.');
+          await signOut({ redirect: false });
+          router.push('/login');
+        } else {
+          setError(`Failed to fetch dashboard data: ${err.response?.data?.message || err.message}`);
+          toast.error(`Failed to fetch dashboard data: ${err.response?.data?.message || err.message}`);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-    // Only re-run when session or status changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, session, status]);
+  }, [session, status, router]);
 
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    toast.info('You have been logged out');
-    router.push('/login');
+  // Handle logout with NextAuth signOut
+  const handleLogout = async () => {
+    try {
+      await signOut({ redirect: false });
+      toast.info('You have been logged out');
+      router.push('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+      router.push('/login');
+    }
+  };
+
+  // Delete user handler
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+
+    const token = getAccessToken();
+    if (!token) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const config = { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      };
+
+      await flaskApi.delete(`/admin/users/${userId}`, config);
+      setUsers(users.filter(user => user.id !== userId));
+      toast.success('User deleted successfully');
+    } catch (err) {
+      console.error('Delete user error:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete user');
+    }
+  };
+
+  // Delete product handler
+  const handleDeleteProduct = async (productId) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
+    const token = getAccessToken();
+    if (!token) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const config = { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      };
+
+      await flaskApi.delete(`/admin/products/${productId}`, config);
+      setProducts(products.filter(product => product.id !== productId));
+      toast.success('Product deleted successfully');
+    } catch (err) {
+      console.error('Delete product error:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete product');
+    }
   };
 
   // Filter users based on search query
@@ -199,16 +278,16 @@ const fetchData = async () => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(value);
+    }).format(value || 0);
   };
 
-  // Add User Handler (calls Flask /admin/create_user endpoint)
+  // Add User Handler
   const handleAddUser = async (e) => {
     e.preventDefault();
     setAddUserLoading(true);
+    
     try {
       const token = getAccessToken();
-
       if (!token) {
         toast.error('Authentication required. Please log in again.');
         router.push('/login');
@@ -228,7 +307,6 @@ const fetchData = async () => {
         role: addUserForm.role
       };
 
-      // Use flaskApi for Flask backend requests
       await flaskApi.post('/admin/create_user', payload, config);
       toast.success('User created successfully!');
       setShowAddUserModal(false);
@@ -236,11 +314,15 @@ const fetchData = async () => {
 
       // Refresh users list
       const usersRes = await flaskApi.get('/admin/users', config);
-      setUsers(usersRes.data.users || usersRes.data);
+      const userData = usersRes.data.users || usersRes.data;
+      setUsers(userData);
+      calculateStats(userData, products);
+      
     } catch (err) {
       console.error('Add user error:', err);
-      if (err.response && err.response.status === 401) {
+      if (err.response?.status === 401) {
         toast.error('Authentication failed. Please log in again.');
+        await signOut({ redirect: false });
         router.push('/login');
       } else {
         toast.error(err.response?.data?.message || 'Failed to create user');
@@ -250,8 +332,7 @@ const fetchData = async () => {
     }
   };
 
-
- if (loading) {
+  if (loading && users.length === 0) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
@@ -280,10 +361,18 @@ const fetchData = async () => {
     );
   }
 
-
   // UI Components
   const OverviewCards = () => (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="bg-white rounded-lg shadow-sm p-6 flex items-center">
+        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+          <Users size={28} className="text-blue-600" />
+        </div>
+        <div>
+          <div className="text-gray-500 text-sm">Total Users</div>
+          <div className="text-2xl font-bold">{stats.totalUsers}</div>
+        </div>
+      </div>
       <div className="bg-white rounded-lg shadow-sm p-6 flex items-center">
         <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mr-4">
           <ShoppingBag size={28} className="text-indigo-600" />
@@ -295,11 +384,11 @@ const fetchData = async () => {
       </div>
       <div className="bg-white rounded-lg shadow-sm p-6 flex items-center">
         <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
-          <Calendar size={28} className="text-green-600" />
+          <DollarSign size={28} className="text-green-600" />
         </div>
         <div>
-          <div className="text-gray-500 text-sm">New Users This Month</div>
-          <div className="text-2xl font-bold">{stats.newUsersThisMonth || 0}</div>
+          <div className="text-gray-500 text-sm">Total Revenue</div>
+          <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
         </div>
       </div>
       <div className="bg-white rounded-lg shadow-sm p-6 flex items-center">
@@ -314,12 +403,40 @@ const fetchData = async () => {
     </div>
   );
 
+  const NotificationDropdown = () => (
+    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+      <div className="p-4 border-b border-gray-200">
+        <h3 className="font-medium text-gray-900">Notifications</h3>
+      </div>
+      <div className="max-h-64 overflow-y-auto">
+        {notifications.length > 0 ? (
+          notifications.slice(0, 5).map((notification, idx) => (
+            <div key={idx} className="p-3 border-b border-gray-100 hover:bg-gray-50">
+              <div className="text-sm text-gray-900">{notification.title}</div>
+              <div className="text-xs text-gray-500 mt-1">{notification.message}</div>
+              <div className="text-xs text-gray-400 mt-1">{notification.timestamp}</div>
+            </div>
+          ))
+        ) : (
+          <div className="p-4 text-center text-gray-500">
+            No new notifications
+          </div>
+        )}
+      </div>
+      <div className="p-2 border-t border-gray-200">
+        <button className="w-full text-center text-sm text-indigo-600 hover:text-indigo-800">
+          View all notifications
+        </button>
+      </div>
+    </div>
+  );
+
   const Sidebar = () => (
     <div className={`bg-indigo-900 text-white w-64 min-h-screen fixed transition-all ${isMobileMenuOpen ? 'left-0' : '-left-64 lg:left-0'} lg:translate-x-0 z-40`}>
       <div className="flex items-center justify-between p-4 border-b border-indigo-800">
         <div className="logo">
           <Link href="/">
-            <img src="/Logo2.svg" alt="Logo" />
+            <img src="/Logo2.svg" alt="Logo" className="h-8" />
           </Link>
         </div>
         <button
@@ -336,7 +453,8 @@ const fetchData = async () => {
               <User size={20} />
             </div>
             <div>
-              <div className="font-medium">Admin User</div>
+              <div className="font-medium">{session?.user?.username || 'Admin User'}</div>
+              <div className="text-xs text-indigo-300">{session?.user?.role || 'admin'}</div>
             </div>
           </div>
         </div>
@@ -352,12 +470,14 @@ const fetchData = async () => {
             label="Users"
             active={activeTab === 'users'}
             onClick={() => setActiveTab('users')}
+            badge={stats.totalUsers}
           />
           <SidebarLink
             icon={<Package size={18} />}
             label="Products"
             active={activeTab === 'products'}
             onClick={() => setActiveTab('products')}
+            badge={stats.totalProducts}
           />
           <SidebarLink
             icon={<DollarSign size={18} />}
@@ -380,7 +500,7 @@ const fetchData = async () => {
         </nav>
         <div className="px-4 mt-8 pt-4 border-t border-indigo-800">
           <button 
-            className="flex items-center text-indigo-300 hover:text-white"
+            className="flex items-center text-indigo-300 hover:text-white w-full"
             onClick={handleLogout}
           >
             <LogOut size={18} className="mr-2" />
@@ -391,13 +511,20 @@ const fetchData = async () => {
     </div>
   );
 
-  const SidebarLink = ({ icon, label, active, onClick }) => (
+  const SidebarLink = ({ icon, label, active, onClick, badge }) => (
     <button
-      className={`flex items-center py-3 px-4 w-full ${active ? 'bg-indigo-800 text-white' : 'text-indigo-300 hover:bg-indigo-800 hover:text-white'}`}
+      className={`flex items-center justify-between py-3 px-4 w-full ${active ? 'bg-indigo-800 text-white' : 'text-indigo-300 hover:bg-indigo-800 hover:text-white'}`}
       onClick={onClick}
     >
-      <span className="mr-3">{icon}</span>
-      <span>{label}</span>
+      <div className="flex items-center">
+        <span className="mr-3">{icon}</span>
+        <span>{label}</span>
+      </div>
+      {badge && (
+        <span className="bg-indigo-600 text-white text-xs px-2 py-1 rounded-full">
+          {badge}
+        </span>
+      )}
     </button>
   );
 
@@ -430,16 +557,24 @@ const fetchData = async () => {
           />
           <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
         </div>
-        <button className="relative p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-full">
-          <Bell size={20} />
-          <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
+        <div className="relative">
+          <button 
+            className="relative p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-full"
+            onClick={() => setShowNotifications(!showNotifications)}
+          >
+            <BellIcon size={20} />
+            {notifications.length > 0 && (
+              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+            )}
+          </button>
+          {showNotifications && <NotificationDropdown />}
+        </div>
         <div className="relative">
           <button className="flex items-center text-gray-700">
             <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center mr-2">
-              A
+              {(session?.user?.username || 'A').charAt(0).toUpperCase()}
             </div>
-            <span className="hidden md:block">Admin</span>
+            <span className="hidden md:block">{session?.user?.username || 'Admin'}</span>
             <ChevronDown size={16} className="ml-1" />
           </button>
         </div>
@@ -451,13 +586,16 @@ const fetchData = async () => {
   const AddUserModal = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Add New User</h2>
+        <div className="flex items-center mb-4">
+          <UserPlusIcon size={24} className="text-indigo-600 mr-2" />
+          <h2 className="text-xl font-bold">Add New User</h2>
+        </div>
         <form onSubmit={handleAddUser}>
           <div className="mb-4">
             <label className="block text-gray-700 mb-1">Username</label>
             <input
               type="text"
-              className="w-full border px-3 py-2 rounded"
+              className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={addUserForm.username}
               onChange={e => setAddUserForm({ ...addUserForm, username: e.target.value })}
               required
@@ -467,16 +605,16 @@ const fetchData = async () => {
             <label className="block text-gray-700 mb-1">Password</label>
             <input
               type="password"
-              className="w-full border px-3 py-2 rounded"
+              className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={addUserForm.password}
               onChange={e => setAddUserForm({ ...addUserForm, password: e.target.value })}
               required
             />
           </div>
-          <div className="mb-4">
+          <div className="mb-6">
             <label className="block text-gray-700 mb-1">Role</label>
             <select
-              className="w-full border px-3 py-2 rounded"
+              className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={addUserForm.role}
               onChange={e => setAddUserForm({ ...addUserForm, role: e.target.value })}
             >
@@ -488,7 +626,7 @@ const fetchData = async () => {
           <div className="flex justify-end space-x-2">
             <button
               type="button"
-              className="px-4 py-2 bg-gray-200 rounded"
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
               onClick={() => setShowAddUserModal(false)}
               disabled={addUserLoading}
             >
@@ -496,7 +634,7 @@ const fetchData = async () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded"
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
               disabled={addUserLoading}
             >
               {addUserLoading ? 'Adding...' : 'Add User'}
@@ -514,12 +652,18 @@ const fetchData = async () => {
         return (
           <div className="bg-white rounded-lg shadow-sm">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium">User Management</h3>
+              <div className="flex items-center">
+                <Users size={20} className="text-gray-600 mr-2" />
+                <h3 className="text-lg font-medium">User Management</h3>
+                <span className="ml-2 bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm">
+                  {filteredUsers.length} users
+                </span>
+              </div>
               <button
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center"
                 onClick={() => setShowAddUserModal(true)}
               >
-                <PlusCircle size={16} className="mr-1" />
+                <UserPlusIcon size={16} className="mr-1" />
                 <span>Add User</span>
               </button>
             </div>
@@ -527,17 +671,18 @@ const fetchData = async () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredUsers.length > 0 ? (
-                    filteredUsers.slice(0, 10).map((user, idx) => (
-                      <tr key={user.id || idx}>
+                    filteredUsers.map((user, idx) => (
+                      <tr key={user.id || idx} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center mr-3">
@@ -546,22 +691,51 @@ const fetchData = async () => {
                             <div>{user.username || user.name || `User ${idx + 1}`}</div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">{user.email || `user${idx + 1}@example.com`}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{user.role || "user"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                          {user.email || `user${idx + 1}@example.com`}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                            {user.isActive ? 'Active' : 'Inactive'}
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                            user.role === 'designer' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.role || "user"}
                           </span>
                         </td>
+                       <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            (user.isActive || user.status === 'active') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {(user.isActive || user.status === 'active') ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 
+                           user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
-                          <button className="text-red-600 hover:text-red-900">Delete</button>
+                          <div className="flex justify-end space-x-2">
+                            <button className="text-indigo-600 hover:text-indigo-900" title="View">
+                              <Eye size={16} />
+                            </button>
+                            <button className="text-blue-600 hover:text-blue-900" title="Edit">
+                              <Edit size={16} />
+                            </button>
+                            <button 
+                              className="text-red-600 hover:text-red-900" 
+                              title="Delete"
+                              onClick={() => handleDeleteUser(user.id)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
                         No users found
                       </td>
                     </tr>
@@ -569,62 +743,96 @@ const fetchData = async () => {
                 </tbody>
               </table>
             </div>
-            {showAddUserModal && <AddUserModal />}
           </div>
         );
+
       case 'products':
         return (
           <div className="bg-white rounded-lg shadow-sm">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium">Product Management</h3>
-              <Link href="/admin/products/new">
-                <button
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center"
-                >
-                  <PlusCircle size={16} className="mr-1" />
-                  <span>Add Product</span>
-                </button>
-              </Link>
+              <div className="flex items-center">
+                <Package size={20} className="text-gray-600 mr-2" />
+                <h3 className="text-lg font-medium">Product Management</h3>
+                <span className="ml-2 bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm">
+                  {filteredProducts.length} products
+                </span>
+              </div>
+              <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center">
+                <PlusCircle size={16} className="mr-1" />
+                <span>Add Product</span>
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscribers</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map((product, idx) => (
-                      <tr key={product.id || idx}>
+                      <tr key={product.id || idx} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center mr-3">
-                              <Package size={16} />
+                            <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center mr-3">
+                              <Package size={20} className="text-gray-500" />
                             </div>
-                            <div>{product.name}</div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {product.name || `Product ${idx + 1}`}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {product.description?.substring(0, 50) || 'No description'}...
+                              </div>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(product.price)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                            {product.active ? 'Active' : 'Inactive'}
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                          {product.category || 'Uncategorized'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                          {formatCurrency(product.price || 0)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                          <span className={`${product.stock < 10 ? 'text-red-600' : 'text-green-600'}`}>
+                            {product.stock || 0}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">{product.subscribers}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {product.status || 'active'}
+                          </span>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
-                          <button className="text-red-600 hover:text-red-900">Delete</button>
+                          <div className="flex justify-end space-x-2">
+                            <button className="text-indigo-600 hover:text-indigo-900" title="View">
+                              <Eye size={16} />
+                            </button>
+                            <button className="text-blue-600 hover:text-blue-900" title="Edit">
+                              <Edit size={16} />
+                            </button>
+                            <button 
+                              className="text-red-600 hover:text-red-900" 
+                              title="Delete"
+                              onClick={() => handleDeleteProduct(product.id)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
                         No products found
                       </td>
                     </tr>
@@ -634,179 +842,332 @@ const fetchData = async () => {
             </div>
           </div>
         );
+
       case 'revenue':
         return (
-          <div className="grid grid-cols-1 gap-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-medium mb-4">Revenue Overview</h3>
-              <div className="mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-indigo-50 p-4 rounded-lg">
-                    <div className="text-indigo-500 text-sm font-medium mb-1">Total Revenue</div>
-                    <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Monthly Revenue</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(stats.totalRevenue)}
+                    </p>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="text-green-500 text-sm font-medium mb-1">Monthly Growth</div>
-                    <div className="text-2xl font-bold">{stats.revenueGrowth}%</div>
+                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                    <DollarSign size={24} className="text-green-600" />
                   </div>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="text-blue-500 text-sm font-medium mb-1">Average Revenue/User</div>
-                    <div className="text-2xl font-bold">
-                      {stats.totalUsers > 0 ? formatCurrency(stats.totalRevenue / stats.totalUsers) : '$0.00'}
-                    </div>
+                </div>
+                <div className="mt-4">
+                  <span className={`text-sm ${stats.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {stats.revenueGrowth >= 0 ? '+' : ''}{stats.revenueGrowth}% from last month
+                  </span>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Average Order Value</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(stats.totalRevenue / Math.max(stats.totalUsers, 1))}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                    <ShoppingCartIcon size={24} className="text-blue-600" />
                   </div>
                 </div>
               </div>
-              <div className="h-80">
-                {revenueData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={revenueData}
-                      margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip formatter={value => formatCurrency(value)} />
-                      <Bar dataKey="revenue" fill={COLORS.primary} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500">No revenue data available</p>
+
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">Conversion Rate</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {((stats.activeUsers / Math.max(stats.totalUsers, 1)) * 100).toFixed(1)}%
+                    </p>
                   </div>
-                )}
+                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                    <TrendingUp size={24} className="text-purple-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-medium mb-4">Revenue Trend</h3>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => [formatCurrency(value), 'Revenue']} />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#4f46e5" 
+                      strokeWidth={2}
+                      name="Monthly Revenue"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
         );
+
       case 'analytics':
         return (
-          <div className="grid grid-cols-1 gap-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-medium mb-4">App Usage Analytics</h3>
-              <div className="mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-indigo-50 p-4 rounded-lg">
-                    <div className="text-indigo-500 text-sm font-medium mb-1">Daily Active Users</div>
-                    <div className="text-2xl font-bold">{stats.dailyActiveUsers}</div>
-                  </div>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="text-blue-500 text-sm font-medium mb-1">Total Users</div>
-                    <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                  </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="text-green-500 text-sm font-medium mb-1">Admin Users</div>
-                    <div className="text-2xl font-bold">{stats.adminUsers}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="h-72">
-                {usageData.length > 0 ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-medium mb-4">Daily Active Users</h3>
+                <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={usageData}
-                      margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e1e8f0" />
-                      <XAxis dataKey="day" stroke="#4a6f8a" />
-                      <YAxis stroke="#4a6f8a" />
+                    <BarChart data={usageData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
                       <Tooltip />
-                      <Bar dataKey="visits" fill={COLORS.secondary} />
+                      <Bar dataKey="users" fill="#4f46e5" />
                     </BarChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500">No usage data available</p>
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-blue-100">
-              <h3 className="text-lg font-medium mb-4 text-blue-900">User Distribution</h3>
-              <div className="h-64">
-                {productData.length > 0 ? (
+
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-medium mb-4">User Distribution</h3>
+                <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={productData}
                         cx="50%"
                         cy="50%"
+                        innerRadius={60}
                         outerRadius={80}
-                        fill="#8884d8"
+                        paddingAngle={5}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
                         {productData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500">No user distribution data available</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-medium mb-4">Usage Analytics Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-indigo-600">
+                    {stats.dailyActiveUsers}
+                  </div>
+                  <div className="text-sm text-gray-600">Daily Active Users</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {stats.activeUsers}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Active Users</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {stats.newUsersThisMonth}
+                  </div>
+                  <div className="text-sm text-gray-600">New Users This Month</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {((stats.activeUsers / Math.max(stats.totalUsers, 1)) * 100).toFixed(1)}%
+                  </div>
+                  <div className="text-sm text-gray-600">Engagement Rate</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'settings':
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-medium mb-4">Dashboard Settings</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Email Notifications</h4>
+                    <p className="text-sm text-gray-600">Receive email notifications for important updates</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Auto Refresh</h4>
+                    <p className="text-sm text-gray-600">Automatically refresh dashboard data</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Dark Mode</h4>
+                    <p className="text-sm text-gray-600">Switch to dark mode interface</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-medium mb-4">Account Settings</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    defaultValue={session?.user?.username || 'Admin User'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    defaultValue={session?.user?.email || 'admin@example.com'}
+                  />
+                </div>
+                <div className="pt-4">
+                  <button className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="space-y-6">
+            <OverviewCards />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-medium mb-4">Revenue Overview</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={revenueData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [formatCurrency(value), 'Revenue']} />
+                      <Bar dataKey="revenue" fill="#4f46e5" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-medium mb-4">User Activity</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={usageData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line 
+                        type="monotone" 
+                        dataKey="users" 
+                        stroke="#22c55e" 
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-medium mb-4">Recent Activity</h3>
+              <div className="space-y-3">
+                {notifications.slice(0, 5).map((notification, idx) => (
+                  <div key={idx} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="w-2 h-2 bg-indigo-600 rounded-full mr-3"></div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-900">
+                        {notification.title || `Activity ${idx + 1}`}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {notification.message || `Recent activity notification`}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {notification.timestamp || 'Just now'}
+                    </div>
+                  </div>
+                ))}
+                {notifications.length === 0 && (
+                  <div className="text-center text-gray-500 py-4">
+                    No recent activity
                   </div>
                 )}
               </div>
             </div>
           </div>
         );
-      case 'settings':
-        return (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-medium mb-6">Dashboard Settings</h3>
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-md font-medium mb-2">Account Settings</h4>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-600 mb-4">Manage your account settings and preferences</p>
-                  <button className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-                    Edit Profile
-                  </button>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-md font-medium mb-2">Notification Preferences</h4>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-600 mb-4">Configure how you receive notifications</p>
-                  <button className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-                    Manage Notifications
-                  </button>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-md font-medium mb-2">Security Settings</h4>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-600 mb-4">Update your password and security preferences</p>
-                  <button className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-                    Change Password
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      default:
-        return <OverviewCards />;
     }
   };
 
   return (
-    <div className="flex">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 lg:ml-64">
+      <div className="lg:ml-64">
         <Header />
-        <main className="p-6 bg-blue-50 min-h-screen">
+        <main className="p-6">
+          {error && !error.includes('Authentication required') && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
           {renderTab()}
-          {/* Always render the modal but conditionally show it */}
-          {showAddUserModal && <AddUserModal />}
         </main>
       </div>
+      
+      {showAddUserModal && <AddUserModal />}
+      
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
     </div>
   );
 };
 
 export default Dashboard;
-                

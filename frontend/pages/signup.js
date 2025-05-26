@@ -39,6 +39,7 @@ export default function RegisterPage() {
           username,
           email,
           password,
+          role:"customer", // Default role for new users
         }),
       });
 

@@ -224,7 +224,7 @@ async function initializeApp() {
     const fileRoutes = require('../routes/fileRoutes')(db, authenticateToken, isAdmin, bucket);
     const signupRoute = require('./routes/auth/signup');
    
-    const adminRoutes = require('../routes/adminRoutes');
+   
     
 
     
@@ -240,7 +240,7 @@ async function initializeApp() {
     app.use('/api/categories', categoriesRoutes);
     app.use('/api/auth', signupRoute);
    
-    app.use('/api/admin', adminRoutes);
+   
 
     // Profile route
     app.get('/api/profile', authenticateToken, async (req, res) => {

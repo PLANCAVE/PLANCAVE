@@ -11,16 +11,84 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [jwtLoggedIn, setJwtLoggedIn] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
   const router = useRouter();
   const { data: _session, status } = useSession();
 
-  // Check JWT login status on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem('token');
-      setJwtLoggedIn(!!token);
+  // Check JWT login status and verify token on mount
+useEffect(() => {
+  // Check if we're coming from a logout action
+  if (router.query.fromLogout) {
+    // Remove the query parameter to prevent infinite loop
+    router.replace('/login', undefined, { shallow: true });
+    return;
+  }
+
+  // Existing verification logic
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem('token');
+    if (token) {
+      verifyAuthStatus();
     }
-  }, []);
+  }
+}, [router.query]);
+
+  // Function to verify authentication status with the dashboard endpoint
+  const verifyAuthStatus = async () => {
+  // Don't verify if we're coming from logout
+  if (router.query.fromLogout) return;
+
+  try {
+    const baseURL = process.env.DATABASE_URL || 'http://localhost:5001';
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      setJwtLoggedIn(false);
+      setUserInfo(null);
+      return;
+    }
+
+    const response = await fetch(`${baseURL}/dashboard`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setJwtLoggedIn(true);
+      setUserInfo(data.user);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      redirectBasedOnRole(data.user?.role);
+      
+      } else {
+        // Token is invalid or expired
+        setJwtLoggedIn(false);
+        setUserInfo(null);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        if (response.status === 401) {
+          setError('Session expired. Please log in again.');
+        }
+      }
+    } catch (err) {
+      console.error('Auth verification error:', err);
+      setJwtLoggedIn(false);
+      setUserInfo(null);
+    }
+  };
+
+  // Redirect logic based on user role
+  const redirectBasedOnRole = (role) => {
+    if (role === 'admin') {
+      router.push('/Dashboard');
+    } else {
+      router.push('/');
+    }
+  };
 
   // If logged in via NextAuth or JWT, show logout option
   const isLoggedIn = status === 'authenticated' || jwtLoggedIn;
@@ -47,18 +115,18 @@ export default function SignInPage() {
         return;
       }
 
-      // Save JWT token
+      // Save JWT token and user info
       localStorage.setItem('token', data.access_token);
-
-      // Optionally, save user info if returned
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
+        setUserInfo(data.user);
       }
 
       setJwtLoggedIn(true);
 
-      // Redirect to dashboard or home
-      router.push('/');
+      // Redirect based on role
+      redirectBasedOnRole(data.user?.role);
+      
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error('Login error:', err);
@@ -73,18 +141,30 @@ export default function SignInPage() {
   };
 
   // Logout logic for both JWT and NextAuth
-  const handleLogout = async () => {
+const handleLogout = async () => {
+  try {
+    // Clear JWT auth
     if (typeof window !== "undefined") {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setJwtLoggedIn(false);
+      setUserInfo(null);
     }
+    
+    // Clear NextAuth session if exists
     if (status === 'authenticated') {
-      await signOut({ callbackUrl: '/login' });
-    } else {
-      router.replace('/login');
+      await signOut({ redirect: false }); // We'll handle redirect manually
     }
-  };
+    
+    // Redirect to login page with a flag to prevent immediate redirect
+    router.push({
+      pathname: '/login',
+      query: { fromLogout: true }
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+};
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-800 to-indigo-900">
@@ -105,6 +185,16 @@ export default function SignInPage() {
             <div className="text-white text-lg font-semibold mb-2">
               You are already logged in.
             </div>
+            
+            {/* Display user information if available */}
+            {userInfo && (
+              <div className="bg-white/10 rounded-lg p-4 w-full text-center backdrop-blur-sm border border-white/20">
+                <p className="text-blue-100 text-sm">Welcome back,</p>
+                <p className="text-white font-semibold">{username}</p>
+                <p className="text-blue-200 text-sm capitalize">Role: {userInfo.role}</p>
+              </div>
+            )}
+            
             <button
               onClick={handleLogout}
               className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
@@ -130,19 +220,19 @@ export default function SignInPage() {
 
             {/* Credentials Login Form */}
             <form onSubmit={handleCredentialsLogin} className="space-y-6">
-<div className="relative">
-  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-blue-300">
-    <Mail size={18} />
-  </div>
-  <input
-    type="text"
-    placeholder="Username"
-    value={username}
-    required
-    onChange={e => setUsername(e.target.value)}
-    className="w-full pl-10 pr-12 py-3 bg-white/10 text-white border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-300 placeholder-blue-200/70 backdrop-blur-sm"
-  />
-</div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-blue-300">
+                  <Mail size={18} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  required
+                  onChange={e => setUsername(e.target.value)}
+                  className="w-full pl-10 pr-12 py-3 bg-white/10 text-white border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-300 placeholder-blue-200/70 backdrop-blur-sm"
+                />
+              </div>
 
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-blue-300">

@@ -1,5 +1,3 @@
-
-
 require('dotenv').config({ path: require('path').resolve(process.cwd(), '/home/badman/ThePlanCave/.env.local') });
 
 import NextAuth from 'next-auth';
@@ -16,35 +14,42 @@ export default NextAuth({
     updateAge: 60 * 60,
   },
   providers: [
-    CredentialsProvider({
-      id: 'flask-credentials',
-      name: 'Credentials',
-      credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        try {
-          const response = await axios.post(
-            `${process.env.FLASK_BACKEND_URL}/login`,
-            credentials
-          );
+  // pages/api/auth/[...nextauth].js
+CredentialsProvider({
+  id: 'credentials',
+  name: 'Credentials',
+  credentials: {
+    username: { label: "Username", type: "text" },
+    password: { label: "Password", type: "password" }
+  },
+  async authorize(credentials) {
+    try {
+      const res = await axios.post(`${process.env.FLASK_BACKEND_URL}/login`, {
+        username: credentials.username,
+        password: credentials.password
+      });
 
-          if (!response.data?.access_token) {
-            throw new Error('Invalid response from auth server');
-          }
+      // DEBUG: Log raw response
+     console.log('Flask response:', JSON.stringify(res.data, null, 2));
 
-          return {
-            id: response.data.id,
-            username: credentials.username,
-            role: response.data.role,  // Ensuring role persists
-            accessToken: response.data.access_token
-          };
-        } catch (error) {
-          throw new Error(error.response?.data?.message || 'Authentication failed');
-        }
+      if (!res.data?.user?.role) {
+        throw new Error('Role missing in response');
       }
-    }),
+
+      // Map to NextAuth's expected user object
+      return {
+        id: res.data.user.id,
+        name: res.data.user.username,
+        email: `${res.data.user.username}@gmail.com`, // Required field
+        role: res.data.user.role, // Critical for admin access
+        accessToken: res.data.access_token, // Required field
+      };
+    } catch (error) {
+      console.error('Login failed:', error.response?.data || error.message);
+      return null;
+    }
+  }
+}),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -54,31 +59,43 @@ export default NextAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
     })
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.accessToken = user.accessToken;
+async jwt({ token, user, account }) {
+  if (account) {
+    // OAuth login: Validate token via Flask /oauth-login endpoint
+    try {
+      const res = await axios.post(`${process.env.FLASK_BACKEND_URL}/oauth-login`, {
+        provider: account.provider,
+        access_token: account.access_token
+      });
+
+      if (res.data?.user?.role) {
+        token.role = res.data.user.role;
+      } else {
+        throw new Error("OAuth response missing role information");
       }
-      return token;
-    },
-
-    async session({ session, token }) {
-      console.log("Session callback:", session);
-      console.log("Token contents:", token);
-
-      session.user = {
-        id: token.id,
-        role: token.role || 'user',  // Ensure role persists
-      };
-      session.accessToken = token.accessToken;
-      return session;
+    } catch (error) {
+      console.error("OAuth JWT callback failed:", error.response?.data || error.message);
+      token.role = null;
     }
-  },
-  pages: {
-    signIn: '/login',
-    error: '/auth/error',
-  },
-  debug: process.env.NODE_ENV === 'development',
+  } else if (user) {
+    // Credentials login: Assign role directly from user object
+    token.role = user.role || null;
+  }
+
+  return token;
+},
+
+
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        domain: "localhost" 
+      }
+    }
+  }
 });

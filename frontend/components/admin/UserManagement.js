@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import flaskApi from '../../lib/flaskApi';
 import { Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
@@ -19,7 +19,7 @@ const UserManagement = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get('/api/users');
+        const res = await flaskApi.get('/admin/users');
         setUsers(res.data);
       } catch (err) {
         setError('Failed to fetch users');
@@ -35,7 +35,7 @@ const UserManagement = () => {
   const toggleUserStatus = async (userId, isActive) => {
     try {
       const user = users.find(u => u.id === userId);
-      await axios.put(`/api/users/${userId}`, {
+      await axios.put(`/admin/users/${userId}`, {
         ...user,
         email: user.email,
         firstName: user.first_name,
@@ -60,7 +60,7 @@ const UserManagement = () => {
     }
     
     try {
-      await axios.delete(`/api/users/${userId}`);
+      await axios.delete(`/admin/users/${userId}`);
       
       // Update local state
       setUsers(users.filter(user => user.id !== userId));
@@ -86,7 +86,7 @@ const UserManagement = () => {
   
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar />
+     
       
       <div className="flex-1 overflow-auto p-6">
         <div className="flex justify-between items-center mb-6">

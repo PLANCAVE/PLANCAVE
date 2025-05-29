@@ -19,6 +19,7 @@ const cookieParser = require('cookie-parser');
 const scheduleJobs = require('../utils/scheduledJobs');
 const { sessionUtils } = require('../utils/security');
 
+
 // Import middleware
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const {
@@ -35,27 +36,35 @@ const { webhookRoutes } = require('../routes/webhook-routes');
 const app = express();
 
 // Initialize Firebase Admin
+
+
+
 try {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-    });
-    console.log('Firebase Admin initialized successfully');
-  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-    const serviceAccount = require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-    });
-    console.log('Firebase Admin initialized successfully from file');
+  if (admin.apps.length === 0) {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+      });
+      console.log('Firebase Admin initialized successfully');
+    } else if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+      const serviceAccount = require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+      });
+      console.log('Firebase Admin initialized successfully from file');
+    } else {
+      console.warn('Firebase credentials not found, Firebase functionality will be disabled');
+    }
   } else {
-    console.warn('Firebase credentials not found, Firebase functionality will be disabled');
+    console.log('Firebase Admin already initialized');
   }
 } catch (error) {
   console.error('Firebase initialization error:', error);
 }
+
 
 // Schedule jobs
 scheduleJobs();
@@ -213,6 +222,9 @@ async function initializeApp() {
     const authRoutes = require('../routes/authRoutes')(db);
     const userRoutes = require('../routes/userRoutes')(db, authenticateToken, isAdmin);
     const fileRoutes = require('../routes/fileRoutes')(db, authenticateToken, isAdmin, bucket);
+    const signupRoute = require('./routes/auth/signup');
+   
+   
     
 
     
@@ -226,7 +238,9 @@ async function initializeApp() {
     app.use('/api/files', fileRoutes);
     app.use('/api/products', productRoutes);
     app.use('/api/categories', categoriesRoutes);
-    
+    app.use('/api/auth', signupRoute);
+   
+   
 
     // Profile route
     app.get('/api/profile', authenticateToken, async (req, res) => {
@@ -303,8 +317,8 @@ async function initializeApp() {
       console.log('Search routes not available:', err.message);
     }
 
-const adminRoutes = require('../routes/admin'); // adjust path as needed
-app.use('/api', adminRoutes);
+//const adminRoutes = require('../routes/admin'); // adjust path as needed
+//app.use('/api', adminRoutes);
 
 
   // Error handling middleware

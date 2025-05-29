@@ -1,2 +1,8 @@
 node_modules/
 git-lfs/
+node_modules/
+.env.local
+*.log
+**/next-swc-*.node
+node_modules/
+__pycache__/

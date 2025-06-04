@@ -45,3 +45,4 @@ venv/
 *.swp
 *.swo
 >>>>>>> 23be1ff5cd0e7a4647d679e0731a214f9410f6b9
+.env.local

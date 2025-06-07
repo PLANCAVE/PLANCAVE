@@ -1,23 +1,43 @@
-const jwt = require('jsonwebtoken');
+import { NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
-/**
- * Middleware to protect routes using JWT.
- * Usage: app.use('/protected', authenticateToken)
- */
-const authenticateToken = (req, res, next) => {
-  // Accept token from Authorization: Bearer ... or x-access-token
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.startsWith('Bearer ')
-    ? authHeader.split(' ')[1]
-    : req.headers['x-access-token'];
+export async function middleware(req) {
+  const path = req.nextUrl.pathname;
+  const token = await getToken({ req });
 
-  if (!token) return res.status(401).json({ message: 'No token provided.' });
+  // Protected routes
+  const protectedRoutes = [
+    '/dashboard',
+    '/api/purchases',
+    '/plans/purchased'
+  ];
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid or expired token.' });
-    req.user = user;
-    next();
-  });
-};
+  // Role-based redirects
+  if (path.startsWith('/dashboard')) {
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', req.url));
+    }
 
-module.exports = { authenticateToken };
+    // Admin-only routes
+    if (path.startsWith('/dashboard/admin') && token.role !== 'admin') {
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
+    }
+
+    // Architect-only routes
+    if (path.startsWith('/dashboard/architect') && token.role !== 'designer') {
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
+    }
+  }
+
+  // API protection
+  if (path.startsWith('/api') && !path.startsWith('/api/auth')) {
+    if (!token) {
+      return NextResponse.json(
+        { message: 'Unauthorized' }, 
+        { status: 401 }
+      );
+    }
+  }
+
+  return NextResponse.next();
+}

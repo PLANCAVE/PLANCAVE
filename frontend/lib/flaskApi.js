@@ -1,89 +1,91 @@
 import axios from 'axios';
 import { getSession } from 'next-auth/react';
 
-// Create a configured Axios instance
+// Create the axios instance first
 const instance = axios.create({
   baseURL: process.env.FLASK_BACKEND_URL || 'http://localhost:5001',
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
 });
 
-// Request interceptor to add auth token
+// Enhanced request interceptor
 instance.interceptors.request.use(
   async (config) => {
-    // For server-side calls
-    if (typeof window === 'undefined') {
+    // Skip auth for public endpoints
+    const publicEndpoints = [
+      '/login',
+      '/register',
+      '/verify-token'
+    ];
+    
+    if (publicEndpoints.some(ep => config.url.includes(ep))) {
       return config;
     }
 
-    // Client-side calls - get session
-    const session = await getSession();
-    
-    if (session?.accessToken) {
-      config.headers.Authorization = `Bearer ${session.accessToken}`;
+    // Manual auth takes precedence
+    if (!config.headers.Authorization) {
+      const session = await getSession();
+      if (session?.accessToken) {
+        config.headers.Authorization = `Bearer ${session.accessToken}`;
+      }
     }
 
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
+// Enhanced response interceptor
 instance.interceptors.response.use(
-  (response) => {
-    return response.data; // Return only the data part
-  },
+  (response) => response,
   (error) => {
-    // Handle errors
-    if (error.response) {
-      // Server responded with error status
-      const errorMessage = error.response.data?.message || 
-                         error.response.statusText || 
-                         'Request failed';
-
-      const customError = new Error(errorMessage);
-      customError.status = error.response.status;
-      customError.data = error.response.data;
-      
-      return Promise.reject(customError);
-    } else if (error.request) {
-      // Request was made but no response
-      return Promise.reject(new Error('No response from server'));
-    } else {
-      // Something else happened
-      return Promise.reject(error);
-    }
-  }
-);
-
-// Specific methods for your admin routes
-const flaskApi = {
-  // Auth-related methods
-  login: (credentials) => instance.post('/login', credentials),
-  oauthLogin: (providerData) => instance.post('/oauth-login', providerData),
-  verifyToken: () => instance.get('/verify-token'),
-
-  // Admin methods
-  getUsers: () => instance.get('/admin/users'),
-  createUser: (userData) => instance.post('/admin/create_user', userData),
-  getProducts: () => instance.get('/admin/products'),
-  getRevenue: () => instance.get('/admin/revenue'),
-  getAnalytics: () => instance.get('/admin/analytics/usage'),
-
-  // Server-side call helper
-  serverSideGet: async (req, url) => {
-    const session = await getSession({ req });
-    return instance.get(url, {
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`
+    const errorMessage = error.response?.data?.message || 
+                       error.response?.statusText || 
+                       error.message;
+    
+    if (error.response?.status === 401) {
+      // Handle token expiration
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?session_expired=1';
       }
+    }
+
+    return Promise.reject({
+      status: error.response?.status,
+      message: errorMessage,
+      data: error.response?.data
     });
   }
+);
+
+// Create the flaskApi object with all methods
+const flaskApi = {
+  instance,
+
+  // Auth methods
+  login: (credentials) => instance.post('/login', credentials),
+  verifyToken: () => instance.get('/verify-token'),
+
+  // Dashboard methods
+  getAdminDashboard: () => instance.get('/dashboard/admin'),
+  getArchitectDashboard: () => instance.get('/dashboard/architect'),
+  getCustomerDashboard: () => instance.get('/dashboard/customer'),
+
+  // User management
+  createUser: (userData) => instance.post('/admin/users', userData),
+  getUsers: () => instance.get('/admin/users'),
+
+  // Purchase handling
+  createPurchase: (planId) => instance.post('/purchases', { plan_id: planId }),
+
+  // Fallback methods
+  get: (url, config) => instance.get(url, config),
+  post: (url, data, config) => instance.post(url, data, config),
+  put: (url, data, config) => instance.put(url, data, config),
+  delete: (url, config) => instance.delete(url, config)
 };
 
 export default flaskApi;

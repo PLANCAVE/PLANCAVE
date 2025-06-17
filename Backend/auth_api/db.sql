@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'customer',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
 );
 
 

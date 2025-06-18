@@ -1,3 +1,13 @@
+<<<<<<< HEAD
+node_modules/
+git-lfs/
+node_modules/
+.env.local
+*.log
+**/next-swc-*.node
+node_modules/
+__pycache__/
+=======
 # Python
 __pycache__/
 *.py[cod]
@@ -34,3 +44,5 @@ venv/
 # Git
 *.swp
 *.swo
+>>>>>>> 23be1ff5cd0e7a4647d679e0731a214f9410f6b9
+.env.local

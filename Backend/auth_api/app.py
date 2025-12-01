@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
+from flasgger import Swagger
 import psycopg2
 import psycopg2.extras
 import os
@@ -13,10 +14,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dashboards.dashboard import dashboard_bp
 from plans.plans import plans_bp
-
-
-
-
+from plans.enhanced_uploads import enhanced_uploads_bp
+from teams.teams import teams_bp
+from creator.creator_tools import creator_tools_bp
+from admin.admin_management import admin_bp
+from customer.customer_actions import customer_bp
 
 load_dotenv()
 
@@ -26,8 +28,48 @@ app.config.from_object(Config)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+swagger_template = {
+    "swagger": "2.0",
+    "info": {
+        "title": "PlanCave Backend API",
+        "description": "Interactive documentation for PlanCave backend endpoints (auth, plans, uploads, teams, creator tools, admin, customer).",
+        "version": "1.0.0"
+    },
+    "basePath": "/",
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "JWT Authorization header. Example: 'Bearer {token}'"
+        }
+    },
+}
+
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": "apispec_1",
+            "route": "/apispec_1.json",
+            "rule_filter": lambda rule: True,  # include all routes
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/docs/",
+}
+
+swagger = Swagger(app, template=swagger_template, config=swagger_config)
+
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(plans_bp)
+app.register_blueprint(enhanced_uploads_bp)
+app.register_blueprint(teams_bp)
+app.register_blueprint(creator_tools_bp)
+app.register_blueprint(admin_bp)
+app.register_blueprint(customer_bp)
 
 
 def get_db():
@@ -89,10 +131,34 @@ def register_user(data, role):
 @app.route('/register/customer', methods=['POST'])
 def register_customer():
     """
-    Endpoint for registering a new customer.
-
-    Returns:
-        Response: JSON response from the registration process.
+    Register Customer
+    Register a new customer account.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+              example: jane_customer
+            password:
+              type: string
+              example: securepass123
+    responses:
+      201:
+        description: Customer registered successfully
+      400:
+        description: Missing username or password
+      409:
+        description: Username already exists
     """
     data = request.get_json()
     return register_user(data, role='customer')
@@ -101,10 +167,34 @@ def register_customer():
 @app.route('/register/designer', methods=['POST'])
 def register_designer():
     """
-    Endpoint for registering a new designer.
-
-    Returns:
-        Response: JSON response from the registration process.
+    Register Designer
+    Register a new designer/architect account.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+              example: john_architect
+            password:
+              type: string
+              example: securepass123
+    responses:
+      201:
+        description: Designer registered successfully
+      400:
+        description: Missing username or password
+      409:
+        description: Username already exists
     """
     data = request.get_json()
     return register_user(data, role='designer')
@@ -137,10 +227,37 @@ def create_user():
 @app.route('/login', methods=['POST'])
 def login():
     """
-    Authenticates a user and returns a JWT access token if credentials are valid.
-
-    Returns:
-        Response: JSON containing the access token or an error message.
+    User Login
+    Authenticates a user and returns a JWT access token.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+              example: john_architect
+            password:
+              type: string
+              example: securepass123
+    responses:
+      200:
+        description: Login successful
+        schema:
+          type: object
+          properties:
+            access_token:
+              type: string
+      401:
+        description: Invalid credentials
     """
     data = request.get_json()
     username = data.get('username')

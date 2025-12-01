@@ -123,8 +123,53 @@ def upload_plan():
 @plans_bp.route('/', methods=['GET'])
 def browse_plans():
     """
-    Public endpoint to browse plans with advanced filtering, search, sort, and pagination.
-    Only shows plans with status='Available'.
+    Browse Plans
+    Public endpoint to browse plans with filtering, search, sort, and pagination.
+    ---
+    tags:
+      - Plans
+    parameters:
+      - name: search
+        in: query
+        type: string
+        description: Search by plan name
+      - name: category
+        in: query
+        type: string
+        description: Filter by category (Residential, Commercial, etc.)
+      - name: bedrooms
+        in: query
+        type: integer
+        description: Filter by number of bedrooms
+      - name: min_price
+        in: query
+        type: number
+        description: Minimum price filter
+      - name: max_price
+        in: query
+        type: number
+        description: Maximum price filter
+      - name: sort_by
+        in: query
+        type: string
+        enum: [price, sales_count, created_at]
+        default: created_at
+      - name: order
+        in: query
+        type: string
+        enum: [asc, desc]
+        default: desc
+      - name: limit
+        in: query
+        type: integer
+        default: 10
+      - name: offset
+        in: query
+        type: integer
+        default: 0
+    responses:
+      200:
+        description: List of available plans
     """
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)

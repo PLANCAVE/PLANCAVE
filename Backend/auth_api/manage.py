@@ -1,7 +1,7 @@
 import click
 from flask import Flask
 from flask_bcrypt import Bcrypt
-import psycopg2
+import psycopg
 import os
 from dotenv import load_dotenv
 
@@ -17,9 +17,9 @@ def get_db():
     using the DATABASE_URL environment variable.
     
     Returns:
-        psycopg2.connection: A new database connection.
+        psycopg.connection: A new database connection.
     """
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg.connect(DATABASE_URL)
 
 @click.group()
 def cli():

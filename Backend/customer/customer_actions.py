@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 from datetime import datetime
 import uuid
 import sys
@@ -14,7 +14,7 @@ customer_bp = Blueprint('customer', __name__, url_prefix='/customer')
 
 
 def get_db():
-    return psycopg2.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(current_app.config['DATABASE_URL'])
 
 
 @customer_bp.route('/plans/purchase', methods=['POST'])
@@ -62,7 +62,7 @@ def purchase_plan():
         return jsonify(message="plan_id is required"), 400
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Get plan details
@@ -135,7 +135,7 @@ def get_my_purchases():
     offset = request.args.get('offset', default=0, type=int)
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Count total
@@ -231,7 +231,7 @@ def get_favorites():
     user_id, role = get_current_user()
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""
@@ -361,7 +361,7 @@ def customer_dashboard():
     user_id, role = get_current_user()
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Purchase summary
@@ -439,7 +439,7 @@ def get_profile():
     user_id, role = get_current_user()
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""

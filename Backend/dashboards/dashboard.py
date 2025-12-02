@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 from datetime import datetime
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
@@ -13,7 +13,7 @@ def get_current_user():
 
 
 def get_db_connection():
-    return psycopg2.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(current_app.config['DATABASE_URL'])
 
 
 # ------------------------------
@@ -27,7 +27,7 @@ def admin_dashboard():
         return jsonify(message="Access denied: Admins only"), 403
 
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
 
     try:
         cur.execute("SELECT COUNT(*) FROM users;")
@@ -67,7 +67,7 @@ def architect_dashboard():
         return jsonify(message="Access denied: Designers only"), 403
 
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
 
     try:
         cur.execute("SELECT COUNT(*) FROM plans WHERE designer_id = %s;", (user_id,))
@@ -109,7 +109,7 @@ def customer_dashboard():
         return jsonify(message="Access denied: Customers only"), 403
 
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
 
     try:
         cur.execute("""
@@ -149,7 +149,7 @@ def my_profile():
     user_id, role = get_current_user()
 
     conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
 
     try:
         cur.execute("SELECT username, role, created_at FROM users WHERE id = %s;", (user_id,))

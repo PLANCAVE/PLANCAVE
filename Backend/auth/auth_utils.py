@@ -5,8 +5,8 @@ Role-based access control for PlanCave
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity
 from functools import wraps
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 
 
 def get_current_user():
@@ -82,7 +82,7 @@ def check_plan_ownership(plan_id, user_id, conn):
     Check if user owns a specific plan
     Returns: True if owner or admin, False otherwise
     """
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""
@@ -112,7 +112,7 @@ def get_user_info(user_id, conn):
     Get complete user information
     Returns: dict with user info or None
     """
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""
@@ -155,7 +155,7 @@ def check_user_quota(user_id, quota_type, conn):
     Check if user has remaining quota for an action
     Returns: (has_quota: bool, remaining: int)
     """
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""

@@ -3,8 +3,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 import os
 import uuid
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 from datetime import datetime
 import json
 
@@ -23,7 +23,7 @@ def get_current_user():
     return identity.get('id'), identity.get('role')
 
 def get_db():
-    return psycopg2.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(current_app.config['DATABASE_URL'])
 
 def allowed_file(filename, allowed_set):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_set
@@ -300,7 +300,7 @@ def browse_plans():
     Public endpoint to browse plans with filtering, search, sort, and pagination.
     """
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
 
     try:
         search = request.args.get('search', type=str)

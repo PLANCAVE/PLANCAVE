@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 from datetime import datetime, timedelta
 import sys
 import os
@@ -13,7 +13,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 def get_db():
-    return psycopg2.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(current_app.config['DATABASE_URL'])
 
 
 @admin_bp.route('/dashboard', methods=['GET'])
@@ -35,7 +35,7 @@ def admin_dashboard():
         description: Admin access required
     """
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor()
     
     try:
         # User statistics
@@ -49,7 +49,7 @@ def admin_dashboard():
                 COUNT(CASE WHEN is_active = true THEN 1 END) as active_users
             FROM users
         """)
-        user_stats = dict(cur.fetchone())
+        user_stats = cur.fetchone()
         
         # Plan statistics
         cur.execute("""
@@ -61,7 +61,7 @@ def admin_dashboard():
                 AVG(price) as avg_price
             FROM plans
         """)
-        plan_stats = dict(cur.fetchone())
+        plan_stats = cur.fetchone()
         
         # Revenue statistics
         cur.execute("""
@@ -74,7 +74,7 @@ def admin_dashboard():
             FROM purchases
             WHERE payment_status = 'completed'
         """)
-        revenue_stats = dict(cur.fetchone())
+        revenue_stats = cur.fetchone()
         
         # Activity statistics
         cur.execute("""
@@ -87,7 +87,7 @@ def admin_dashboard():
             FROM user_activity
             WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
         """)
-        activity_stats = dict(cur.fetchone())
+        activity_stats = cur.fetchone()
         
         # Top designers
         cur.execute("""
@@ -103,7 +103,7 @@ def admin_dashboard():
             ORDER BY total_revenue DESC
             LIMIT 10
         """)
-        top_designers = [dict(row) for row in cur.fetchall()]
+        top_designers = cur.fetchall()
         
         # Recent activity
         cur.execute("""
@@ -114,7 +114,7 @@ def admin_dashboard():
             ORDER BY ua.created_at DESC
             LIMIT 20
         """)
-        recent_activity = [dict(row) for row in cur.fetchall()]
+        recent_activity = cur.fetchall()
         
         return jsonify({
             "user_stats": user_stats,
@@ -146,7 +146,7 @@ def get_all_users():
     offset = request.args.get('offset', default=0, type=int)
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor()
     
     try:
         where_clauses = []
@@ -182,7 +182,7 @@ def get_all_users():
         """
         
         cur.execute(query, tuple(values + [limit, offset]))
-        users = [dict(row) for row in cur.fetchall()]
+        users = cur.fetchall()
         
         return jsonify({
             "metadata": {
@@ -209,7 +209,7 @@ def get_user_details(user_id):
     Get detailed information about a specific user
     """
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor()
     
     try:
         # User info
@@ -223,8 +223,6 @@ def get_user_details(user_id):
         if not user:
             return jsonify(message="User not found"), 404
         
-        user_dict = dict(user)
-        
         # Purchase history
         cur.execute("""
             SELECT p.*, pl.name as plan_name
@@ -234,7 +232,7 @@ def get_user_details(user_id):
             ORDER BY p.purchased_at DESC
             LIMIT 20
         """, (user_id,))
-        user_dict['purchases'] = [dict(row) for row in cur.fetchall()]
+        user['purchases'] = cur.fetchall()
         
         # Plans (if designer)
         if user['role'] in ['designer', 'admin']:
@@ -244,7 +242,7 @@ def get_user_details(user_id):
                 WHERE designer_id = %s
                 ORDER BY created_at DESC
             """, (user_id,))
-            user_dict['plans'] = [dict(row) for row in cur.fetchall()]
+            user['plans'] = cur.fetchall()
         
         # Recent activity
         cur.execute("""
@@ -254,9 +252,9 @@ def get_user_details(user_id):
             ORDER BY created_at DESC
             LIMIT 20
         """, (user_id,))
-        user_dict['recent_activity'] = [dict(row) for row in cur.fetchall()]
+        user['recent_activity'] = cur.fetchall()
         
-        return jsonify(user_dict), 200
+        return jsonify(user), 200
         
     except Exception as e:
         return jsonify(error=str(e)), 500
@@ -378,7 +376,7 @@ def get_all_plans():
     offset = request.args.get('offset', default=0, type=int)
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor()
     
     try:
         where_clauses = []
@@ -414,7 +412,7 @@ def get_all_plans():
         """
         
         cur.execute(query, tuple(values + [limit, offset]))
-        plans = [dict(row) for row in cur.fetchall()]
+        plans = cur.fetchall()
         
         return jsonify({
             "metadata": {
@@ -536,7 +534,7 @@ def get_revenue_analytics():
         group_by = "DATE_TRUNC('day', purchased_at)"
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor()
     
     try:
         # Revenue over time
@@ -551,7 +549,7 @@ def get_revenue_analytics():
             GROUP BY period
             ORDER BY period
         """)
-        revenue_timeline = [dict(row) for row in cur.fetchall()]
+        revenue_timeline = cur.fetchall()
         
         # Revenue by category
         cur.execute("""
@@ -565,7 +563,7 @@ def get_revenue_analytics():
             GROUP BY pl.category
             ORDER BY revenue DESC
         """)
-        revenue_by_category = [dict(row) for row in cur.fetchall()]
+        revenue_by_category = cur.fetchall()
         
         # Revenue by designer
         cur.execute("""
@@ -581,7 +579,7 @@ def get_revenue_analytics():
             ORDER BY revenue DESC
             LIMIT 10
         """)
-        top_earners = [dict(row) for row in cur.fetchall()]
+        top_earners = cur.fetchall()
         
         return jsonify({
             "revenue_timeline": revenue_timeline,
@@ -604,7 +602,7 @@ def get_platform_analytics():
     Overall platform analytics and metrics
     """
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor()
     
     try:
         # Growth metrics

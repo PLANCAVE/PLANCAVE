@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 from datetime import datetime
 import uuid
 
@@ -14,7 +14,7 @@ def get_current_user():
 
 
 def get_db():
-    return psycopg2.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(current_app.config['DATABASE_URL'])
 
 
 def check_team_permission(team_id, user_id, required_role=None):
@@ -23,7 +23,7 @@ def check_team_permission(team_id, user_id, required_role=None):
     Returns: (has_permission, user_role)
     """
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""
@@ -143,7 +143,7 @@ def get_my_teams():
     user_id, _ = get_current_user()
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""
@@ -181,7 +181,7 @@ def get_team_details(team_id):
         return jsonify(message="Access denied"), 403
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Get team info
@@ -360,7 +360,7 @@ def get_team_collections(team_id):
         return jsonify(message="Access denied"), 403
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""
@@ -436,7 +436,7 @@ def get_collection_plans(team_id, collection_id):
         return jsonify(message="Access denied"), 403
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         cur.execute("""

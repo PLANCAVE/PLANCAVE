@@ -3,8 +3,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 import os
 import uuid
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 from datetime import datetime
 import json
 import shutil
@@ -21,7 +21,7 @@ UPLOAD_FOLDER = 'uploads/plans'
 
 
 def get_db():
-    return psycopg2.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(current_app.config['DATABASE_URL'])
 
 
 def allowed_file(filename, allowed_extensions):
@@ -318,7 +318,7 @@ def get_plan_details(plan_id):
     Get complete plan details including BOQs, specs, compliance, and files
     """
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Get plan
@@ -370,7 +370,7 @@ def create_plan_version(plan_id):
     user_id, role = get_current_user()
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Check if plan exists and user owns it

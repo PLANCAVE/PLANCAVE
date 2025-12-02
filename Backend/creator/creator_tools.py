@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 from datetime import datetime, timedelta
 import uuid
 import sys
@@ -14,7 +14,7 @@ creator_tools_bp = Blueprint('creator_tools', __name__, url_prefix='/creator')
 
 
 def get_db():
-    return psycopg2.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(current_app.config['DATABASE_URL'])
 
 
 @creator_tools_bp.route('/analytics/overview', methods=['GET'])
@@ -38,7 +38,7 @@ def get_analytics_overview():
     user_id, role = get_current_user()
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Total plans
@@ -108,7 +108,7 @@ def get_plan_analytics(plan_id):
     days = request.args.get('days', default=30, type=int)
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Verify ownership
@@ -187,7 +187,7 @@ def get_revenue_analytics():
     period = request.args.get('period', default='month', type=str)  # 'week', 'month', 'year'
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         if period == 'week':
@@ -258,7 +258,7 @@ def get_my_plans():
     offset = request.args.get('offset', default=0, type=int)
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         where_clauses = ["designer_id = %s"]
@@ -402,7 +402,7 @@ def get_plan_versions(plan_id):
         return jsonify(message="Access denied: Designers only"), 403
     
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # Verify ownership

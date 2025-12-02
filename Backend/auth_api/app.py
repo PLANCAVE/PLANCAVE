@@ -3,8 +3,8 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flasgger import Swagger
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 import os
 import sys
 from dotenv import load_dotenv
@@ -86,7 +86,7 @@ def get_db():
     """
     Establishes and returns a new connection to the PostgreSQL database.
     """
-    return psycopg2.connect(app.config['DATABASE_URL'])
+    return psycopg.connect(app.config['DATABASE_URL'])
 
 
 def get_current_user():
@@ -123,7 +123,7 @@ def register_user(data, role):
     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
 
     conn = get_db()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=dict_row)
     try:
         # First try to add columns if they don't exist
         try:
@@ -138,9 +138,9 @@ def register_user(data, role):
             "INSERT INTO users (username, password, role, first_name, middle_name, last_name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;",
             (username, hashed_pw, role, first_name, middle_name, last_name)
         )
-        user_id = cur.fetchone()[0]
+        user_id = cur.fetchone()['id']
         conn.commit()
-    except psycopg2.errors.UniqueViolation:
+    except psycopg.OperationalError as e:
         conn.rollback()
         return jsonify(message="Username already exists"), 409
     finally:

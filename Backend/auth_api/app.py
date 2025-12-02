@@ -27,13 +27,28 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 # Enable CORS for frontend
-CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+# CORS configuration - allows frontend from any origin in production
+# In production, set FRONTEND_URL env variable for security
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# Add production frontend URL if set
+frontend_url = os.environ.get("FRONTEND_URL")
+if frontend_url:
+    allowed_origins.append(frontend_url)
+
+# For prototype/development: allow all Render domains
+# In production, replace this with specific domain
+if os.environ.get("ENV") != "production":
+    allowed_origins.append("*")  # Allow all origins for prototype
+
+CORS(app, 
+     resources={r"/*": {"origins": allowed_origins}},
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"],
+     supports_credentials=True)
 
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)

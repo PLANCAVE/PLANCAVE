@@ -3,7 +3,7 @@ Unified Authentication and Authorization Utilities
 Role-based access control for PlanCave
 """
 from flask import jsonify
-from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, get_jwt
 from functools import wraps
 import psycopg
 from psycopg.rows import dict_row
@@ -14,8 +14,14 @@ def get_current_user():
     Get current authenticated user from JWT token
     Returns: (user_id, role)
     """
-    identity = get_jwt_identity()
-    return identity.get('id'), identity.get('role')
+    # Identity is now a string (user_id)
+    user_id = int(get_jwt_identity())
+    
+    # Role is in additional claims
+    claims = get_jwt()
+    role = claims.get('role')
+    
+    return user_id, role
 
 
 def require_role(*allowed_roles):

@@ -328,8 +328,7 @@ def delete_user(user_id):
     
     try:
         # Get current admin's ID
-        identity = get_jwt_identity()
-        current_user_id = identity['id']
+        current_user_id = int(get_jwt_identity())
         
         # Prevent self-deletion
         if user_id == current_user_id:

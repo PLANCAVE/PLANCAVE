@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from werkzeug.utils import secure_filename
 import os
 import uuid
@@ -19,8 +19,10 @@ ALLOWED_EXTENSIONS_BOQ = {'xlsx', 'xls', 'pdf'}
 ALLOWED_EXTENSIONS_IMAGES = {'jpg', 'jpeg', 'png'}
 
 def get_current_user():
-    identity = get_jwt_identity()
-    return identity.get('id'), identity.get('role')
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    role = claims.get('role')
+    return user_id, role
 
 def get_db():
     return psycopg.connect(current_app.config['DATABASE_URL'])

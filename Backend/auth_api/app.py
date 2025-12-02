@@ -121,8 +121,11 @@ def get_current_user():
     Returns:
         tuple: User ID and role of the currently authenticated user.
     """
-    identity = get_jwt_identity()
-    return identity['id'], identity['role']
+    from flask_jwt_extended import get_jwt
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    role = claims.get('role')
+    return user_id, role
 
 
 def register_user(data, role):
@@ -327,7 +330,10 @@ def login():
         return jsonify(message="Your account has been deactivated. Please contact admin@plancave.com."), 403
 
     if bcrypt.check_password_hash(hashed_pw, password):
-        token = create_access_token(identity={"id": user_id, "role": role})
+        token = create_access_token(
+            identity=str(user_id),
+            additional_claims={"role": role, "email": username}
+        )
         return jsonify(access_token=token)
     else:
         return jsonify(message="Invalid credentials"), 401

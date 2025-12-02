@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 import psycopg
 from psycopg.rows import dict_row
 from datetime import datetime
@@ -8,8 +8,10 @@ dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
 
 def get_current_user():
-    identity = get_jwt_identity()
-    return identity.get('id'), identity.get('role')
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    role = claims.get('role')
+    return user_id, role
 
 
 def get_db_connection():

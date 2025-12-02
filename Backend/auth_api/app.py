@@ -375,6 +375,77 @@ def init_db():
         if conn:
             conn.close()
 
+@app.route('/admin/run-migrations', methods=['POST'])
+@jwt_required()
+def run_migrations():
+    """
+    ONE-TIME MIGRATION ENDPOINT
+    Run database migrations to set up all tables and columns.
+    Admin access required. Safe to run multiple times (idempotent).
+    """
+    from auth.auth_utils import get_current_user
+    
+    try:
+        user_id, role = get_current_user()
+        if role != 'admin':
+            return jsonify(message="Admin access required"), 403
+    except Exception as e:
+        return jsonify(message="Authentication failed", error=str(e)), 401
+    
+    conn = None
+    cur = None
+    
+    try:
+        conn = psycopg.connect(app.config['DATABASE_URL'])
+        conn.autocommit = True
+        cur = conn.cursor()
+        
+        # Read SQL files
+        base_schema_path = os.path.join(os.path.dirname(__file__), 'db.sql')
+        migrations_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'migrations.sql')
+        
+        results = []
+        
+        # Run base schema
+        if os.path.exists(base_schema_path):
+            with open(base_schema_path, 'r') as f:
+                base_schema = f.read()
+            cur.execute(base_schema)
+            results.append("✅ Base schema (db.sql) applied successfully")
+        else:
+            results.append("⚠️ Base schema file not found")
+        
+        # Run migrations
+        if os.path.exists(migrations_path):
+            with open(migrations_path, 'r') as f:
+                migrations = f.read()
+            cur.execute(migrations)
+            results.append("✅ Migrations (migrations.sql) applied successfully")
+        else:
+            results.append("⚠️ Migrations file not found")
+        
+        results.append("✅ All migrations completed successfully!")
+        
+        return jsonify({
+            "message": "Migrations completed",
+            "details": results
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        return jsonify({
+            "message": "Migration failed",
+            "error": str(e),
+            "traceback": error_trace
+        }), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
 if __name__ == '__main__':
     # Initialize database on startup
     init_db()

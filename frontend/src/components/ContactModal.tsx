@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Mail, Phone, MapPin, Send } from 'lucide-react';
 
 interface ContactModalProps {
@@ -14,6 +14,18 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
     message: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,16 +43,25 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button - top right, outside the colored header for better visibility */}
+        <button
+          onClick={onClose}
+          className="absolute -top-3 -right-3 z-10 bg-white text-gray-700 p-2 rounded-full shadow-lg hover:bg-gray-100 transition-colors border-2 border-gray-200"
+          aria-label="Close modal"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-6 rounded-t-2xl relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-6 rounded-t-2xl">
           <h2 className="text-3xl font-bold mb-2">Get In Touch</h2>
           <p className="text-teal-100">We're here to help with your construction plans</p>
         </div>

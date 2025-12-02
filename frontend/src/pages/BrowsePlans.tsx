@@ -74,18 +74,6 @@ export default function BrowsePlans() {
     setBedrooms('');
   };
 
-  const getDisciplineCount = (disciplines: any) => {
-    if (!disciplines) return 0;
-    let count = 0;
-    if (disciplines.architectural) count++;
-    if (disciplines.structural) count++;
-    if (disciplines.mep?.mechanical || disciplines.mep?.electrical || disciplines.mep?.plumbing) count++;
-    if (disciplines.civil) count++;
-    if (disciplines.fire_safety) count++;
-    if (disciplines.interior) count++;
-    return count;
-  };
-
   const getPackageBadgeColor = (level: string) => {
     switch(level) {
       case 'basic': return 'bg-gray-100 text-gray-700';

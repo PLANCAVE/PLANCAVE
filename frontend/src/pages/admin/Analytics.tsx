@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getDesignerAnalytics, getCustomerAnalytics } from '../../api';
-import { Users, DollarSign, TrendingUp, ShoppingCart, FileText, Eye } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, ShoppingCart, FileText } from 'lucide-react';
 
 interface Designer {
   designer_id: number;

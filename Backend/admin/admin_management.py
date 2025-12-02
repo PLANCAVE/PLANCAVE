@@ -35,7 +35,7 @@ def admin_dashboard():
         description: Admin access required
     """
     conn = get_db()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # User statistics
@@ -49,7 +49,7 @@ def admin_dashboard():
                 COUNT(CASE WHEN is_active = true THEN 1 END) as active_users
             FROM users
         """)
-        user_stats = cur.fetchone()
+        user_stats = dict(cur.fetchone())
         
         # Plan statistics
         cur.execute("""
@@ -57,45 +57,45 @@ def admin_dashboard():
                 COUNT(*) as total_plans,
                 COUNT(CASE WHEN status = 'Available' THEN 1 END) as available_plans,
                 COUNT(CASE WHEN status = 'Draft' THEN 1 END) as draft_plans,
-                SUM(sales_count) as total_sales,
-                AVG(price) as avg_price
+                COALESCE(SUM(sales_count), 0) as total_sales,
+                COALESCE(AVG(price), 0) as avg_price
             FROM plans
         """)
-        plan_stats = cur.fetchone()
+        plan_stats = dict(cur.fetchone())
         
         # Revenue statistics
         cur.execute("""
             SELECT 
-                COUNT(*) as total_purchases,
-                SUM(amount) as total_revenue,
-                AVG(amount) as avg_transaction,
-                SUM(CASE WHEN purchased_at >= CURRENT_DATE - INTERVAL '30 days' THEN amount ELSE 0 END) as revenue_30d,
-                COUNT(CASE WHEN purchased_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as purchases_30d
+                COALESCE(COUNT(*), 0) as total_purchases,
+                COALESCE(SUM(amount), 0) as total_revenue,
+                COALESCE(AVG(amount), 0) as avg_transaction,
+                COALESCE(SUM(CASE WHEN purchased_at >= CURRENT_DATE - INTERVAL '30 days' THEN amount ELSE 0 END), 0) as revenue_30d,
+                COALESCE(COUNT(CASE WHEN purchased_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END), 0) as purchases_30d
             FROM purchases
             WHERE payment_status = 'completed'
         """)
-        revenue_stats = cur.fetchone()
+        revenue_stats = dict(cur.fetchone())
         
         # Activity statistics
         cur.execute("""
             SELECT 
-                COUNT(*) as total_activities,
-                COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '24 hours' THEN 1 END) as activities_24h,
-                COUNT(CASE WHEN activity_type = 'login' THEN 1 END) as logins,
-                COUNT(CASE WHEN activity_type = 'purchase' THEN 1 END) as purchases,
-                COUNT(CASE WHEN activity_type = 'view' THEN 1 END) as views
+                COALESCE(COUNT(*), 0) as total_activities,
+                COALESCE(COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '24 hours' THEN 1 END), 0) as activities_24h,
+                COALESCE(COUNT(CASE WHEN activity_type = 'login' THEN 1 END), 0) as logins,
+                COALESCE(COUNT(CASE WHEN activity_type = 'purchase' THEN 1 END), 0) as purchases,
+                COALESCE(COUNT(CASE WHEN activity_type = 'view' THEN 1 END), 0) as views
             FROM user_activity
             WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
         """)
-        activity_stats = cur.fetchone()
+        activity_stats = dict(cur.fetchone())
         
         # Top designers
         cur.execute("""
             SELECT 
                 u.id, u.username, u.email,
                 COUNT(p.id) as total_plans,
-                SUM(p.sales_count) as total_sales,
-                SUM(p.price * p.sales_count) as total_revenue
+                COALESCE(SUM(p.sales_count), 0) as total_sales,
+                COALESCE(SUM(p.price * p.sales_count), 0) as total_revenue
             FROM users u
             LEFT JOIN plans p ON u.id = p.designer_id
             WHERE u.role = 'designer'
@@ -103,7 +103,7 @@ def admin_dashboard():
             ORDER BY total_revenue DESC
             LIMIT 10
         """)
-        top_designers = cur.fetchall()
+        top_designers = [dict(row) for row in cur.fetchall()]
         
         # Recent activity
         cur.execute("""
@@ -114,7 +114,7 @@ def admin_dashboard():
             ORDER BY ua.created_at DESC
             LIMIT 20
         """)
-        recent_activity = cur.fetchall()
+        recent_activity = [dict(row) for row in cur.fetchall()]
         
         return jsonify({
             "user_stats": user_stats,
@@ -146,7 +146,7 @@ def get_all_users():
     offset = request.args.get('offset', default=0, type=int)
     
     conn = get_db()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         where_clauses = []
@@ -168,7 +168,7 @@ def get_all_users():
         
         # Count total
         cur.execute(f"SELECT COUNT(*) FROM users WHERE {where_sql}", tuple(values))
-        total_count = cur.fetchone()[0]
+        total_count = cur.fetchone()['count']
         
         # Get users
         query = f"""
@@ -182,7 +182,7 @@ def get_all_users():
         """
         
         cur.execute(query, tuple(values + [limit, offset]))
-        users = cur.fetchall()
+        users = [dict(row) for row in cur.fetchall()]
         
         return jsonify({
             "metadata": {
@@ -209,7 +209,7 @@ def get_user_details(user_id):
     Get detailed information about a specific user
     """
     conn = get_db()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         # User info
@@ -219,9 +219,11 @@ def get_user_details(user_id):
             WHERE id = %s
         """, (user_id,))
         
-        user = cur.fetchone()
-        if not user:
+        user_row = cur.fetchone()
+        if not user_row:
             return jsonify(message="User not found"), 404
+        
+        user = dict(user_row)
         
         # Purchase history
         cur.execute("""
@@ -232,7 +234,7 @@ def get_user_details(user_id):
             ORDER BY p.purchased_at DESC
             LIMIT 20
         """, (user_id,))
-        user['purchases'] = cur.fetchall()
+        user['purchases'] = [dict(row) for row in cur.fetchall()]
         
         # Plans (if designer)
         if user['role'] in ['designer', 'admin']:
@@ -242,7 +244,7 @@ def get_user_details(user_id):
                 WHERE designer_id = %s
                 ORDER BY created_at DESC
             """, (user_id,))
-            user['plans'] = cur.fetchall()
+            user['plans'] = [dict(row) for row in cur.fetchall()]
         
         # Recent activity
         cur.execute("""
@@ -252,7 +254,7 @@ def get_user_details(user_id):
             ORDER BY created_at DESC
             LIMIT 20
         """, (user_id,))
-        user['recent_activity'] = cur.fetchall()
+        user['recent_activity'] = [dict(row) for row in cur.fetchall()]
         
         return jsonify(user), 200
         
@@ -376,7 +378,7 @@ def get_all_plans():
     offset = request.args.get('offset', default=0, type=int)
     
     conn = get_db()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=dict_row)
     
     try:
         where_clauses = []
@@ -398,7 +400,7 @@ def get_all_plans():
         
         # Count total
         cur.execute(f"SELECT COUNT(*) FROM plans WHERE {where_sql}", tuple(values))
-        total_count = cur.fetchone()[0]
+        total_count = cur.fetchone()['count']
         
         # Get plans
         query = f"""
@@ -412,7 +414,7 @@ def get_all_plans():
         """
         
         cur.execute(query, tuple(values + [limit, offset]))
-        plans = cur.fetchall()
+        plans = [dict(row) for row in cur.fetchall()]
         
         return jsonify({
             "metadata": {

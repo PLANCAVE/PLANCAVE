@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
+from flask_cors import CORS
 from flasgger import Swagger
 import psycopg2
 import psycopg2.extras
@@ -24,6 +25,15 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Enable CORS for frontend
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)

@@ -14,15 +14,15 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b border-purple-500/20 sticky top-0 z-50 backdrop-blur-xl">
+    <header className="bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] border-b border-teal-500/20 sticky top-0 z-50 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl text-white group">
-            <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center group-hover:shadow-lg group-hover:shadow-purple-500/50 transition-all">
-              <Building2 className="w-5 h-5 text-white" />
+          <Link to="/" className="flex items-center gap-3 font-serif font-light text-xl tracking-wider text-white group hover:text-teal-300 transition-all">
+            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center group-hover:shadow-2xl group-hover:shadow-teal-400/60 group-hover:scale-110 transition-all duration-300">
+              <Building2 className="w-6 h-6 text-white" />
             </div>
-            PlanCave
+            <span className="drop-shadow-lg">The Plancave</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -38,9 +38,9 @@ export default function Header() {
                   Dashboard
                 </Link>
                 
-                <div className="flex items-center gap-4 ml-4 pl-4 border-l border-purple-500/30">
+                <div className="flex items-center gap-4 ml-4 pl-4 border-l border-teal-500/30">
                   <span className="text-sm text-gray-300">
-                    {user?.email} <span className="text-purple-400">({user?.role})</span>
+                    {user?.email} <span className="text-teal-400">({user?.role})</span>
                   </span>
                   <button
                     onClick={handleLogout}
@@ -56,7 +56,7 @@ export default function Header() {
                 <Link to="/login" className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg transition-all border border-white/20">
                   Sign In
                 </Link>
-                <Link to="/register" className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition-all">
+                <Link to="/register" className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all">
                   Sign Up
                 </Link>
               </>
@@ -78,7 +78,7 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-purple-500/20">
+          <div className="md:hidden py-4 border-t border-teal-500/20">
             <nav className="flex flex-col gap-4">
               <Link
                 to="/plans"
@@ -97,9 +97,9 @@ export default function Header() {
                   >
                     Dashboard
                   </Link>
-                  <div className="pt-4 border-t border-purple-500/20">
+                  <div className="pt-4 border-t border-teal-500/20">
                     <p className="text-sm text-gray-300 mb-2">
-                      {user?.email} <span className="text-purple-400">({user?.role})</span>
+                      {user?.email} <span className="text-teal-400">({user?.role})</span>
                     </p>
                     <button
                       onClick={() => {
@@ -123,7 +123,7 @@ export default function Header() {
                   </Link>
                   <Link
                     to="/register"
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition-all text-center"
+                    className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all text-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Sign Up

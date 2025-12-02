@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Building2, Sparkles, TrendingUp, ArrowRight, CheckCircle, Zap } from 'lucide-react';
+import { Building2, TrendingUp, ArrowRight, CheckCircle, Zap, Hammer, Calculator, Ruler, PenTool } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a]">
       {/* Hero Section with 3D Elements */}
       <div className="relative overflow-hidden">
         {/* Animated Background Grid */}
@@ -14,30 +14,97 @@ export default function Landing() {
         
         {/* Floating 3D Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute top-40 right-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-float-delayed"></div>
-          <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl animate-float-slow"></div>
+          <div className="absolute top-20 left-10 w-64 h-64 bg-teal-500/20 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute top-40 right-20 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-float-delayed"></div>
+          <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 py-24 md:py-32">
           <div className="text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-8 backdrop-blur-sm">
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span className="text-purple-300 text-sm font-medium">Professional Architectural Designs</span>
+            {/* Elegant Logo/Heading */}
+            <div className="mb-8">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="h-px w-24 md:w-32 bg-gradient-to-r from-transparent to-white"></div>
+                <span className="text-lg md:text-xl font-light tracking-widest text-white">THE</span>
+                <div className="h-px w-24 md:w-32 bg-gradient-to-l from-transparent to-white"></div>
+              </div>
+              <h1 className="text-6xl md:text-8xl font-serif font-light tracking-[0.2em] text-white mb-4">
+                PLANCAVE
+              </h1>
+              <div className="flex items-center justify-center gap-8">
+                <div className="h-px w-16 md:w-24 bg-white"></div>
+                <div className="h-px w-16 md:w-24 bg-white"></div>
+              </div>
             </div>
 
-            {/* Main Heading */}
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-              Buy & Sell Plans
-              <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-                The Smart Way
-              </span>
-            </h1>
-
-            <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
-              Browse and purchase professional designs, or showcase your work to thousands of buyers worldwide
+            <p className="text-2xl md:text-3xl text-teal-100 mb-16 max-w-3xl mx-auto font-light tracking-wide drop-shadow-lg">
+              Your Complete Construction Solutions Partner
             </p>
+
+            {/* Services Grid - 3D Cards */}
+            <div className="mb-16 max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                {/* Design & Build */}
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+                  <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:bg-white/20 transition-all duration-500 transform hover:-translate-y-3 hover:rotate-1 cursor-pointer">
+                    <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-lg">
+                      <PenTool className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-semibold text-sm mb-1">Design & Build</h3>
+                    <p className="text-teal-200 text-xs">Consultants</p>
+                  </div>
+                </div>
+
+                {/* Contractors */}
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+                  <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:bg-white/20 transition-all duration-500 transform hover:-translate-y-3 hover:rotate-1 cursor-pointer">
+                    <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-lg">
+                      <Hammer className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-semibold text-sm mb-1">Contractors</h3>
+                    <p className="text-teal-200 text-xs">Builders</p>
+                  </div>
+                </div>
+
+                {/* Architects */}
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-2xl blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+                  <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:bg-white/20 transition-all duration-500 transform hover:-translate-y-3 hover:rotate-1 cursor-pointer">
+                    <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-lg">
+                      <Building2 className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-semibold text-sm mb-1">Architects</h3>
+                    <p className="text-teal-200 text-xs">Designers</p>
+                  </div>
+                </div>
+
+                {/* Structural Engineers */}
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+                  <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:bg-white/20 transition-all duration-500 transform hover:-translate-y-3 hover:rotate-1 cursor-pointer">
+                    <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-lg">
+                      <Ruler className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-semibold text-sm mb-1">Structural</h3>
+                    <p className="text-teal-200 text-xs">Engineers</p>
+                  </div>
+                </div>
+
+                {/* Costing Experts */}
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+                  <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:bg-white/20 transition-all duration-500 transform hover:-translate-y-3 hover:rotate-1 cursor-pointer">
+                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-lg">
+                      <Calculator className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-semibold text-sm mb-1">Costing</h3>
+                    <p className="text-teal-200 text-xs">Experts</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -45,7 +112,7 @@ export default function Landing() {
                 <>
                   <Link
                     to="/plans"
-                    className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 flex items-center gap-2"
+                    className="group px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-teal-500/50 transition-all duration-300 flex items-center gap-2"
                   >
                     Browse Plans
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -61,7 +128,7 @@ export default function Landing() {
                 <>
                   <Link
                     to="/register"
-                    className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 flex items-center gap-2"
+                    className="group px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-teal-500/50 transition-all duration-300 flex items-center gap-2"
                   >
                     Get Started Free
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -100,7 +167,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Why Choose PlanCave?
+              Why Choose The Plancave?
             </h2>
             <p className="text-xl text-gray-400">Everything you need to bring your vision to life</p>
           </div>
@@ -108,13 +175,13 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature Card 1 */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-              <div className="relative bg-slate-800/50 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-8 hover:border-purple-500/40 transition-all duration-300 transform hover:-translate-y-2">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center mb-6">
-                  <Building2 className="w-7 h-7 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+              <div className="relative bg-white/10 backdrop-blur-2xl border border-white/30 rounded-2xl p-8 hover:bg-white/15 transition-all duration-500 transform hover:-translate-y-4 hover:scale-105 cursor-pointer">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-2xl">
+                  <Building2 className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-3">Professional Designs</h3>
-                <p className="text-gray-400">
+                <p className="text-gray-200">
                   Access thousands of professional architectural plans created by expert designers and architects
                 </p>
               </div>
@@ -122,13 +189,13 @@ export default function Landing() {
 
             {/* Feature Card 2 */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-              <div className="relative bg-slate-800/50 backdrop-blur-xl border border-pink-500/20 rounded-2xl p-8 hover:border-pink-500/40 transition-all duration-300 transform hover:-translate-y-2">
-                <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-500 rounded-xl flex items-center justify-center mb-6">
-                  <Zap className="w-7 h-7 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 rounded-2xl blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+              <div className="relative bg-white/10 backdrop-blur-2xl border border-white/30 rounded-2xl p-8 hover:bg-white/15 transition-all duration-500 transform hover:-translate-y-4 hover:scale-105 cursor-pointer">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-2xl">
+                  <Zap className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-3">Instant Access</h3>
-                <p className="text-gray-400">
+                <p className="text-gray-200">
                   Purchase and download plans instantly. Get detailed BOQs, specifications, and compliance documents
                 </p>
               </div>
@@ -136,13 +203,13 @@ export default function Landing() {
 
             {/* Feature Card 3 */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-              <div className="relative bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-8 hover:border-blue-500/40 transition-all duration-300 transform hover:-translate-y-2">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-6">
-                  <TrendingUp className="w-7 h-7 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-green-600 to-lime-600 rounded-2xl blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+              <div className="relative bg-white/10 backdrop-blur-2xl border border-white/30 rounded-2xl p-8 hover:bg-white/15 transition-all duration-500 transform hover:-translate-y-4 hover:scale-105 cursor-pointer">
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 via-green-500 to-lime-500 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-2xl">
+                  <TrendingUp className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-3">For Designers</h3>
-                <p className="text-gray-400">
+                <p className="text-gray-200">
                   Sell your designs, track analytics, and earn from your expertise. Join our community of creators
                 </p>
               </div>
@@ -155,29 +222,41 @@ export default function Landing() {
       <div className="relative py-24 border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                1000+
+            <div className="text-center group cursor-pointer">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
+                <div className="relative text-6xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent drop-shadow-2xl">
+                  1000+
+                </div>
               </div>
-              <div className="text-gray-400">Design Plans</div>
+              <div className="text-gray-300 text-lg font-medium">Design Plans</div>
             </div>
-            <div className="text-center">
-              <div className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-2">
-                500+
+            <div className="text-center group cursor-pointer">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
+                <div className="relative text-6xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent drop-shadow-2xl">
+                  500+
+                </div>
               </div>
-              <div className="text-gray-400">Designers</div>
+              <div className="text-gray-300 text-lg font-medium">Designers</div>
             </div>
-            <div className="text-center">
-              <div className="text-5xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
-                5000+
+            <div className="text-center group cursor-pointer">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
+                <div className="relative text-6xl font-bold bg-gradient-to-r from-emerald-400 via-green-400 to-lime-400 bg-clip-text text-transparent drop-shadow-2xl">
+                  5000+
+                </div>
               </div>
-              <div className="text-gray-400">Happy Customers</div>
+              <div className="text-gray-300 text-lg font-medium">Happy Customers</div>
             </div>
-            <div className="text-center">
-              <div className="text-5xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mb-2">
-                24/7
+            <div className="text-center group cursor-pointer">
+              <div className="relative inline-block mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
+                <div className="relative text-6xl font-bold bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400 bg-clip-text text-transparent drop-shadow-2xl">
+                  24/7
+                </div>
               </div>
-              <div className="text-gray-400">Support</div>
+              <div className="text-gray-300 text-lg font-medium">Support</div>
             </div>
           </div>
         </div>
@@ -186,22 +265,27 @@ export default function Landing() {
       {/* CTA Section */}
       <div className="relative py-24">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl blur-2xl opacity-20"></div>
-            <div className="relative bg-gradient-to-r from-purple-600/20 to-blue-600/20 backdrop-blur-xl border border-purple-500/30 rounded-3xl p-12">
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 via-red-600 via-orange-600 to-yellow-600 rounded-3xl blur-3xl opacity-40 group-hover:opacity-60 transition-opacity duration-500 animate-pulse"></div>
+            <div className="relative bg-white/10 backdrop-blur-2xl border-2 border-white/30 rounded-3xl p-12 transform group-hover:scale-105 transition-all duration-500">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-full flex items-center justify-center shadow-2xl animate-bounce">
+                  <CheckCircle className="w-10 h-10 text-white" />
+                </div>
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 mt-8 drop-shadow-2xl">
                 Ready to Start Building?
               </h2>
-              <p className="text-xl text-gray-300 mb-8">
-                Join thousands of architects, designers, and builders using PlanCave
+              <p className="text-xl md:text-2xl text-gray-100 mb-10 font-light">
+                Join thousands of architects, designers, and builders using The Plancave
               </p>
               {!isAuthenticated && (
                 <Link
                   to="/register"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-900 rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-white/50 transition-all duration-300"
+                  className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white rounded-2xl font-bold text-xl hover:shadow-2xl hover:shadow-pink-500/50 transition-all duration-300 transform hover:scale-110 hover:-translate-y-1"
                 >
                   Get Started Now
-                  <ArrowRight className="w-5 h-5" />
+                  <ArrowRight className="w-6 h-6" />
                 </Link>
               )}
             </div>

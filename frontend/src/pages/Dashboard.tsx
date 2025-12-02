@@ -39,7 +39,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/20 py-8">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -149,13 +149,27 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">
               Start uploading your architectural plans and track your sales & analytics here.
             </p>
-            <button className="btn-primary">
-              Upload Your First Plan
-            </button>
+            <div className="flex gap-4 justify-center">
+              <a href="/designer/upload" className="btn-primary">
+                Upload Your First Plan
+              </a>
+              <a href="/designer/my-plans" className="btn-secondary">
+                View My Plans
+              </a>
+            </div>
           </div>
         )}
         
         {isDesigner && !isAdmin && data && (
+          <>
+            <div className="mb-6 flex gap-4">
+              <a href="/designer/upload" className="btn-primary">
+                Upload New Plan
+              </a>
+              <a href="/designer/my-plans" className="btn-secondary">
+                My Plans
+              </a>
+            </div>
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="card">
@@ -221,11 +235,20 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+          </>
         )}
 
         {/* Admin Dashboard */}
         {isAdmin && data && (
           <div className="space-y-6">
+            <div className="mb-6 flex gap-4">
+              <a href="/admin/users" className="btn-primary">
+                Manage Users
+              </a>
+              <a href="/admin/plans" className="btn-secondary">
+                Manage Plans
+              </a>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="card">
                 <div className="flex items-center justify-between">

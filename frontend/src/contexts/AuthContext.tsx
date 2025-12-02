@@ -23,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('access_token');
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
     }
+    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -40,13 +42,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Decode JWT to get user info (basic decode, not secure validation)
     const payload = JSON.parse(atob(access_token.split('.')[1]));
+    console.log('JWT Payload:', JSON.stringify(payload, null, 2));
+    
     // flask-jwt-extended stores identity in 'sub' claim
     const identity = payload.sub || payload;
+    console.log('Identity:', JSON.stringify(identity, null, 2));
+    
     const userData: User = {
       id: identity.id,
       email: email, // Use the email from login form
       role: identity.role,
     };
+    
+    console.log('User Data:', JSON.stringify(userData, null, 2));
+    console.log('isAdmin will be:', userData.role === 'admin');
     
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -71,6 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isDesigner: user?.role === 'designer' || user?.role === 'admin',
     isCustomer: user?.role === 'customer',
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+      </div>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

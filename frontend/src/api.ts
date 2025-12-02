@@ -73,8 +73,20 @@ export const getAdminDashboard = () =>
 export const getAllUsers = (params?: Record<string, any>) =>
   api.get('/admin/users', { params });
 
+export const updateUser = (userId: number, data: {role?: string; is_active?: boolean}) =>
+  api.put(`/admin/users/${userId}`, data);
+
+export const deleteUser = (userId: number) =>
+  api.delete(`/admin/users/${userId}`);
+
 export const getAllPlans = (params?: Record<string, any>) =>
   api.get('/admin/plans', { params });
+
+export const updatePlan = (planId: string, data: Record<string, any>) =>
+  api.put(`/admin/plans/${planId}`, data);
+
+export const deletePlan = (planId: string) =>
+  api.delete(`/admin/plans/${planId}`);
 
 // Teams
 export const createTeam = (name: string, description?: string) =>

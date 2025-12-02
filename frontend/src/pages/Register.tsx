@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerCustomer, registerDesigner } from '../api';
-import { Building2 } from 'lucide-react';
+import { Building2, ShoppingBag, Pencil, Check } from 'lucide-react';
 
 export default function Register() {
   const [firstName, setFirstName] = useState('');
@@ -10,7 +10,7 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'customer' | 'designer'>('customer');
+  const [wantsToSellPlans, setWantsToSellPlans] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -44,11 +44,14 @@ export default function Register() {
 
     try {
       const userData = { email, password, first_name: firstName, middle_name: middleName, last_name: lastName };
-      if (role === 'customer') {
-        await registerCustomer(userData.email, userData.password, userData.first_name, userData.middle_name, userData.last_name);
-      } else {
+      
+      // Register as designer if they want to sell plans, otherwise as customer
+      if (wantsToSellPlans) {
         await registerDesigner(userData.email, userData.password, userData.first_name, userData.middle_name, userData.last_name);
+      } else {
+        await registerCustomer(userData.email, userData.password, userData.first_name, userData.middle_name, userData.last_name);
       }
+      
       navigate('/login', { state: { message: 'Registration successful! Please login with your credentials.' } });
     } catch (err: any) {
       // Show detailed error messages
@@ -98,34 +101,45 @@ export default function Register() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                I want to:
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole('customer')}
-                  className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                    role === 'customer'
-                      ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  Buy Plans
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('designer')}
-                  className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                    role === 'designer'
-                      ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  Sell Plans
-                </button>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Account Type Info */}
+            <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-200 rounded-xl p-5">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-teal-600 rounded-lg">
+                  <ShoppingBag className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 text-lg mb-1">
+                    Create Your Account
+                  </h3>
+                  <p className="text-gray-700 text-sm mb-3">
+                    All accounts can browse and purchase professional construction plans from our marketplace.
+                  </p>
+                  
+                  {/* Designer Checkbox */}
+                  <label className="flex items-start gap-3 p-4 bg-white rounded-lg border-2 border-teal-300 cursor-pointer hover:bg-teal-50 transition-all group">
+                    <input
+                      type="checkbox"
+                      checked={wantsToSellPlans}
+                      onChange={(e) => setWantsToSellPlans(e.target.checked)}
+                      className="w-5 h-5 text-teal-600 rounded mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Pencil className="w-5 h-5 text-teal-600" />
+                        <span className="font-semibold text-gray-900">I also want to sell my plans as a designer</span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Upload and sell your architectural, structural, and construction plans on our platform. You'll be able to both buy and sell plans.
+                      </p>
+                    </div>
+                    {wantsToSellPlans && (
+                      <div className="p-1 bg-teal-600 rounded-full">
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </label>
+                </div>
               </div>
             </div>
 

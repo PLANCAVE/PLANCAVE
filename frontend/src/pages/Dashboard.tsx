@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getCustomerDashboard, getAnalyticsOverview, getAdminDashboard } from '../api';
+import api, { getCustomerDashboard, getAnalyticsOverview, getAdminDashboard } from '../api';
 import { ShoppingBag, Heart, TrendingUp, Users, FileText, DollarSign } from 'lucide-react';
 
 export default function Dashboard() {
@@ -8,6 +8,8 @@ export default function Dashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'running' | 'success' | 'error'>("idle");
+  const [migrationMessage, setMigrationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboard();
@@ -31,6 +33,26 @@ export default function Dashboard() {
       setError(error?.response?.data?.message || error?.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runMigrationsFromAdmin = async () => {
+    if (!isAdmin) return;
+    try {
+      setMigrationStatus('running');
+      setMigrationMessage(null);
+      const response = await api.post('/admin/run-migrations');
+      const details = (response.data?.details || []).join(' \n');
+      setMigrationStatus('success');
+      setMigrationMessage(details || 'Migrations completed successfully');
+      // Reload dashboard data after successful migrations
+      setLoading(true);
+      await loadDashboard();
+    } catch (err: any) {
+      setMigrationStatus('error');
+      const msg = err?.response?.data?.message || err?.message || 'Failed to run migrations';
+      const extra = err?.response?.data?.error || '';
+      setMigrationMessage(extra ? `${msg}: ${extra}` : msg);
     }
   };
 
@@ -78,6 +100,32 @@ export default function Dashboard() {
             >
               Retry
             </button>
+          </div>
+        )}
+
+        {/* Admin Migration Status */}
+        {isAdmin && migrationStatus !== 'idle' && (
+          <div
+            className={`mb-6 px-6 py-4 rounded-lg border text-sm ${
+              migrationStatus === 'running'
+                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                : migrationStatus === 'success'
+                ? 'bg-green-50 border-green-200 text-green-700'
+                : 'bg-red-50 border-red-200 text-red-700'
+            }`}
+          >
+            <p className="font-semibold">
+              {migrationStatus === 'running'
+                ? 'Running database migrations...'
+                : migrationStatus === 'success'
+                ? 'Migrations completed'
+                : 'Migration failed'}
+            </p>
+            {migrationMessage && (
+              <pre className="mt-2 whitespace-pre-wrap text-xs bg-white/70 rounded p-2 max-h-60 overflow-auto">
+                {migrationMessage}
+              </pre>
+            )}
           </div>
         )}
 
@@ -278,7 +326,7 @@ export default function Dashboard() {
         {/* Admin Dashboard */}
         {isAdmin && data && (
           <div className="space-y-6">
-            <div className="mb-6 flex flex-wrap gap-4">
+            <div className="mb-6 flex flex-wrap gap-4 items-center">
               <a href="/admin/users" className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all font-semibold">
                 Manage Users
               </a>
@@ -291,6 +339,18 @@ export default function Dashboard() {
               <a href="/admin/analytics" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all font-semibold">
                 View Analytics
               </a>
+              <button
+                type="button"
+                onClick={runMigrationsFromAdmin}
+                disabled={migrationStatus === 'running'}
+                className={`px-6 py-3 rounded-lg font-semibold border transition-all ${
+                  migrationStatus === 'running'
+                    ? 'bg-gray-200 text-gray-600 border-gray-300 cursor-not-allowed'
+                    : 'bg-white text-red-700 border-red-300 hover:bg-red-50'
+                }`}
+              >
+                {migrationStatus === 'running' ? 'Running Migrations...' : 'Run DB Migrations'}
+              </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="card">

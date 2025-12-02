@@ -147,20 +147,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Decode JWT to get user info (basic decode, not secure validation)
     const payload = JSON.parse(atob(access_token.split('.')[1]));
-    console.log('JWT Payload:', JSON.stringify(payload, null, 2));
-    
-    // flask-jwt-extended stores identity in 'sub' claim
-    const identity = payload.sub || payload;
-    console.log('Identity:', JSON.stringify(identity, null, 2));
-    
+
+    // New JWT format (flask-jwt-extended):
+    //   - identity is stored in 'sub' claim as a string user_id
+    //   - role and email are stored as top-level custom claims
+    const rawId = payload.sub ?? payload.id;
+    const id = typeof rawId === 'string' ? parseInt(rawId, 10) : rawId;
+    const role = (payload.role as User['role']) ?? 'customer';
+    const emailClaim = (payload.email as string) || email;
+
     const userData: User = {
-      id: identity.id,
-      email: email, // Use the email from login form
-      role: identity.role,
+      id,
+      email: emailClaim,
+      role,
     };
-    
-    console.log('User Data:', JSON.stringify(userData, null, 2));
-    console.log('isAdmin will be:', userData.role === 'admin');
     
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('user', JSON.stringify(userData));

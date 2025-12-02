@@ -7,6 +7,7 @@ export default function Dashboard() {
   const { user, isAdmin, isDesigner, isCustomer } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboard();
@@ -22,9 +23,12 @@ export default function Dashboard() {
       } else {
         response = await getCustomerDashboard();
       }
+      console.log('Dashboard data received:', response.data);
       setData(response.data);
-    } catch (error) {
+      setError(null);
+    } catch (error: any) {
       console.error('Failed to load dashboard:', error);
+      setError(error?.response?.data?.message || error?.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -62,6 +66,20 @@ export default function Dashboard() {
             {isCustomer && !isAdmin && !isDesigner && '🛍️ Customer Dashboard - Your Purchases & Favorites'}
           </p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+            <p className="font-semibold">Error loading dashboard</p>
+            <p className="text-sm mt-1">{error}</p>
+            <button 
+              onClick={loadDashboard}
+              className="mt-3 text-sm bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Customer Dashboard */}
         {isCustomer && !isAdmin && !data && (
@@ -236,6 +254,25 @@ export default function Dashboard() {
             )}
           </div>
           </>
+        )}
+
+        {/* Admin Dashboard Empty State */}
+        {isAdmin && !data && !error && (
+          <div className="card text-center py-12">
+            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Welcome, Admin!</h3>
+            <p className="text-gray-600 mb-4">
+              Platform is initializing. Dashboard data will appear once users and plans are added.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <a href="/designer/upload" className="btn-primary">
+                Upload First Plan
+              </a>
+              <a href="/admin/users" className="btn-secondary">
+                Manage Users
+              </a>
+            </div>
+          </div>
         )}
 
         {/* Admin Dashboard */}

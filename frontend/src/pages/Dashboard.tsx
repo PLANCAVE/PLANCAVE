@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api, { getCustomerDashboard, getAnalyticsOverview, getAdminDashboard } from '../api';
 import { ShoppingBag, Heart, TrendingUp, Users, FileText, DollarSign } from 'lucide-react';
@@ -166,9 +167,9 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">
               You haven't made any purchases yet. Browse our amazing architectural plans!
             </p>
-            <a href="/plans" className="btn-primary inline-block">
+            <Link to="/plans" className="btn-primary inline-block">
               Browse Plans
-            </a>
+            </Link>
           </div>
         )}
         
@@ -245,12 +246,12 @@ export default function Dashboard() {
               Start uploading your architectural plans and track your sales & analytics here.
             </p>
             <div className="flex gap-4 justify-center">
-              <a href="/designer/upload" className="btn-primary">
+              <Link to="/designer/upload" className="btn-primary">
                 Upload Your First Plan
-              </a>
-              <a href="/designer/my-plans" className="btn-secondary">
+              </Link>
+              <Link to="/designer/my-plans" className="btn-secondary">
                 View My Plans
-              </a>
+              </Link>
             </div>
           </div>
         )}
@@ -258,12 +259,12 @@ export default function Dashboard() {
         {isDesigner && !isAdmin && data && (
           <>
             <div className="mb-6 flex gap-4">
-              <a href="/designer/upload" className="btn-primary">
+              <Link to="/designer/upload" className="btn-primary">
                 Upload New Plan
-              </a>
-              <a href="/designer/my-plans" className="btn-secondary">
+              </Link>
+              <Link to="/designer/my-plans" className="btn-secondary">
                 My Plans
-              </a>
+              </Link>
             </div>
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -342,12 +343,12 @@ export default function Dashboard() {
               Platform is initializing. Dashboard data will appear once users and plans are added.
             </p>
             <div className="flex gap-4 justify-center">
-              <a href="/designer/upload" className="btn-primary">
+              <Link to="/designer/upload" className="btn-primary">
                 Upload First Plan
-              </a>
-              <a href="/admin/users" className="btn-secondary">
+              </Link>
+              <Link to="/admin/users" className="btn-secondary">
                 Manage Users
-              </a>
+              </Link>
             </div>
           </div>
         )}
@@ -356,18 +357,18 @@ export default function Dashboard() {
         {isAdmin && data && (
           <div className="space-y-6">
             <div className="mb-6 flex flex-wrap gap-4 items-center">
-              <a href="/admin/users" className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all font-semibold">
+              <Link to="/admin/users" className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all font-semibold">
                 Manage Users
-              </a>
-              <a href="/admin/plans" className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-emerald-500/50 transition-all font-semibold">
+              </Link>
+              <Link to="/admin/plans" className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-emerald-500/50 transition-all font-semibold">
                 Manage Plans
-              </a>
-              <a href="/designer/upload" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition-all font-semibold">
+              </Link>
+              <Link to="/designer/upload" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition-all font-semibold">
                 Upload Plan
-              </a>
-              <a href="/admin/analytics" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all font-semibold">
+              </Link>
+              <Link to="/admin/analytics" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all font-semibold">
                 View Analytics
-              </a>
+              </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="card">

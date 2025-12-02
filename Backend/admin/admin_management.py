@@ -321,20 +321,36 @@ def update_user(user_id):
 @require_admin
 def delete_user(user_id):
     """
-    Deactivate a user (soft delete)
+    Deactivate a user (soft delete) - cannot delete admin users or self
     """
     conn = get_db()
     cur = conn.cursor()
     
     try:
+        # Get current admin's ID
+        identity = get_jwt_identity()
+        current_user_id = identity['id']
+        
+        # Prevent self-deletion
+        if user_id == current_user_id:
+            return jsonify(message="You cannot deactivate your own account"), 403
+        
+        # Check if target user is admin
+        cur.execute("SELECT role FROM users WHERE id = %s", (user_id,))
+        result = cur.fetchone()
+        
+        if not result:
+            return jsonify(message="User not found"), 404
+            
+        if result[0] == 'admin':
+            return jsonify(message="Admin users can only be managed directly from the database for security"), 403
+        
+        # Deactivate non-admin user
         cur.execute("""
             UPDATE users
             SET is_active = FALSE
             WHERE id = %s
         """, (user_id,))
-        
-        if cur.rowcount == 0:
-            return jsonify(message="User not found"), 404
         
         conn.commit()
         
@@ -651,6 +667,145 @@ def get_platform_analytics():
             "engagement_timeline": engagement_timeline,
             "most_viewed_plans": most_viewed,
             "most_purchased_plans": most_purchased
+        }), 200
+        
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@admin_bp.route('/analytics/designers', methods=['GET'])
+@jwt_required()
+@require_admin
+def get_designer_analytics():
+    """Get detailed analytics for all designers including revenue and sales"""
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        # Get designer revenue and sales stats (simplified - no purchases table yet)
+        cur.execute("""
+            SELECT 
+                u.id as designer_id,
+                u.username as designer_email,
+                COUNT(pl.id) as total_plans,
+                0 as total_sales,
+                0 as total_revenue,
+                COALESCE(AVG(pl.price), 0) as avg_plan_price,
+                u.created_at as joined_date
+            FROM users u
+            LEFT JOIN plans pl ON u.id = pl.designer_id
+            WHERE u.role = 'designer'
+            GROUP BY u.id, u.username, u.created_at
+            ORDER BY total_plans DESC
+        """)
+        columns = [desc[0] for desc in cur.description]
+        designers = [dict(zip(columns, row)) for row in cur.fetchall()]
+        
+        return jsonify({
+            "designers": designers,
+            "total_designers": len(designers),
+            "total_revenue": 0
+        }), 200
+        
+    except Exception as e:
+        print(f"Designer analytics error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@admin_bp.route('/analytics/customers', methods=['GET'])
+@jwt_required()
+@require_admin
+def get_customer_analytics():
+    """Get detailed analytics for all customers including purchase history"""
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        # Get customer purchase history (simplified - no purchases/likes tables yet)
+        cur.execute("""
+            SELECT 
+                u.id as customer_id,
+                u.username as customer_email,
+                0 as total_purchases,
+                0 as total_spent,
+                0 as plans_liked,
+                u.created_at as joined_date,
+                NULL as last_purchase_date
+            FROM users u
+            WHERE u.role = 'customer'
+            ORDER BY u.created_at DESC
+        """)
+        columns = [desc[0] for desc in cur.description]
+        customers = [dict(zip(columns, row)) for row in cur.fetchall()]
+        
+        return jsonify({
+            "customers": customers,
+            "total_customers": len(customers),
+            "total_revenue": 0
+        }), 200
+        
+    except Exception as e:
+        print(f"Customer analytics error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@admin_bp.route('/analytics/plan-details/<plan_id>', methods=['GET'])
+@jwt_required()
+@require_admin
+def get_plan_details(plan_id):
+    """Get detailed analytics for a specific plan including buyers and viewers"""
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        # Get plan buyers
+        cur.execute("""
+            SELECT 
+                u.id as user_id,
+                u.username as email,
+                pu.purchase_date,
+                pu.payment_status,
+                pl.price
+            FROM purchases pu
+            JOIN users u ON pu.user_id = u.id
+            JOIN plans pl ON pu.plan_id = pl.id
+            WHERE pu.plan_id = %s
+            ORDER BY pu.purchase_date DESC
+        """, (plan_id,))
+        buyers = [dict(row) for row in cur.fetchall()]
+        
+        # Get plan likes
+        cur.execute("""
+            SELECT 
+                u.id as user_id,
+                u.username as email,
+                l.created_at as liked_date
+            FROM likes l
+            JOIN users u ON l.user_id = u.id
+            WHERE l.plan_id = %s
+            ORDER BY l.created_at DESC
+        """, (plan_id,))
+        likes = [dict(row) for row in cur.fetchall()]
+        
+        return jsonify({
+            "buyers": buyers,
+            "likes": likes,
+            "total_buyers": len(buyers),
+            "total_likes": len(likes),
+            "total_revenue": sum(b['price'] for b in buyers if b['payment_status'] == 'completed')
         }), 200
         
     except Exception as e:

@@ -5,6 +5,9 @@ import { Users, Edit, Trash2, Check, X } from 'lucide-react';
 interface User {
   id: number;
   username: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
   role: string;
   created_at: string;
   is_active: boolean;
@@ -15,6 +18,15 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editRole, setEditRole] = useState('');
+  const [editModalUser, setEditModalUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    first_name: '',
+    middle_name: '',
+    last_name: '',
+    username: '',
+    role: '',
+    is_active: true
+  });
 
   useEffect(() => {
     loadUsers();
@@ -28,6 +40,32 @@ export default function UserManagement() {
       console.error('Failed to load users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openEditModal = (user: User) => {
+    setEditModalUser(user);
+    setEditForm({
+      first_name: user.first_name || '',
+      middle_name: user.middle_name || '',
+      last_name: user.last_name || '',
+      username: user.username,
+      role: user.role,
+      is_active: user.is_active
+    });
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editModalUser) return;
+    
+    try {
+      await updateUser(editModalUser.id, editForm);
+      setUsers(users.map(u => u.id === editModalUser.id ? { ...u, ...editForm } : u));
+      setEditModalUser(null);
+      alert('User updated successfully!');
+      loadUsers(); // Reload to get fresh data
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to update user');
     }
   };
 
@@ -156,12 +194,9 @@ export default function UserManagement() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => {
-                            setEditingId(user.id);
-                            setEditRole(user.role);
-                          }}
+                          onClick={() => openEditModal(user)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Edit role"
+                          title="Edit user details"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
@@ -180,6 +215,142 @@ export default function UserManagement() {
             </table>
           </div>
         </div>
+
+        {/* Edit User Modal */}
+        {editModalUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Edit className="w-6 h-6" />
+                  Edit User Details
+                </h2>
+                <p className="text-blue-100 mt-1">User ID: {editModalUser.id}</p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Name Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.first_name}
+                      onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
+                      className="input-field w-full"
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Middle Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.middle_name}
+                      onChange={(e) => setEditForm({...editForm, middle_name: e.target.value})}
+                      className="input-field w-full"
+                      placeholder="Middle name (optional)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.last_name}
+                      onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
+                      className="input-field w-full"
+                      placeholder="Last name"
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.username}
+                    onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                    className="input-field w-full"
+                    placeholder="email@example.com"
+                  />
+                </div>
+
+                {/* Role */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    User Role
+                  </label>
+                  <select
+                    value={editForm.role}
+                    onChange={(e) => setEditForm({...editForm, role: e.target.value})}
+                    className="input-field w-full"
+                  >
+                    <option value="customer">Customer</option>
+                    <option value="designer">Designer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {editForm.role === 'admin' && '🛡️ Full platform access'}
+                    {editForm.role === 'designer' && '🎨 Can upload and sell plans'}
+                    {editForm.role === 'customer' && '🛍️ Can browse and purchase plans'}
+                  </p>
+                </div>
+
+                {/* Active Status */}
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editForm.is_active}
+                      onChange={(e) => setEditForm({...editForm, is_active: e.target.checked})}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Account Active
+                    </span>
+                  </label>
+                  <p className="text-sm text-gray-500 mt-1 ml-6">
+                    {editForm.is_active ? '✅ User can log in and use the platform' : '❌ User account is deactivated'}
+                  </p>
+                </div>
+
+                {/* Account Info */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-700 mb-2">Account Information</h3>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><span className="font-medium">Created:</span> {new Date(editModalUser.created_at).toLocaleString()}</p>
+                    <p><span className="font-medium">Current Email:</span> {editModalUser.username}</p>
+                    <p><span className="font-medium">Current Role:</span> {editModalUser.role}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="sticky bottom-0 bg-gray-50 p-6 rounded-b-2xl flex gap-3 border-t">
+                <button
+                  onClick={handleUpdateUser}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all font-semibold"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={() => setEditModalUser(null)}
+                  className="flex-1 bg-white text-gray-700 px-6 py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 transition-all font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

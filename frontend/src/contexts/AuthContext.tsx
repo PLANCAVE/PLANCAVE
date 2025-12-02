@@ -77,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     isAuthenticated: !!token,
     isAdmin: user?.role === 'admin',
-    isDesigner: user?.role === 'designer' || user?.role === 'admin',
-    isCustomer: user?.role === 'customer',
+    isDesigner: user?.role === 'designer' || user?.role === 'admin', // Admin can do everything designers can
+    isCustomer: user?.role === 'customer' || user?.role === 'admin', // Admin can do everything customers can
   };
 
   if (loading) {

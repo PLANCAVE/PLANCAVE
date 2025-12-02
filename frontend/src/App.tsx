@@ -8,6 +8,7 @@ import BrowsePlans from './pages/BrowsePlans';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/admin/UserManagement';
 import PlanManagement from './pages/admin/PlanManagement';
+import Analytics from './pages/admin/Analytics';
 import UploadPlan from './pages/designer/UploadPlan';
 import MyPlans from './pages/designer/MyPlans';
 
@@ -62,6 +63,14 @@ function AppContent() {
             element={
               <AdminRoute>
                 <PlanManagement />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <AdminRoute>
+                <Analytics />
               </AdminRoute>
             }
           />

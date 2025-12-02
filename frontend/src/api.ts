@@ -21,11 +21,11 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 export const login = (email: string, password: string) =>
   api.post('/login', { username: email, password });
 
-export const registerCustomer = (email: string, password: string) =>
-  api.post('/register/customer', { username: email, password });
+export const registerCustomer = (email: string, password: string, firstName?: string, middleName?: string, lastName?: string) =>
+  api.post('/register/customer', { username: email, password, first_name: firstName, middle_name: middleName, last_name: lastName });
 
-export const registerDesigner = (email: string, password: string) =>
-  api.post('/register/designer', { username: email, password });
+export const registerDesigner = (email: string, password: string, firstName?: string, middleName?: string, lastName?: string) =>
+  api.post('/register/designer', { username: email, password, first_name: firstName, middle_name: middleName, last_name: lastName });
 
 // Plans
 export const browsePlans = (params?: Record<string, any>) =>
@@ -87,6 +87,16 @@ export const updatePlan = (planId: string, data: Record<string, any>) =>
 
 export const deletePlan = (planId: string) =>
   api.delete(`/admin/plans/${planId}`);
+
+// Admin Analytics
+export const getDesignerAnalytics = () =>
+  api.get('/admin/analytics/designers');
+
+export const getCustomerAnalytics = () =>
+  api.get('/admin/analytics/customers');
+
+export const getAdminPlanDetails = (planId: string) =>
+  api.get(`/admin/analytics/plan-details/${planId}`);
 
 // Teams
 export const createTeam = (name: string, description?: string) =>

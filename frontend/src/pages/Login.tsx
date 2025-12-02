@@ -41,7 +41,7 @@ export default function Login() {
         } else if (status === 404) {
           setError('Account not found. Please check your email or register for a new account.');
         } else if (status === 403) {
-          setError('Your account has been deactivated. Please contact support.');
+          setError('Your account has been deactivated. Please contact admin@plancave.com.');
         } else {
           setError(message || 'Login failed. Please try again later.');
         }

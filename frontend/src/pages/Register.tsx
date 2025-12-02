@@ -4,6 +4,9 @@ import { registerCustomer, registerDesigner } from '../api';
 import { Building2 } from 'lucide-react';
 
 export default function Register() {
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,6 +20,11 @@ export default function Register() {
     setError('');
 
     // Validation
+    if (!firstName || !lastName) {
+      setError('Please enter your first name and last name');
+      return;
+    }
+
     if (!email || !email.includes('@')) {
       setError('Please enter a valid email address');
       return;
@@ -35,10 +43,11 @@ export default function Register() {
     setLoading(true);
 
     try {
+      const userData = { email, password, first_name: firstName, middle_name: middleName, last_name: lastName };
       if (role === 'customer') {
-        await registerCustomer(email, password);
+        await registerCustomer(userData.email, userData.password, userData.first_name, userData.middle_name, userData.last_name);
       } else {
-        await registerDesigner(email, password);
+        await registerDesigner(userData.email, userData.password, userData.first_name, userData.middle_name, userData.last_name);
       }
       navigate('/login', { state: { message: 'Registration successful! Please login with your credentials.' } });
     } catch (err: any) {
@@ -117,6 +126,45 @@ export default function Register() {
                 >
                   Sell Plans
                 </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  First Name *
+                </label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="input-field"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Middle Name
+                </label>
+                <input
+                  type="text"
+                  value={middleName}
+                  onChange={(e) => setMiddleName(e.target.value)}
+                  className="input-field"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Name *
+                </label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="input-field"
+                  required
+                />
               </div>
             </div>
 

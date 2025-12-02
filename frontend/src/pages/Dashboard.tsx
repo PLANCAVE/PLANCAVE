@@ -59,12 +59,12 @@ export default function Dashboard() {
           <p className="text-gray-600 mt-1">
             {isAdmin && '🛡️ Admin Dashboard - Platform Overview'}
             {isDesigner && !isAdmin && '🎨 Designer Dashboard - Your Analytics & Sales'}
-            {isCustomer && '🛍️ Customer Dashboard - Your Purchases & Favorites'}
+            {isCustomer && !isAdmin && !isDesigner && '🛍️ Customer Dashboard - Your Purchases & Favorites'}
           </p>
         </div>
 
         {/* Customer Dashboard */}
-        {isCustomer && !data && (
+        {isCustomer && !isAdmin && !data && (
           <div className="card text-center py-12">
             <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-900 mb-2">Welcome, Customer!</h3>
@@ -77,7 +77,7 @@ export default function Dashboard() {
           </div>
         )}
         
-        {isCustomer && data && (
+        {isCustomer && !isAdmin && data && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="card">
@@ -241,12 +241,18 @@ export default function Dashboard() {
         {/* Admin Dashboard */}
         {isAdmin && data && (
           <div className="space-y-6">
-            <div className="mb-6 flex gap-4">
-              <a href="/admin/users" className="btn-primary">
+            <div className="mb-6 flex flex-wrap gap-4">
+              <a href="/admin/users" className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all font-semibold">
                 Manage Users
               </a>
-              <a href="/admin/plans" className="btn-secondary">
+              <a href="/admin/plans" className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-emerald-500/50 transition-all font-semibold">
                 Manage Plans
+              </a>
+              <a href="/designer/upload" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition-all font-semibold">
+                Upload Plan
+              </a>
+              <a href="/admin/analytics" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all font-semibold">
+                View Analytics
               </a>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

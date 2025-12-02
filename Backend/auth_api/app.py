@@ -105,7 +105,7 @@ def register_user(data, role):
     Registers a new user with the specified role (customer, designer, or admin).
 
     Args:
-        data (dict): The request data containing 'username' and 'password'.
+        data (dict): The request data containing 'username', 'password', and optional name fields.
         role (str): Role to assign to the new user.
 
     Returns:
@@ -113,6 +113,9 @@ def register_user(data, role):
     """
     username = data.get('username')
     password = data.get('password')
+    first_name = data.get('first_name', '')
+    middle_name = data.get('middle_name', '')
+    last_name = data.get('last_name', '')
 
     if not username or not password:
         return jsonify(message="Username and password are required"), 400
@@ -122,9 +125,18 @@ def register_user(data, role):
     conn = get_db()
     cur = conn.cursor()
     try:
+        # First try to add columns if they don't exist
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name VARCHAR(100);")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);")
+            conn.commit()
+        except:
+            conn.rollback()
+        
         cur.execute(
-            "INSERT INTO users (username, password, role) VALUES (%s, %s, %s) RETURNING id;",
-            (username, hashed_pw, role)
+            "INSERT INTO users (username, password, role, first_name, middle_name, last_name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;",
+            (username, hashed_pw, role, first_name, middle_name, last_name)
         )
         user_id = cur.fetchone()[0]
         conn.commit()
@@ -275,7 +287,7 @@ def login():
 
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT id, password, role FROM users WHERE username=%s;", (username,))
+    cur.execute("SELECT id, password, role, is_active FROM users WHERE username=%s;", (username,))
     result = cur.fetchone()
     cur.close()
     conn.close()
@@ -283,7 +295,11 @@ def login():
     if not result:
         return jsonify(message="Invalid credentials"), 401
 
-    user_id, hashed_pw, role = result
+    user_id, hashed_pw, role, is_active = result
+    
+    # Check if account is active
+    if not is_active:
+        return jsonify(message="Your account has been deactivated. Please contact admin@plancave.com."), 403
 
     if bcrypt.check_password_hash(hashed_pw, password):
         token = create_access_token(identity={"id": user_id, "role": role})
@@ -305,5 +321,36 @@ def protected():
     return jsonify(message=f"Welcome {role} #{user_id}!")
 
 
+def init_db():
+    """Initialize database with required columns"""
+    conn = None
+    cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # Add missing columns if they don't exist
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name VARCHAR(100);")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;")
+        
+        # Update existing users to be active
+        cur.execute("UPDATE users SET is_active = TRUE WHERE is_active IS NULL;")
+        
+        conn.commit()
+        print("✅ Database initialized successfully")
+    except Exception as e:
+        print(f"⚠️  Database initialization error (may be normal): {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
 if __name__ == '__main__':
+    # Initialize database on startup
+    init_db()
     app.run(debug=True)

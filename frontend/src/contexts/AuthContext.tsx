@@ -25,13 +25,118 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+  // Check if token is expired
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload.exp * 1000; // Convert to milliseconds
+      return Date.now() >= exp;
+    } catch {
+      return true;
+    }
+  };
+
+  // Logout function
+  const logout = (reason?: string) => {
+    if (reason) {
+      console.log(`Logout reason: ${reason}`);
+    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('last_activity');
+    setToken(null);
+    setUser(null);
+    
+    if (reason === 'session_expired') {
+      alert('Your session has expired due to inactivity. Please log in again.');
+    } else if (reason === 'token_expired') {
+      alert('Your session has expired. Please log in again.');
+    }
+  };
+
+  // Update last activity timestamp
+  const updateActivity = () => {
+    if (token) {
+      localStorage.setItem('last_activity', Date.now().toString());
+    }
+  };
+
+  // Check for inactivity and token expiry
+  useEffect(() => {
+    if (!token) return;
+
+    // Check token expiry
+    if (isTokenExpired(token)) {
+      logout('token_expired');
+      return;
+    }
+
+    // Set up activity listeners
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    
+    const handleActivity = () => {
+      updateActivity();
+    };
+
+    events.forEach(event => {
+      window.addEventListener(event, handleActivity);
+    });
+
+    // Check for inactivity every minute
+    const inactivityInterval = setInterval(() => {
+      const lastActivity = localStorage.getItem('last_activity');
+      if (lastActivity) {
+        const timeSinceActivity = Date.now() - parseInt(lastActivity);
+        
+        if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
+          logout('session_expired');
+        }
+      }
+
+      // Also check token expiry
+      if (token && isTokenExpired(token)) {
+        logout('token_expired');
+      }
+    }, 60000); // Check every minute
+
+    // Cleanup
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+      clearInterval(inactivityInterval);
+    };
+  }, [token]);
+
+  // Initial load
   useEffect(() => {
     const storedToken = localStorage.getItem('access_token');
     const storedUser = localStorage.getItem('user');
     
     if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      // Check if token is expired
+      if (isTokenExpired(storedToken)) {
+        logout('token_expired');
+      } else {
+        // Check last activity
+        const lastActivity = localStorage.getItem('last_activity');
+        if (lastActivity) {
+          const timeSinceActivity = Date.now() - parseInt(lastActivity);
+          if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
+            logout('session_expired');
+          } else {
+            setToken(storedToken);
+            setUser(JSON.parse(storedUser));
+            updateActivity();
+          }
+        } else {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+          updateActivity();
+        }
+      }
     }
     setLoading(false);
   }, []);
@@ -59,15 +164,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('last_activity', Date.now().toString());
     setToken(access_token);
     setUser(userData);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
   };
 
   const value = {

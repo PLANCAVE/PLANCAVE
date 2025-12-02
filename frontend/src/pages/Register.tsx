@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerCustomer, registerDesigner } from '../api';
-import { Building2, ShoppingBag, Pencil, Check } from 'lucide-react';
+import { Building2, Pencil, Check } from 'lucide-react';
 
 export default function Register() {
   const [firstName, setFirstName] = useState('');
@@ -11,6 +11,7 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [wantsToSellPlans, setWantsToSellPlans] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -101,47 +102,7 @@ export default function Register() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Account Type Info */}
-            <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-200 rounded-xl p-5">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-teal-600 rounded-lg">
-                  <ShoppingBag className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 text-lg mb-1">
-                    Create Your Account
-                  </h3>
-                  <p className="text-gray-700 text-sm mb-3">
-                    All accounts can browse and purchase professional construction plans from our marketplace.
-                  </p>
-                  
-                  {/* Designer Checkbox */}
-                  <label className="flex items-start gap-3 p-4 bg-white rounded-lg border-2 border-teal-300 cursor-pointer hover:bg-teal-50 transition-all group">
-                    <input
-                      type="checkbox"
-                      checked={wantsToSellPlans}
-                      onChange={(e) => setWantsToSellPlans(e.target.checked)}
-                      className="w-5 h-5 text-teal-600 rounded mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Pencil className="w-5 h-5 text-teal-600" />
-                        <span className="font-semibold text-gray-900">I also want to sell my plans as a designer</span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Upload and sell your architectural, structural, and construction plans on our platform. You'll be able to both buy and sell plans.
-                      </p>
-                    </div>
-                    {wantsToSellPlans && (
-                      <div className="p-1 bg-teal-600 rounded-full">
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </label>
-                </div>
-              </div>
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -228,9 +189,77 @@ export default function Register() {
               )}
             </div>
 
+            {/* Optional Checkboxes Section */}
+            <div className="space-y-3 pt-2">
+              {/* Sell Plans Checkbox */}
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                wantsToSellPlans 
+                  ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-400 shadow-md' 
+                  : 'bg-gray-50 border-gray-200 hover:border-purple-300'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={wantsToSellPlans}
+                  onChange={(e) => setWantsToSellPlans(e.target.checked)}
+                  className="w-5 h-5 text-purple-600 rounded mt-0.5 cursor-pointer"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Pencil className={`w-5 h-5 ${wantsToSellPlans ? 'text-purple-600' : 'text-gray-500'}`} />
+                    <span className="font-semibold text-gray-900">
+                      I want to sell construction plans on this platform
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Upload and monetize your architectural, structural, and construction designs
+                  </p>
+                </div>
+                {wantsToSellPlans && (
+                  <div className="flex-shrink-0 p-1.5 bg-purple-600 rounded-full">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </label>
+
+              {/* Terms & Conditions Checkbox - REQUIRED */}
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                termsAccepted 
+                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400 shadow-md' 
+                  : 'bg-orange-50 border-orange-300 hover:border-green-400'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="w-5 h-5 text-green-600 rounded mt-0.5 cursor-pointer"
+                  required
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900">
+                      I accept the{' '}
+                      <a href="/terms" target="_blank" className="text-teal-600 hover:text-teal-700 underline">
+                        Terms and Conditions
+                      </a>{' '}
+                      and{' '}
+                      <a href="/privacy" target="_blank" className="text-teal-600 hover:text-teal-700 underline">
+                        Privacy Policy
+                      </a>
+                    </span>
+                    <span className="text-red-500 text-sm">*</span>
+                  </div>
+                </div>
+                {termsAccepted && (
+                  <div className="flex-shrink-0 p-1.5 bg-green-600 rounded-full">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !termsAccepted}
               className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}

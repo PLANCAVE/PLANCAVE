@@ -82,6 +82,16 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(customer_bp)
 
 
+@app.route('/')
+def health_check():
+    """Health check endpoint for Render and monitoring"""
+    return jsonify({
+        "status": "healthy",
+        "service": "PlanCave API",
+        "version": "1.0.0"
+    }), 200
+
+
 def get_db():
     """
     Establishes and returns a new connection to the PostgreSQL database.

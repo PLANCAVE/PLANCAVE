@@ -89,11 +89,40 @@ export default function Dashboard() {
           </p>
         </div>
 
+        {/* Admin Migration Button - Always visible for admin */}
+        {isAdmin && (
+          <div className="mb-6 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-gray-900">Database Setup Required</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Click this button once to set up all database tables and fix dashboard errors.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={runMigrationsFromAdmin}
+                disabled={migrationStatus === 'running'}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                  migrationStatus === 'running'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-red-600 to-orange-600 text-white hover:from-red-700 hover:to-orange-700 shadow-lg'
+                }`}
+              >
+                {migrationStatus === 'running' ? 'Running...' : '🔧 Run DB Migrations'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Error Display */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
             <p className="font-semibold">Error loading dashboard</p>
             <p className="text-sm mt-1">{error}</p>
+            <p className="text-xs mt-2 text-red-600">
+              💡 If you see a 422 error, run the DB Migrations button above first.
+            </p>
             <button 
               onClick={loadDashboard}
               className="mt-3 text-sm bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
@@ -339,18 +368,6 @@ export default function Dashboard() {
               <a href="/admin/analytics" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all font-semibold">
                 View Analytics
               </a>
-              <button
-                type="button"
-                onClick={runMigrationsFromAdmin}
-                disabled={migrationStatus === 'running'}
-                className={`px-6 py-3 rounded-lg font-semibold border transition-all ${
-                  migrationStatus === 'running'
-                    ? 'bg-gray-200 text-gray-600 border-gray-300 cursor-not-allowed'
-                    : 'bg-white text-red-700 border-red-300 hover:bg-red-50'
-                }`}
-              >
-                {migrationStatus === 'running' ? 'Running Migrations...' : 'Run DB Migrations'}
-              </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="card">

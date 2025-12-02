@@ -1,14 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, LayoutDashboard, LogOut, Menu, X, HelpCircle } from 'lucide-react';
+import { Building2, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
-import ContactModal from './ContactModal';
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -33,14 +31,6 @@ export default function Header() {
             <Link to="/plans" className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-3 py-2 rounded-lg hover:bg-white/10">
               Browse Plans
             </Link>
-            
-            <button
-              onClick={() => setContactModalOpen(true)}
-              className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-3 py-2 rounded-lg hover:bg-white/10 flex items-center gap-2 group"
-            >
-              <HelpCircle className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              Contact
-            </button>
             
             {isAuthenticated ? (
               <>
@@ -107,17 +97,6 @@ export default function Header() {
                 Browse Plans
               </Link>
               
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setContactModalOpen(true);
-                }}
-                className="text-gray-300 hover:text-white flex items-center gap-2 text-left"
-              >
-                <HelpCircle className="w-5 h-5" />
-                Contact
-              </button>
-              
               {isAuthenticated ? (
                 <>
                   <Link
@@ -164,7 +143,6 @@ export default function Header() {
           </div>
         )}
       </div>
-      <ContactModal isOpen={contactModalOpen} onClose={() => setContactModalOpen(false)} />
     </header>
   );
 }

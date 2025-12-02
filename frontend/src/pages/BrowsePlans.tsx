@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { browsePlans } from '../api';
-import { Search, Filter, Heart, ShoppingCart, Building2, Award, Check, FileText } from 'lucide-react';
+import { Search, Filter, Heart, ShoppingCart, Building2, Award, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 

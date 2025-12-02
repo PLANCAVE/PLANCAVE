@@ -1,12 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
+import { Building2, LayoutDashboard, LogOut, Menu, X, HelpCircle } from 'lucide-react';
 import { useState } from 'react';
+import ContactModal from './ContactModal';
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -14,50 +16,67 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] border-b border-teal-500/20 sticky top-0 z-50 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-4">
+    <header className="bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] border-b border-teal-500/30 sticky top-0 z-50 backdrop-blur-xl shadow-2xl shadow-black/30">
+      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-cyan-500/10 backdrop-blur-sm"></div>
+      <div className="max-w-7xl mx-auto px-4 relative">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 font-serif font-light text-xl tracking-wider text-white group hover:text-teal-300 transition-all">
-            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center group-hover:shadow-2xl group-hover:shadow-teal-400/60 group-hover:scale-110 transition-all duration-300">
-              <Building2 className="w-6 h-6 text-white" />
+            <div className="w-11 h-11 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center group-hover:shadow-2xl group-hover:shadow-teal-400/80 group-hover:scale-110 transition-all duration-300 ring-2 ring-white/20">
+              <Building2 className="w-6 h-6 text-white drop-shadow-lg" />
             </div>
-            <span className="drop-shadow-lg">The Plancave</span>
+            <span className="drop-shadow-lg text-2xl font-medium">The Plancave</span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link to="/plans" className="text-gray-300 hover:text-white transition-colors">
+            <Link to="/plans" className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-3 py-2 rounded-lg hover:bg-white/10">
               Browse Plans
             </Link>
             
+            <button
+              onClick={() => setContactModalOpen(true)}
+              className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-3 py-2 rounded-lg hover:bg-white/10 flex items-center gap-2 group"
+            >
+              <HelpCircle className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+              Contact
+            </button>
+            
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="text-gray-300 hover:text-white transition-colors flex items-center gap-2">
-                  <LayoutDashboard className="w-4 h-4" />
+                <Link to="/dashboard" className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-4 py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm flex items-center gap-2 group">
+                  <LayoutDashboard className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                   Dashboard
                 </Link>
                 
-                <div className="flex items-center gap-4 ml-4 pl-4 border-l border-teal-500/30">
-                  <span className="text-sm text-gray-300">
-                    {user?.email} <span className="text-teal-400">({user?.role})</span>
-                  </span>
+                <div className="flex items-center gap-4 ml-4 pl-4 border-l border-teal-400/40">
+                  <div className="hidden lg:flex items-center gap-2 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-gray-200">
+                      {user?.email}
+                    </span>
+                    <span className="px-2 py-0.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                      {user?.role}
+                    </span>
+                  </div>
                   <button
                     onClick={handleLogout}
-                    className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg transition-all border border-white/20 flex items-center gap-2"
+                    className="group relative bg-gradient-to-r from-red-500/20 to-orange-500/20 hover:from-red-500 hover:to-orange-500 text-white py-2.5 px-5 rounded-xl transition-all border border-red-500/30 hover:border-red-400 flex items-center gap-2 hover:shadow-xl hover:shadow-red-500/30 hover:scale-105 font-medium"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                     Logout
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <Link to="/login" className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg transition-all border border-white/20">
-                  Sign In
+                <Link to="/login" className="relative group bg-white/5 hover:bg-white/10 backdrop-blur-sm text-white py-2.5 px-6 rounded-xl transition-all border border-white/20 hover:border-white/40 font-medium hover:scale-105 hover:shadow-xl hover:shadow-white/10">
+                  <span className="relative z-10">Sign In</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-teal-500/0 to-cyan-500/0 group-hover:from-teal-500/10 group-hover:to-cyan-500/10 rounded-xl transition-all"></div>
                 </Link>
-                <Link to="/register" className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all">
-                  Sign Up
+                <Link to="/register" className="relative group bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white py-2.5 px-6 rounded-xl font-bold hover:shadow-2xl hover:shadow-teal-500/60 transition-all hover:scale-110 ring-2 ring-teal-400/50 hover:ring-teal-300">
+                  <span className="relative z-10">Sign Up</span>
+                  <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity blur-xl"></div>
                 </Link>
               </>
             )}
@@ -87,6 +106,17 @@ export default function Header() {
               >
                 Browse Plans
               </Link>
+              
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setContactModalOpen(true);
+                }}
+                className="text-gray-300 hover:text-white flex items-center gap-2 text-left"
+              >
+                <HelpCircle className="w-5 h-5" />
+                Contact
+              </button>
               
               {isAuthenticated ? (
                 <>
@@ -134,6 +164,7 @@ export default function Header() {
           </div>
         )}
       </div>
+      <ContactModal isOpen={contactModalOpen} onClose={() => setContactModalOpen(false)} />
     </header>
   );
 }

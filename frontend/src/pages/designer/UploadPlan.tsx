@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api';
-import { Upload, FileText, Check, Building2, Hammer, Zap, Droplet, Shield, Palette, DollarSign, Award } from 'lucide-react';
+import { Upload, FileText, Check, Building2, Hammer, Zap, Shield, Palette, DollarSign, Award } from 'lucide-react';
 
 export default function UploadPlan() {
   const navigate = useNavigate();

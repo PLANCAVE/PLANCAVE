@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Building2, TrendingUp, ArrowRight, CheckCircle, Zap, Hammer, Calculator, Ruler, PenTool } from 'lucide-react';
+import { Building2, TrendingUp, CheckCircle, ArrowRight, Mail, Phone, MapPin, PenTool, Hammer, Ruler, Calculator, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Landing() {
@@ -289,6 +289,79 @@ export default function Landing() {
                 </Link>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Section */}
+      <div id="contact" className="relative py-20 border-t border-teal-500/20">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30"></div>
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-2xl">
+              Get In Touch
+            </h2>
+            <p className="text-xl text-gray-200 max-w-2xl mx-auto">
+              Have questions? We're here to help you find the perfect construction plans
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Email */}
+            <div className="group">
+              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 hover:bg-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-teal-500/30 transform hover:-translate-y-2">
+                <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                  <Mail className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Email Us</h3>
+                <a 
+                  href="mailto:admin@plancave.com"
+                  className="text-teal-300 hover:text-teal-200 transition-colors text-lg break-words"
+                >
+                  admin@plancave.com
+                </a>
+              </div>
+            </div>
+
+            {/* Phone */}
+            <div className="group">
+              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 hover:bg-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/30 transform hover:-translate-y-2">
+                <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                  <Phone className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Call Us</h3>
+                <a 
+                  href="tel:+254741076621"
+                  className="text-cyan-300 hover:text-cyan-200 transition-colors text-lg"
+                >
+                  +254 741 076 621
+                </a>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="group">
+              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 hover:bg-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/30 transform hover:-translate-y-2">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                  <MapPin className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Visit Us</h3>
+                <p className="text-green-300 text-lg">
+                  Karen Watermark<br />
+                  Business Center
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Business Hours */}
+          <div className="text-center mt-12">
+            <p className="text-gray-300 text-lg mb-2">
+              We're here to help Monday - Friday, 8AM - 6PM EAT
+            </p>
+            <p className="text-teal-400 text-sm">
+              Reach out anytime - we typically respond within 24 hours
+            </p>
           </div>
         </div>
       </div>

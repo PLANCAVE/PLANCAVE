@@ -38,7 +38,7 @@ export default function Landing() {
             </div>
 
             <p className="text-2xl md:text-3xl text-teal-100 mb-16 max-w-3xl mx-auto font-light tracking-wide drop-shadow-lg">
-              The marketplace where architects and designers sell ready-to-build plans to clients worldwide
+              Marketplace where architects sell ready-to-build plans
             </p>
 
             {/* Services Grid - 3D Cards */}

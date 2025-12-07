@@ -8,6 +8,7 @@ interface Plan {
   id: string;
   name: string;
   project_type: string;
+  category?: string;
   description: string;
   package_level: string;
   price: number;
@@ -30,24 +31,36 @@ export default function BrowsePlans() {
   
   // Filter states
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
   const [projectType, setProjectType] = useState('');
   const [packageLevel, setPackageLevel] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [includesBoq, setIncludesBoq] = useState('');
   const [bedrooms, setBedrooms] = useState('');
-  
+
   const { isAuthenticated } = useAuth();
+
+  const planCategories = [
+    'Mansion',
+    'Bungalow',
+    'Townhouse',
+    'Duplex',
+    'Apartment',
+    'Villa',
+    'Commercial Complex'
+  ];
 
   useEffect(() => {
     loadPlans();
-  }, [search, projectType, packageLevel, minPrice, maxPrice, includesBoq, bedrooms]);
+  }, [search, category, projectType, packageLevel, minPrice, maxPrice, includesBoq, bedrooms]);
 
   const loadPlans = async () => {
     setLoading(true);
     try {
       const params: any = {};
       if (search) params.search = search;
+      if (category) params.category = category;
       if (projectType) params.project_type = projectType;
       if (packageLevel) params.package_level = packageLevel;
       if (minPrice) params.min_price = minPrice;
@@ -66,6 +79,7 @@ export default function BrowsePlans() {
 
   const clearFilters = () => {
     setSearch('');
+    setCategory('');
     setProjectType('');
     setPackageLevel('');
     setMinPrice('');
@@ -147,6 +161,22 @@ export default function BrowsePlans() {
                     <option value="Industrial">Industrial</option>
                     <option value="Institutional">Institutional</option>
                     <option value="Mixed-Use">Mixed-Use</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">All Categories</option>
+                    {planCategories.map((entry) => (
+                      <option key={entry} value={entry}>
+                        {entry}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -302,6 +332,11 @@ export default function BrowsePlans() {
                         <Building2 className="w-4 h-4" />
                         {plan.project_type}
                       </span>
+                      {plan.category && (
+                        <span className="px-2 py-1 bg-teal-100 text-teal-700 rounded text-xs font-semibold">
+                          {plan.category}
+                        </span>
+                      )}
                       <span>{plan.area}m²</span>
                       {plan.bedrooms && <span>{plan.bedrooms} Bed</span>}
                       <span>{plan.floors} Floor{plan.floors > 1 ? 's' : ''}</span>

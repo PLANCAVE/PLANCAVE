@@ -38,7 +38,7 @@ export default function Landing() {
             </div>
 
             <p className="text-2xl md:text-3xl text-teal-100 mb-16 max-w-3xl mx-auto font-light tracking-wide drop-shadow-lg">
-              Your Complete Construction Solutions Partner
+              The marketplace where architects and designers sell ready-to-build plans to clients worldwide
             </p>
 
             {/* Services Grid - 3D Cards */}
@@ -169,7 +169,9 @@ export default function Landing() {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Why Choose The Plancave?
             </h2>
-            <p className="text-xl text-gray-400">Everything you need to bring your vision to life</p>
+            <p className="text-xl text-gray-400">
+              The ultimate marketplace for architects and designers to showcase and sell their ready-to-build plans
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -180,9 +182,9 @@ export default function Landing() {
                 <div className="w-16 h-16 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-2xl">
                   <Building2 className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Professional Designs</h3>
+                <h3 className="text-2xl font-bold text-white mb-3">Discover Top Designers</h3>
                 <p className="text-gray-200">
-                  Access thousands of professional architectural plans created by expert designers and architects
+                  Browse curated portfolios and ready plans from vetted African architects and building designers
                 </p>
               </div>
             </div>
@@ -194,9 +196,9 @@ export default function Landing() {
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-2xl">
                   <Zap className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Instant Access</h3>
+                <h3 className="text-2xl font-bold text-white mb-3">Flexible Opportunities</h3>
                 <p className="text-gray-200">
-                  Purchase and download plans instantly. Get detailed BOQs, specifications, and compliance documents
+                  Designers publish plans independently, set their pricing, and connect with homeowners, developers, and contractors
                 </p>
               </div>
             </div>
@@ -208,9 +210,9 @@ export default function Landing() {
                 <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 via-green-500 to-lime-500 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-2xl">
                   <TrendingUp className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">For Designers</h3>
+                <h3 className="text-2xl font-bold text-white mb-3">Built Like Upwork</h3>
                 <p className="text-gray-200">
-                  Sell your designs, track analytics, and earn from your expertise. Join our community of creators
+                  A vertical marketplace for architectural talent – clients discover plans while designers build reputation and recurring income
                 </p>
               </div>
             </div>

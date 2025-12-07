@@ -10,9 +10,20 @@ export default function UploadPlan() {
   const [currentStep, setCurrentStep] = useState(1);
 
   // Section 1: Basic Information
+  const planCategories = [
+    'Mansion',
+    'Bungalow',
+    'Townhouse',
+    'Duplex',
+    'Apartment',
+    'Villa',
+    'Commercial Complex'
+  ];
+
   const [basicInfo, setBasicInfo] = useState({
     name: '',
     project_type: 'Residential',
+    category: '',
     description: '',
     target_audience: 'All'
   });
@@ -271,6 +282,27 @@ export default function UploadPlan() {
             <option value="Industrial">Industrial</option>
             <option value="Institutional">Institutional (Schools, Hospitals)</option>
             <option value="Mixed-Use">Mixed-Use</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Plan Category *
+          </label>
+          <select
+            value={basicInfo.category}
+            onChange={(e) => setBasicInfo({...basicInfo, category: e.target.value})}
+            className="input-field"
+            required
+          >
+            <option value="" disabled>
+              Select what you are listing (e.g. Mansion, Bungalow)
+            </option>
+            {planCategories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
           </select>
         </div>
 

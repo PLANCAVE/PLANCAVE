@@ -10,6 +10,7 @@ interface Plan {
   price: number;
   status: string;
   designer_id: number;
+  designer_name?: string;
   sales_count: number;
   created_at: string;
 }
@@ -76,7 +77,7 @@ export default function PlanManagement() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Price</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Sales</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Designer ID</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Designer</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
@@ -102,7 +103,9 @@ export default function PlanManagement() {
                       </span>
                     </td>
                     <td className="py-3 px-4">{plan.sales_count}</td>
-                    <td className="py-3 px-4 text-gray-600">{plan.designer_id}</td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {plan.designer_name || `ID ${plan.designer_id}`}
+                    </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <Link

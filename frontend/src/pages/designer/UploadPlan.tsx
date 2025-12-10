@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import api, { updatePlan } from '../../api';
+import api, { updatePlan, getPlanDetails } from '../../api';
 import { Upload, FileText, Check, Building2, Hammer, Zap, Shield, Palette, DollarSign, Award } from 'lucide-react';
 
 export default function UploadPlan() {
@@ -125,6 +125,75 @@ export default function UploadPlan() {
     const fileArray = Array.from(fileList);
     setFiles(prev => ({ ...prev, [category]: fileArray }));
   };
+
+  // Prefill when editing an existing plan
+  useEffect(() => {
+    if (!isEditMode || !editingPlanId) return;
+
+    const loadPlan = async () => {
+      try {
+        const response = await getPlanDetails(editingPlanId);
+        const plan = response.data;
+
+        setBasicInfo({
+          name: plan.name || '',
+          project_type: plan.project_type || 'Residential',
+          category: plan.category || '',
+          description: plan.description || '',
+          target_audience: plan.target_audience || 'All',
+        });
+
+        setTechSpecs({
+          area: plan.area != null ? String(plan.area) : '',
+          plot_size: plan.plot_size != null ? String(plan.plot_size) : '',
+          bedrooms: plan.bedrooms != null ? String(plan.bedrooms) : '',
+          bathrooms: plan.bathrooms != null ? String(plan.bathrooms) : '',
+          floors: plan.floors != null ? String(plan.floors) : '',
+          building_height: plan.building_height != null ? String(plan.building_height) : '',
+          parking_spaces: plan.parking_spaces != null ? String(plan.parking_spaces) : '0',
+          special_features: plan.special_features || [],
+        });
+
+        if (plan.disciplines_included) {
+          setDisciplines(plan.disciplines_included);
+        }
+
+        setBoq({
+          includes_boq: !!plan.includes_boq,
+          boq_architectural: null,
+          boq_structural: null,
+          boq_mep: null,
+          cost_summary: null,
+          estimated_cost_min: plan.estimated_cost_min != null ? String(plan.estimated_cost_min) : '',
+          estimated_cost_max: plan.estimated_cost_max != null ? String(plan.estimated_cost_max) : '',
+        });
+
+        setPackageLevel(plan.package_level || 'basic');
+
+        setCompliance({
+          building_code: plan.building_code || 'Kenya Building Code',
+          certifications: plan.certifications || [],
+        });
+
+        setPricing({
+          price: plan.price != null ? String(plan.price) : '',
+          license_type: plan.license_type || 'single_use',
+          customization_available: !!plan.customization_available,
+          support_duration: plan.support_duration != null ? String(plan.support_duration) : '0',
+        });
+
+        setAdditional({
+          project_timeline_ref: plan.project_timeline_ref || '',
+          material_specifications: plan.material_specifications || '',
+          construction_notes: plan.construction_notes || '',
+        });
+      } catch (err) {
+        console.error('Failed to load plan for editing', err);
+      }
+    };
+
+    loadPlan();
+  }, [isEditMode, editingPlanId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

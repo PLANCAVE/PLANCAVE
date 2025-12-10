@@ -249,60 +249,31 @@ def get_my_plans():
     if role not in ['admin', 'designer']:
         return jsonify(message="Access denied: Designers only"), 403
     
-    # Filters
-    status = request.args.get('status', type=str)
-    category = request.args.get('category', type=str)
-    sort_by = request.args.get('sort_by', default='created_at', type=str)
-    order = request.args.get('order', default='desc', type=str).upper()
-    limit = request.args.get('limit', default=20, type=int)
-    offset = request.args.get('offset', default=0, type=int)
-    
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
 
     try:
-        where_clauses = ["designer_id = %s"]
-        values = [user_id]
-
-        if status:
-            where_clauses.append("status = %s")
-            values.append(status)
-
-        if category:
-            where_clauses.append("category = %s")
-            values.append(category)
-
-        where_sql = " AND ".join(where_clauses)
-
-        # Allowed sort fields
-        allowed_sorts = ['created_at', 'price', 'sales_count', 'name']
-        sort_by = sort_by if sort_by in allowed_sorts else 'created_at'
-        order = 'ASC' if order == 'ASC' else 'DESC'
-
-        # Count total
-        cur.execute(f"SELECT COUNT(*) FROM plans WHERE {where_sql}", tuple(values))
-        total_count = cur.fetchone()[0]
-
-        # Get plans for this designer only (no analytics join to avoid 500s)
-        query = f"""
+        # Very simple, robust query: return all plans for this designer.
+        cur.execute(
+            """
             SELECT id, name, category, price, status, sales_count, created_at
             FROM plans
-            WHERE {where_sql}
-            ORDER BY {sort_by} {order}
-            LIMIT %s OFFSET %s
-        """
+            WHERE designer_id = %s
+            ORDER BY created_at DESC
+            """,
+            (user_id,),
+        )
 
-        cur.execute(query, tuple(values + [limit, offset]))
         plans = [dict(row) for row in cur.fetchall()]
 
         return jsonify({
             "metadata": {
-                "total": total_count,
-                "limit": limit,
-                "offset": offset,
-                "returned": len(plans)
+                "total": len(plans),
+                "limit": len(plans),
+                "offset": 0,
+                "returned": len(plans),
             },
-            "plans": plans
+            "plans": plans,
         }), 200
 
     except Exception as e:

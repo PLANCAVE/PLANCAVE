@@ -326,7 +326,8 @@ def login():
 
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT id, password, role, is_active FROM users WHERE username=%s;", (username,))
+    # Make username lookup case-insensitive so existing mixed-case usernames still work
+    cur.execute("SELECT id, password, role, is_active FROM users WHERE LOWER(username) = LOWER(%s);", (username,))
     result = cur.fetchone()
     cur.close()
     conn.close()

@@ -17,15 +17,16 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 // Auth
-// Note: Backend expects 'username' field, but we're using it for email
+// Note: Backend expects 'username' field, but we're using it for email.
+// Always normalize to lowercase so login/registration are case-insensitive.
 export const login = (email: string, password: string) =>
-  api.post('/login', { username: email, password });
+  api.post('/login', { username: email.toLowerCase(), password });
 
 export const registerCustomer = (email: string, password: string, firstName?: string, middleName?: string, lastName?: string) =>
-  api.post('/register/customer', { username: email, password, first_name: firstName, middle_name: middleName, last_name: lastName });
+  api.post('/register/customer', { username: email.toLowerCase(), password, first_name: firstName, middle_name: middleName, last_name: lastName });
 
 export const registerDesigner = (email: string, password: string, firstName?: string, middleName?: string, lastName?: string) =>
-  api.post('/register/designer', { username: email, password, first_name: firstName, middle_name: middleName, last_name: lastName });
+  api.post('/register/designer', { username: email.toLowerCase(), password, first_name: firstName, middle_name: middleName, last_name: lastName });
 
 // Plans
 export const browsePlans = (params?: Record<string, any>) =>

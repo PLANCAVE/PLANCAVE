@@ -19,14 +19,28 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
+    // First, show whatever we already have in AuthContext so the page doesn't feel empty
+    if (user) {
+      setForm({
+        first_name: user.first_name || '',
+        middle_name: user.middle_name || '',
+        last_name: user.last_name || '',
+      });
+      setAvatarUrl(user.profile_picture_url || '');
+    }
+
+    setLoading(false);
+
+    // Then, refresh from backend in the background
     const load = async () => {
       try {
-        setLoading(true);
+        setProfileLoading(true);
         const res = await getMyProfile();
         const data = res.data;
         setForm({
@@ -42,14 +56,18 @@ export default function Profile() {
           profile_picture_url: data.profile_picture_url,
         });
       } catch (err: any) {
-        setError(err?.response?.data?.message || 'Failed to load profile');
+        const status = err?.response?.status;
+        // If token is rejected for /me we silently skip instead of showing a big error banner
+        if (status !== 401) {
+          setError(err?.response?.data?.message || 'Failed to load profile');
+        }
       } finally {
-        setLoading(false);
+        setProfileLoading(false);
       }
     };
 
     load();
-  }, [refreshUserProfile]);
+  }, [refreshUserProfile, user]);
 
   const handleChange = (field: keyof ProfileForm, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -123,6 +141,9 @@ export default function Profile() {
           <div>
             <h1 className="text-xl font-semibold text-slate-900">My profile</h1>
             <p className="text-sm text-slate-500">View and update your personal details.</p>
+            {profileLoading && (
+              <p className="text-xs text-slate-400 mt-0.5">Refreshing profile5e</p>
+            )}
           </div>
         </div>
 

@@ -59,7 +59,7 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => navigate('/profile')}
-                    className="hidden lg:flex items-center gap-3 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10 hover:bg-white/10 transition-colors"
+                    className="hidden lg:inline-flex items-center justify-center bg-white/5 backdrop-blur-sm px-2 py-2 rounded-full border border-white/10 hover:bg-white/10 transition-colors"
                   >
                     <div className="relative w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden ring-2 ring-white/30">
                       {user?.profile_picture_url ? (
@@ -72,14 +72,6 @@ export default function Header() {
                         <span>{getInitials()}</span>
                       )}
                       <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-green-400 ring-1 ring-white" />
-                    </div>
-                    <div className="flex flex-col items-start text-left">
-                      <span className="text-sm font-medium text-gray-200 line-clamp-1 max-w-[160px]">
-                        {user?.email}
-                      </span>
-                      <span className="px-2 py-0.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-[10px] font-bold rounded-full uppercase tracking-wide">
-                        {user?.role}
-                      </span>
                     </div>
                   </button>
                   <button

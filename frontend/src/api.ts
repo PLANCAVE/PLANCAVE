@@ -35,6 +35,16 @@ export const getMyProfile = () =>
 export const updateMyProfile = (data: any) =>
   api.put('/me', data);
 
+export const uploadMyAvatar = (file: File) => {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  return api.post('/me/avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
 // Plans
 export const browsePlans = (params?: Record<string, any>) =>
   // Use trailing slash to avoid HTTP->HTTPS redirect issues in production

@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getMyProfile, updateMyProfile } from '../api';
-import { User as UserIcon } from 'lucide-react';
+import { getMyProfile, updateMyProfile, uploadMyAvatar } from '../api';
+import { User as UserIcon, Image as ImageIcon } from 'lucide-react';
 
 interface ProfileForm {
   first_name: string;
   middle_name: string;
   last_name: string;
-  profile_picture_url: string;
 }
 
 export default function Profile() {
@@ -16,8 +15,9 @@ export default function Profile() {
     first_name: '',
     middle_name: '',
     last_name: '',
-    profile_picture_url: '',
   });
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -33,8 +33,8 @@ export default function Profile() {
           first_name: data.first_name || '',
           middle_name: data.middle_name || '',
           last_name: data.last_name || '',
-          profile_picture_url: data.profile_picture_url || '',
         });
+        setAvatarUrl(data.profile_picture_url || '');
         refreshUserProfile({
           first_name: data.first_name,
           middle_name: data.middle_name,
@@ -62,8 +62,17 @@ export default function Profile() {
     setSaving(true);
 
     try {
+      // First update text fields
       const res = await updateMyProfile(form);
-      const data = res.data;
+      let data = res.data;
+
+      // Then upload avatar file if provided
+      if (avatarFile) {
+        const avatarRes = await uploadMyAvatar(avatarFile);
+        data = avatarRes.data;
+        setAvatarUrl(data.profile_picture_url || '');
+      }
+
       refreshUserProfile({
         first_name: data.first_name,
         middle_name: data.middle_name,
@@ -93,7 +102,13 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-slate-500 text-sm">Loading profile...</div>
+        <div className="card flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-2 w-32 bg-slate-200 rounded-full animate-pulse" />
+            <div className="h-2 w-48 bg-slate-100 rounded-full animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -170,16 +185,33 @@ export default function Profile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Profile picture URL (optional)</label>
-              <input
-                type="url"
-                value={form.profile_picture_url}
-                onChange={e => handleChange('profile_picture_url', e.target.value)}
-                className="input-field"
-                placeholder="https://..."
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Profile picture</label>
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50">
+                  <ImageIcon className="w-4 h-4 text-slate-500" />
+                  <span>Choose image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setAvatarFile(file);
+                      if (file) {
+                        const url = URL.createObjectURL(file);
+                        setAvatarUrl(url);
+                      }
+                    }}
+                  />
+                </label>
+                {avatarUrl && (
+                  <span className="text-xs text-slate-500 truncate max-w-[160px]">
+                    Preview updated
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-[11px] text-slate-400">
-                Use a square image for best results. File uploads are not yet supported; paste an image URL instead.
+                Use a square image for best results. Changes are saved when you click "Save changes".
               </p>
             </div>
 
@@ -194,9 +226,9 @@ export default function Profile() {
 
           <div className="card flex flex-col items-center justify-center gap-3 text-center">
             <div className="relative w-24 h-24 rounded-full bg-teal-600 flex items-center justify-center text-white text-2xl font-semibold overflow-hidden ring-4 ring-teal-200/80 mb-2">
-              {form.profile_picture_url ? (
+              {avatarUrl ? (
                 <img
-                  src={form.profile_picture_url}
+                  src={avatarUrl}
                   alt={user?.email}
                   className="w-full h-full object-cover"
                 />

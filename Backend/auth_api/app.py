@@ -32,6 +32,7 @@ app.config.from_object(Config)
 allowed_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://plancave-prototype-frontend.onrender.com",
 ]
 
 # Add production frontend URL if set
@@ -182,6 +183,70 @@ def register_user(data, role):
     except psycopg.OperationalError as e:
         conn.rollback()
         return jsonify(message="Username already exists"), 409
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route('/me/avatar', methods=['POST'])
+@jwt_required()
+def upload_avatar():
+    """Upload and set the current user's profile picture.
+
+    Expects multipart/form-data with a single file field named 'avatar'.
+    """
+    from werkzeug.utils import secure_filename
+    user_id, role = get_current_user()
+
+    if 'avatar' not in request.files:
+        return jsonify(message="No avatar file provided"), 400
+
+    file = request.files['avatar']
+    if file.filename == '':
+        return jsonify(message="Empty filename"), 400
+
+    filename = secure_filename(file.filename)
+    # Simple extension check
+    allowed_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+    _, ext = os.path.splitext(filename)
+    ext = ext.lower()
+    if ext not in allowed_exts:
+        return jsonify(message="Unsupported file type"), 400
+
+    upload_root = os.path.join(os.getcwd(), 'uploads', 'profiles')
+    os.makedirs(upload_root, exist_ok=True)
+
+    new_name = f"user_{user_id}{ext}"
+    save_path = os.path.join(upload_root, new_name)
+    file.save(save_path)
+
+    relative_url = f"/uploads/profiles/{new_name}"
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            "UPDATE users SET profile_picture_url = %s WHERE id = %s RETURNING id, username, role, first_name, middle_name, last_name, profile_picture_url;",
+            (relative_url, user_id),
+        )
+        row = cur.fetchone()
+        conn.commit()
+
+        if not row:
+            return jsonify(message="User not found"), 404
+
+        return jsonify({
+            "id": row["id"],
+            "email": row["username"],
+            "role": row["role"],
+            "first_name": row.get("first_name"),
+            "middle_name": row.get("middle_name"),
+            "last_name": row.get("last_name"),
+            "profile_picture_url": row.get("profile_picture_url"),
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message="Failed to upload avatar", error=str(e)), 500
     finally:
         cur.close()
         conn.close()

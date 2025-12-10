@@ -235,6 +235,10 @@ def upload_plan():
                     path = save_file_locally(file, plan_id, 'images/gallery', file.filename)
                     gallery_paths.append(path)
 
+        # Attach gallery paths to file_paths so details endpoint can build a gallery
+        if gallery_paths:
+            file_paths['gallery'] = gallery_paths
+
         # Parse JSON fields
         disciplines_included = json.loads(form.get('disciplines_included', '{}'))
         certifications = json.loads(form.get('certifications', '[]'))

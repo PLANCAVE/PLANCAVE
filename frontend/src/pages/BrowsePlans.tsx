@@ -25,6 +25,7 @@ interface Plan {
 }
 
 export default function BrowsePlans() {
+  const [allPlans, setAllPlans] = useState<Plan[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -51,31 +52,82 @@ export default function BrowsePlans() {
     'Commercial Complex'
   ];
 
+  // Initial load: fetch all available plans from backend
   useEffect(() => {
-    loadPlans();
-  }, [search, category, projectType, packageLevel, minPrice, maxPrice, includesBoq, bedrooms]);
+    const loadAllPlans = async () => {
+      setLoading(true);
+      try {
+        const response = await browsePlans();
+        const results: Plan[] = response.data.results || [];
+        setAllPlans(results);
+        setPlans(results);
+      } catch (error) {
+        console.error('Failed to load plans:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const loadPlans = async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (search) params.search = search;
-      if (category) params.category = category;
-      if (projectType) params.project_type = projectType;
-      if (packageLevel) params.package_level = packageLevel;
-      if (minPrice) params.min_price = minPrice;
-      if (maxPrice) params.max_price = maxPrice;
-      if (includesBoq) params.includes_boq = includesBoq;
-      if (bedrooms) params.bedrooms = bedrooms;
-      
-      const response = await browsePlans(params);
-      setPlans(response.data.results || []);
-    } catch (error) {
-      console.error('Failed to load plans:', error);
-    } finally {
-      setLoading(false);
+    loadAllPlans();
+  }, []);
+
+  // Client-side filtering so all plans are visible by default
+  useEffect(() => {
+    let filtered = [...allPlans];
+
+    if (search) {
+      const lower = search.toLowerCase();
+      filtered = filtered.filter(plan =>
+        plan.name.toLowerCase().includes(lower) ||
+        plan.description.toLowerCase().includes(lower)
+      );
     }
-  };
+
+    if (category) {
+      filtered = filtered.filter(plan => plan.category === category);
+    }
+
+    if (projectType) {
+      filtered = filtered.filter(plan => plan.project_type === projectType);
+    }
+
+    if (packageLevel) {
+      filtered = filtered.filter(plan => plan.package_level === packageLevel);
+    }
+
+    if (minPrice) {
+      const min = Number(minPrice);
+      if (!Number.isNaN(min)) {
+        filtered = filtered.filter(plan => plan.price >= min);
+      }
+    }
+
+    if (maxPrice) {
+      const max = Number(maxPrice);
+      if (!Number.isNaN(max)) {
+        filtered = filtered.filter(plan => plan.price <= max);
+      }
+    }
+
+    if (includesBoq) {
+      const val = includesBoq === 'true';
+      filtered = filtered.filter(plan => plan.includes_boq === val);
+    }
+
+    if (bedrooms) {
+      const beds = Number(bedrooms);
+      if (!Number.isNaN(beds)) {
+        if (beds === 5) {
+          // 5+ option
+          filtered = filtered.filter(plan => (plan.bedrooms || 0) >= 5);
+        } else {
+          filtered = filtered.filter(plan => plan.bedrooms === beds);
+        }
+      }
+    }
+
+    setPlans(filtered);
+  }, [allPlans, search, category, projectType, packageLevel, minPrice, maxPrice, includesBoq, bedrooms]);
 
   const clearFilters = () => {
     setSearch('');

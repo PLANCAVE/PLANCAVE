@@ -74,7 +74,6 @@ export default function Header() {
                       ) : (
                         <span>{getInitials()}</span>
                       )}
-                      <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-green-400 ring-1 ring-white" />
                     </div>
                   </button>
                 </div>

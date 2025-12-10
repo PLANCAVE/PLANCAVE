@@ -39,6 +39,7 @@ export default function BrowsePlans() {
   const [maxPrice, setMaxPrice] = useState('');
   const [includesBoq, setIncludesBoq] = useState('');
   const [bedrooms, setBedrooms] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   const { isAuthenticated } = useAuth();
 
@@ -154,52 +155,54 @@ export default function BrowsePlans() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] text-white py-10 overflow-hidden">
+      {/* Minimal top bar for background only */}
+      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] h-20 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="absolute top-0 right-10 w-60 h-60 bg-teal-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-10 w-52 h-52 bg-cyan-400/10 rounded-full blur-3xl"></div>
-        
-        <div className="max-w-5xl mx-auto px-4 relative z-10 text-center">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-wide mb-2 drop-shadow-2xl">
-            Browse Ready-to-Build Plans
-          </h1>
-          <p className="text-xs md:text-sm text-teal-100 max-w-2xl mx-auto">
-            Find architectural plans by price, size, package level and more.
-          </p>
-        </div>
+        <div className="absolute top-0 right-10 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-10 w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search and Filters triggers */}
       <div className="max-w-5xl mx-auto px-4 -mt-8 relative z-10">
-        <div className="card shadow-xl border border-teal-100/60">
-          <div className="flex flex-col gap-4">
-            {/* Search Bar */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-              <div className="relative flex-1 max-w-xl mx-auto w-full">
-                <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search by name or description..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="input-field pl-9 py-2 text-sm rounded-full shadow-sm"
-                />
-              </div>
-              <div className="flex justify-center sm:justify-end">
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                    showFilters 
-                      ? 'bg-teal-600 text-white border-teal-600 shadow-sm' 
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <Filter className="w-4 h-4" />
-                  Filters
-                </button>
-              </div>
+        <div className="card shadow-md border border-teal-100/60">
+          <div className="flex flex-col gap-3">
+            {/* Compact actions row */}
+            <div className="flex flex-wrap justify-center sm:justify-between gap-2 items-center">
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 hover:bg-gray-50 transition-all"
+              >
+                <Search className="w-4 h-4 text-gray-500" />
+                <span>Search plans</span>
+              </button>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                  showFilters 
+                    ? 'bg-teal-600 text-white border-teal-600 shadow-sm' 
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                <span>Filter plans</span>
+              </button>
             </div>
+
+            {/* Search Bar - only shows when user wants to search */}
+            {showSearch && (
+              <div className="flex justify-center">
+                <div className="relative flex-1 max-w-xl w-full">
+                  <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or description..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="input-field pl-9 py-2 text-sm rounded-full shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Advanced Filters */}
             {showFilters && (

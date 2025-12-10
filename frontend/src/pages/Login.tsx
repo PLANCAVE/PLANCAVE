@@ -29,7 +29,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate('/plans');
     } catch (err: any) {
       // Show detailed error messages
       if (err.response) {

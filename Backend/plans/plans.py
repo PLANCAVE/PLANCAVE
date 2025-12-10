@@ -441,3 +441,50 @@ def browse_plans():
     finally:
         cur.close()
         conn.close()
+
+
+@plans_bp.route('/<plan_id>/details', methods=['GET'])
+def get_plan_details(plan_id):
+    """Get full details for a single plan by ID"""
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        query = """
+            SELECT id, name, project_type, description, category, target_audience,
+                   package_level, price, area, plot_size, bedrooms, bathrooms, floors,
+                   building_height, parking_spaces, special_features, disciplines_included,
+                   includes_boq, building_code, certifications, license_type,
+                   customization_available, support_duration, estimated_cost_min,
+                   estimated_cost_max, project_timeline_ref, material_specifications,
+                   construction_notes, file_paths, image_url, designer_id, status,
+                   sales_count, created_at
+            FROM plans
+            WHERE id = %s;
+        """
+        cur.execute(query, (plan_id,))
+        row = cur.fetchone()
+
+        if not row:
+            return jsonify(message="Plan not found"), 404
+
+        plan = dict(row)
+
+        # Parse JSON fields
+        if plan.get('disciplines_included'):
+            plan['disciplines_included'] = json.loads(plan['disciplines_included']) if isinstance(plan['disciplines_included'], str) else plan['disciplines_included']
+        if plan.get('special_features'):
+            plan['special_features'] = json.loads(plan['special_features']) if isinstance(plan['special_features'], str) else plan['special_features']
+        if plan.get('certifications'):
+            plan['certifications'] = json.loads(plan['certifications']) if isinstance(plan['certifications'], str) else plan['certifications']
+        if plan.get('file_paths') and isinstance(plan['file_paths'], str):
+            plan['file_paths'] = json.loads(plan['file_paths'])
+
+        return jsonify(plan), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting plan details: {e}")
+        return jsonify(error="Failed to load plan details"), 500
+    finally:
+        cur.close()
+        conn.close()

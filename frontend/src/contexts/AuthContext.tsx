@@ -44,21 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Logout function
-  const logout = (reason?: string) => {
-    if (reason) {
-      console.log(`Logout reason: ${reason}`);
-    }
+  const logout = () => {
+    // Keep behavior simple and quiet: clear auth state without noisy alerts/logging
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     localStorage.removeItem('last_activity');
     setToken(null);
     setUser(null);
-    
-    if (reason === 'session_expired') {
-      alert('Your session has expired due to inactivity. Please log in again.');
-    } else if (reason === 'token_expired') {
-      alert('Your session has expired. Please log in again.');
-    }
   };
 
   // Update last activity timestamp
@@ -74,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check token expiry
     if (isTokenExpired(token)) {
-      logout('token_expired');
+      logout();
       return;
     }
 
@@ -96,13 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const timeSinceActivity = Date.now() - parseInt(lastActivity);
         
         if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
-          logout('session_expired');
+          logout();
         }
       }
 
       // Also check token expiry
       if (token && isTokenExpired(token)) {
-        logout('token_expired');
+        logout();
       }
     }, 60000); // Check every minute
 
@@ -123,14 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedToken && storedUser) {
       // Check if token is expired
       if (isTokenExpired(storedToken)) {
-        logout('token_expired');
+        logout();
       } else {
         // Check last activity
         const lastActivity = localStorage.getItem('last_activity');
         if (lastActivity) {
           const timeSinceActivity = Date.now() - parseInt(lastActivity);
           if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
-            logout('session_expired');
+            logout();
           } else {
             setToken(storedToken);
             setUser(JSON.parse(storedUser));

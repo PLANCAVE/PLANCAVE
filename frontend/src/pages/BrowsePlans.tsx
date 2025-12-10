@@ -150,20 +150,22 @@ export default function BrowsePlans() {
     }
   };
 
+  const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] text-white py-20 overflow-hidden">
+      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] text-white py-10 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-teal-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-72 h-72 bg-teal-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl"></div>
         
         <div className="max-w-7xl mx-auto px-4 relative z-10">
-          <h1 className="text-4xl md:text-6xl font-serif font-light tracking-wide mb-6 drop-shadow-2xl">
-            Professional Construction Plans
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-wide mb-2 drop-shadow-2xl">
+            Browse Ready-to-Build Plans
           </h1>
-          <p className="text-xl md:text-2xl text-teal-100 max-w-3xl font-light">
-            Complete architectural, structural, MEP & BOQ packages from certified designers
+          <p className="text-sm md:text-base text-teal-100 max-w-xl">
+            Explore designer plans and use filters to find the right match.
           </p>
         </div>
       </div>
@@ -330,8 +332,8 @@ export default function BrowsePlans() {
         ) : (
           <>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {plans.length} Plans Available
+              <h2 className="text-lg font-semibold text-gray-800">
+                {plans.length === 1 ? '1 plan' : `${plans.length} plans`} found
               </h2>
             </div>
             
@@ -343,9 +345,9 @@ export default function BrowsePlans() {
                   className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group overflow-hidden"
                 >
                   {/* Image */}
-                  <div className="relative h-56 overflow-hidden rounded-t-xl -m-6 mb-4">
+                  <div className="relative h-56 overflow-hidden rounded-t-xl -m-6 mb-4 bg-gray-100">
                     <img
-                      src={plan.image_url || '/placeholder.jpg'}
+                      src={(plan.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg')}
                       alt={plan.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />

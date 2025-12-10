@@ -116,22 +116,16 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0b1f1f] via-[#071415] to-black py-10">
+    <div className="min-h-screen bg-gradient-to-b from-[#0b1f1f] via-[#071415] to-black py-8">
       <div className="max-w-5xl mx-auto px-4">
         {/* Header / hero */}
-        <div className="relative overflow-hidden rounded-3xl border border-teal-500/30 bg-gradient-to-r from-teal-600/70 via-cyan-600/70 to-emerald-500/70 px-6 sm:px-10 py-6 sm:py-7 mb-8 shadow-2xl shadow-black/40">
-          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_top,_#ffffff33,transparent_55%)]" />
-          <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-teal-500/30 bg-gradient-to-r from-teal-600/80 via-cyan-600/80 to-emerald-500/80 px-4 sm:px-6 py-3 sm:py-4 mb-6 shadow-xl shadow-black/40">
+          <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_top,_#ffffff33,transparent_55%)]" />
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold tracking-[0.2em] uppercase text-teal-100/80 mb-1">
-                Account
-              </p>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-white drop-shadow-md">
+              <h1 className="text-lg sm:text-xl font-semibold text-white drop-shadow-md">
                 My Profile
               </h1>
-              <p className="mt-1 text-sm text-teal-50/90 max-w-xl">
-                Basic profile info and account controls.
-              </p>
             </div>
             <div className="flex items-center gap-3 self-stretch sm:self-auto sm:items-center sm:justify-end">
               <button
@@ -171,7 +165,6 @@ export default function Profile() {
                 ) : (
                   <span>{initials}</span>
                 )}
-                <span className="absolute bottom-2 right-2 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-slate-900" />
               </div>
               <h3 className="font-semibold text-slate-50 text-base truncate">{user.email}</h3>
               <p className="mt-0.5 inline-flex items-center justify-center rounded-full bg-teal-500/15 px-3 py-0.5 text-[11px] font-medium uppercase tracking-wide text-teal-200 border border-teal-400/40">
@@ -181,11 +174,8 @@ export default function Profile() {
 
             <div className="relative mt-2 border-t border-slate-800 pt-4 text-left text-xs text-slate-300 space-y-2">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                   Account overview
-                </p>
-                <p className="text-slate-400/90">
-                  Quick view of your name and role.
                 </p>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-[11px]">

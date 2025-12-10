@@ -157,46 +157,48 @@ export default function BrowsePlans() {
       {/* Hero Section */}
       <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] text-white py-10 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="absolute top-0 right-0 w-72 h-72 bg-teal-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-10 w-60 h-60 bg-teal-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-10 w-52 h-52 bg-cyan-400/10 rounded-full blur-3xl"></div>
         
-        <div className="max-w-7xl mx-auto px-4 relative z-10">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-wide mb-2 drop-shadow-2xl">
+        <div className="max-w-5xl mx-auto px-4 relative z-10 text-center">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-wide mb-2 drop-shadow-2xl">
             Browse Ready-to-Build Plans
           </h1>
-          <p className="text-sm md:text-base text-teal-100 max-w-xl">
-            Explore designer plans and use filters to find the right match.
+          <p className="text-xs md:text-sm text-teal-100 max-w-2xl mx-auto">
+            Find architectural plans by price, size, package level and more.
           </p>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-10">
-        <div className="card shadow-2xl border-2 border-teal-100">
+      <div className="max-w-5xl mx-auto px-4 -mt-8 relative z-10">
+        <div className="card shadow-xl border border-teal-100/60">
           <div className="flex flex-col gap-4">
             {/* Search Bar */}
-            <div className="flex gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <div className="relative flex-1 max-w-xl mx-auto w-full">
+                <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search plans by name or description..."
+                  placeholder="Search by name or description..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="input-field pl-10"
+                  className="input-field pl-9 py-2 text-sm rounded-full shadow-sm"
                 />
               </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-6 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                  showFilters 
-                    ? 'bg-teal-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                <Filter className="w-5 h-5" />
-                Filters
-              </button>
+              <div className="flex justify-center sm:justify-end">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                    showFilters 
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-sm' 
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  Filters
+                </button>
+              </div>
             </div>
 
             {/* Advanced Filters */}

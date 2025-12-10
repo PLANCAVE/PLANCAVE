@@ -443,8 +443,8 @@ def browse_plans():
         conn.close()
 
 
-@plans_bp.route('/<plan_id>/details', methods=['GET'])
-def get_plan_details(plan_id):
+@plans_bp.route('/simple/<plan_id>', methods=['GET'])
+def get_simple_plan_details(plan_id):
     """Get full details for a single plan by ID"""
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)

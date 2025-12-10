@@ -5,7 +5,7 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BrowsePlans from './pages/BrowsePlans';
-import PlanDetails from './pages/PlanDetails';
+import PlanDetailsPage from './pages/PlanDetailsPage';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/admin/UserManagement';
 import PlanManagement from './pages/admin/PlanManagement';
@@ -44,7 +44,7 @@ function AppContent() {
             path="/plans/:id"
             element={
               <ProtectedRoute>
-                <PlanDetails />
+                <PlanDetailsPage />
               </ProtectedRoute>
             }
           />

@@ -56,7 +56,10 @@ export default function Profile() {
       if (avatarFile) {
         const avatarRes = await uploadMyAvatar(avatarFile);
         data = avatarRes.data;
-        setAvatarUrl(data.profile_picture_url || '');
+        // Only override the current avatar if the backend returns a URL
+        if (data.profile_picture_url) {
+          setAvatarUrl(data.profile_picture_url);
+        }
       }
 
       // Update auth context
@@ -105,7 +108,7 @@ export default function Profile() {
                 My Profile
               </h1>
               <p className="mt-1 text-sm text-teal-50/90 max-w-xl">
-                Update how you appear across Plancave and manage your session.
+                Basic profile info and account controls.
               </p>
             </div>
             <div className="flex items-center gap-3 self-stretch sm:self-auto sm:items-center sm:justify-end">
@@ -160,7 +163,7 @@ export default function Profile() {
                   Account overview
                 </p>
                 <p className="text-slate-400/90">
-                  Your name and avatar are shown on plans, dashboards, and team views within Plancave.
+                  Quick view of your name and role.
                 </p>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-[11px]">
@@ -204,7 +207,7 @@ export default function Profile() {
               <div className="space-y-1.5">
                 <h2 className="text-sm font-semibold text-slate-50">Personal details</h2>
                 <p className="text-xs text-slate-400">
-                  These details help designers and customers recognise you across the platform.
+                  Keep your name up to date.
                 </p>
               </div>
 
@@ -273,7 +276,7 @@ export default function Profile() {
                     }}
                   />
                   <p className="text-[11px] text-slate-400">
-                    Use a square image for best results. Changes apply when you save.
+                    Square images work best.
                   </p>
                 </div>
               </div>

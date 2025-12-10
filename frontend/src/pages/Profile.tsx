@@ -3,113 +3,74 @@ import { useAuth } from '../contexts/AuthContext';
 import { getMyProfile, updateMyProfile, uploadMyAvatar } from '../api';
 import { User as UserIcon, Image as ImageIcon } from 'lucide-react';
 
-interface ProfileForm {
-  first_name: string;
-  middle_name: string;
-  last_name: string;
-}
-
 export default function Profile() {
   const { user, refreshUserProfile } = useAuth();
-  const [form, setForm] = useState<ProfileForm>({
-    first_name: '',
-    middle_name: '',
-    last_name: '',
-  });
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // First, show whatever we already have in AuthContext so the page doesn't feel empty
-    if (user) {
-      setForm({
-        first_name: user.first_name || '',
-        middle_name: user.middle_name || '',
-        last_name: user.last_name || '',
-      });
-      setAvatarUrl(user.profile_picture_url || '');
-    }
-
-    setLoading(false);
-
-    // Then, refresh from backend in the background
-    const load = async () => {
+    // Load profile data
+    const loadProfile = async () => {
       try {
-        setProfileLoading(true);
         const res = await getMyProfile();
         const data = res.data;
-        setForm({
-          first_name: data.first_name || '',
-          middle_name: data.middle_name || '',
-          last_name: data.last_name || '',
-        });
+        setFirstName(data.first_name || '');
+        setMiddleName(data.middle_name || '');
+        setLastName(data.last_name || '');
         setAvatarUrl(data.profile_picture_url || '');
-        refreshUserProfile({
-          first_name: data.first_name,
-          middle_name: data.middle_name,
-          last_name: data.last_name,
-          profile_picture_url: data.profile_picture_url,
-        });
       } catch (err: any) {
-        const status = err?.response?.status;
-        // If token is rejected for /me we silently skip instead of showing a big error banner
-        if (status !== 401) {
-          setError(err?.response?.data?.message || 'Failed to load profile');
+        console.error('Failed to load profile:', err);
+        // Fallback to auth context data
+        if (user) {
+          setFirstName(user.first_name || '');
+          setMiddleName(user.middle_name || '');
+          setLastName(user.last_name || '');
+          setAvatarUrl(user.profile_picture_url || '');
         }
-      } finally {
-        setProfileLoading(false);
       }
     };
-
-    load();
-  }, [refreshUserProfile, user]);
-
-  const handleChange = (field: keyof ProfileForm, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-  };
+    loadProfile();
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-    setSaving(true);
+    setLoading(true);
+    setMessage('');
 
     try {
-      // First update text fields
-      const res = await updateMyProfile(form);
+      // Update profile
+      const res = await updateMyProfile({
+        first_name: firstName,
+        middle_name: middleName,
+        last_name: lastName
+      });
       let data = res.data;
 
-      // Then upload avatar file if provided
+      // Upload avatar if selected
       if (avatarFile) {
         const avatarRes = await uploadMyAvatar(avatarFile);
         data = avatarRes.data;
         setAvatarUrl(data.profile_picture_url || '');
       }
 
-      refreshUserProfile({
-        first_name: data.first_name,
-        middle_name: data.middle_name,
-        last_name: data.last_name,
-        profile_picture_url: data.profile_picture_url,
-      });
-      setSuccess('Profile updated successfully');
+      // Update auth context
+      refreshUserProfile(data);
+      setMessage('Profile updated successfully!');
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to update profile');
+      setMessage(err?.response?.data?.message || 'Failed to update profile');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
   const initials = (() => {
-    if (!user) return '';
-    const parts = [form.first_name, form.last_name].filter(Boolean);
-    const base = parts.length ? parts.join(' ') : (user.email?.split('@')[0] || user.email);
-    return base
+    const name = [firstName, lastName].filter(Boolean).join(' ') || user?.email?.split('@')[0] || '';
+    return name
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
@@ -117,15 +78,12 @@ export default function Profile() {
       .join('');
   })();
 
-  if (loading) {
+  if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="card flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
-          <div className="space-y-2">
-            <div className="h-2 w-32 bg-slate-200 rounded-full animate-pulse" />
-            <div className="h-2 w-48 bg-slate-100 rounded-full animate-pulse" />
-          </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Please log in</h2>
+          <p className="text-gray-600">You need to be logged in to view your profile.</p>
         </div>
       </div>
     );
@@ -133,138 +91,100 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white">
-            <UserIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900">My profile</h1>
-            <p className="text-sm text-slate-500">View and update your personal details.</p>
-            {profileLoading && (
-              <p className="text-xs text-slate-400 mt-0.5">Refreshing profile5e</p>
-            )}
-          </div>
+      <div className="max-w-2xl mx-auto px-4">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">My Profile</h1>
+          <p className="text-slate-600">Update your personal information</p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)]">
-          <form onSubmit={handleSubmit} className="card space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-md text-sm">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-2 rounded-md text-sm">
-                {success}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Email</label>
-              <input
-                type="email"
-                value={user?.email || ''}
-                readOnly
-                className="input-field bg-slate-100 cursor-not-allowed text-slate-500"
-              />
-              <p className="mt-1 text-[11px] text-slate-400">Email is your login and cannot be changed.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">First name</label>
-                <input
-                  type="text"
-                  value={form.first_name}
-                  onChange={e => handleChange('first_name', e.target.value)}
-                  className="input-field"
-                  placeholder="Jane"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Last name</label>
-                <input
-                  type="text"
-                  value={form.last_name}
-                  onChange={e => handleChange('last_name', e.target.value)}
-                  className="input-field"
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Middle name (optional)</label>
-              <input
-                type="text"
-                value={form.middle_name}
-                onChange={e => handleChange('middle_name', e.target.value)}
-                className="input-field"
-                placeholder="Optional"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Profile picture</label>
-              <div className="flex items-center gap-3">
-                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50">
-                  <ImageIcon className="w-4 h-4 text-slate-500" />
-                  <span>Choose image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setAvatarFile(file);
-                      if (file) {
-                        const url = URL.createObjectURL(file);
-                        setAvatarUrl(url);
-                      }
-                    }}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Profile Card */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="text-center">
+              <div className="relative w-20 h-20 rounded-full bg-teal-600 flex items-center justify-center text-white text-xl font-semibold mx-auto mb-4 overflow-hidden">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
                   />
-                </label>
-                {avatarUrl && (
-                  <span className="text-xs text-slate-500 truncate max-w-[160px]">
-                    Preview updated
-                  </span>
+                ) : (
+                  <span>{initials}</span>
                 )}
               </div>
-              <p className="mt-1 text-[11px] text-slate-400">
-                Use a square image for best results. Changes are saved when you click "Save changes".
-              </p>
+              <h3 className="font-semibold text-slate-900">{user.email}</h3>
+              <p className="text-sm text-slate-500 capitalize">{user.role}</p>
             </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {saving ? 'Saving changes...' : 'Save changes'}
-            </button>
-          </form>
-
-          <div className="card flex flex-col items-center justify-center gap-3 text-center">
-            <div className="relative w-24 h-24 rounded-full bg-teal-600 flex items-center justify-center text-white text-2xl font-semibold overflow-hidden ring-4 ring-teal-200/80 mb-2">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={user?.email}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span>{initials}</span>
+          {/* Edit Form */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {message && (
+                <div className={`p-3 rounded text-sm ${message.includes('success') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  {message}
+                </div>
               )}
-              <span className="absolute bottom-1 right-1 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-white" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-900">{user?.email}</p>
-              <p className="text-xs text-slate-500">{user?.role}</p>
-            </div>
-            <p className="mt-3 text-xs text-slate-500 max-w-xs">
-              Your profile details are used across the marketplace, including your avatar and name shown on plans and dashboards.
-            </p>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  placeholder="Enter first name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Middle Name (optional)</label>
+                <input
+                  type="text"
+                  value={middleName}
+                  onChange={(e) => setMiddleName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  placeholder="Enter middle name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  placeholder="Enter last name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Profile Picture</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setAvatarFile(file);
+                    if (file) {
+                      const url = URL.createObjectURL(file);
+                      setAvatarUrl(url);
+                    }
+                  }}
+                  className="w-full"
+                />
+                <p className="text-xs text-slate-500 mt-1">Upload a new profile picture (optional)</p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-teal-600 text-white py-2 px-4 rounded-md hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </form>
           </div>
         </div>
       </div>

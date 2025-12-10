@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getMyProfile, updateMyProfile, uploadMyAvatar } from '../api';
+import api, { getMyProfile, updateMyProfile, uploadMyAvatar } from '../api';
+
+const resolveAvatarUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = (api.defaults.baseURL || '').replace(/\/+$/, '');
+  return `${base}${url}`;
+};
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -23,7 +30,7 @@ export default function Profile() {
         setFirstName(data.first_name || '');
         setMiddleName(data.middle_name || '');
         setLastName(data.last_name || '');
-        setAvatarUrl(data.profile_picture_url || '');
+        setAvatarUrl(resolveAvatarUrl(data.profile_picture_url));
       } catch (err: any) {
         console.error('Failed to load profile:', err);
         // Fallback to auth context data
@@ -31,7 +38,7 @@ export default function Profile() {
           setFirstName(user.first_name || '');
           setMiddleName(user.middle_name || '');
           setLastName(user.last_name || '');
-          setAvatarUrl(user.profile_picture_url || '');
+          setAvatarUrl(resolveAvatarUrl(user.profile_picture_url));
         }
       }
     };
@@ -58,7 +65,7 @@ export default function Profile() {
         data = avatarRes.data;
         // Only override the current avatar if the backend returns a URL
         if (data.profile_picture_url) {
-          setAvatarUrl(data.profile_picture_url);
+          setAvatarUrl(resolveAvatarUrl(data.profile_picture_url));
         }
       }
 

@@ -1,7 +1,15 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, LayoutDashboard, Menu, X } from 'lucide-react';
+import api from '../api';
 import { useState } from 'react';
+
+const resolveAvatarUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = (api.defaults.baseURL || '').replace(/\/+$/, '');
+  return `${base}${url}`;
+};
 
 export default function Header() {
   const { isAuthenticated, user } = useAuth();
@@ -59,7 +67,7 @@ export default function Header() {
                     <div className="relative w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden ring-2 ring-white/30">
                       {user?.profile_picture_url ? (
                         <img
-                          src={user.profile_picture_url}
+                          src={resolveAvatarUrl(user.profile_picture_url)}
                           alt={user.email}
                           className="w-full h-full object-cover"
                         />
@@ -130,7 +138,7 @@ export default function Header() {
                       <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden ring-2 ring-teal-300/60">
                         {user?.profile_picture_url ? (
                           <img
-                            src={user.profile_picture_url}
+                            src={resolveAvatarUrl(user.profile_picture_url)}
                             alt={user.email}
                             className="w-full h-full object-cover"
                           />

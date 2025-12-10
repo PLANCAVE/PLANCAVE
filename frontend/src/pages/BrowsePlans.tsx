@@ -155,37 +155,43 @@ export default function BrowsePlans() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
-      {/* Minimal top bar for background only */}
+      {/* Header with browse label and controls */}
       <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] h-20 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="absolute top-0 right-10 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-10 w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl"></div>
+
+        <div className="relative z-10 h-full">
+          <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
+            <span className="text-xs font-medium tracking-wide text-teal-100 uppercase">
+              Browse plans
+            </span>
+            <div className="flex flex-wrap justify-end gap-2 items-center">
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-white/95 text-gray-800 hover:bg-white shadow-sm"
+              >
+                <Search className="w-4 h-4 text-gray-500" />
+                <span>Search plans</span>
+              </button>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium border transition-all shadow-sm ${
+                  showFilters 
+                    ? 'bg-teal-600 text-white border-teal-500' 
+                    : 'bg-white/90 text-gray-800 border-white/70 hover:bg-white'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                <span>Filter plans</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Search and Filters triggers */}
-      <div className="max-w-5xl mx-auto px-4 -mt-6 relative z-10 space-y-3">
-        {/* Compact actions row (no big bar) */}
-        <div className="flex flex-wrap justify-center sm:justify-start gap-3 items-center">
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 hover:bg-gray-50 transition-all shadow-sm"
-          >
-            <Search className="w-4 h-4 text-gray-500" />
-            <span>Search plans</span>
-          </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all shadow-sm ${
-              showFilters 
-                ? 'bg-teal-600 text-white border-teal-600' 
-                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filter plans</span>
-          </button>
-        </div>
-
+      {/* Search and Filters content */}
+      <div className="max-w-5xl mx-auto px-4 mt-4 relative z-10 space-y-3">
         {/* Search Bar - only shows when user wants to search */}
         {showSearch && (
           <div className="flex justify-center">

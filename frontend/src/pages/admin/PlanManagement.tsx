@@ -112,6 +112,13 @@ export default function PlanManagement() {
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
+                        <Link
+                          to={`/designer/upload?edit=${plan.id}`}
+                          className="px-2 py-1 text-xs font-medium text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded"
+                          title="Edit plan"
+                        >
+                          Edit
+                        </Link>
                         <button
                           onClick={() => handleDelete(plan.id, plan.name)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded"

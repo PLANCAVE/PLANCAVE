@@ -30,6 +30,24 @@ def get_db():
 def allowed_file(filename, allowed_set):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_set
 
+def safe_float(value, default=None):
+    """Safely convert string to float, handling empty strings"""
+    if not value or str(value).strip() == '':
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(value, default=None):
+    """Safely convert string to int, handling empty strings"""
+    if not value or str(value).strip() == '':
+        return default
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
 def save_file_locally(file, plan_id, category, filename):
     """Save file to local storage organized by discipline"""
     safe_filename = secure_filename(filename)
@@ -63,8 +81,30 @@ def upload_plan():
     # Validate required fields
     required_fields = ['name', 'project_type', 'description', 'price', 'area', 'floors', 'package_level']
     for field in required_fields:
-        if field not in form:
-            return jsonify(message=f"Missing required field: {field}"), 400
+        if field not in form or str(form[field]).strip() == '':
+            return jsonify(message=f"Missing or empty required field: {field}"), 400
+
+    # Validate numeric fields
+    try:
+        price = float(form['price'])
+        if price <= 0:
+            return jsonify(message="Price must be a positive number"), 400
+    except (ValueError, TypeError):
+        return jsonify(message="Invalid price format"), 400
+
+    try:
+        area = float(form['area'])
+        if area <= 0:
+            return jsonify(message="Area must be a positive number"), 400
+    except (ValueError, TypeError):
+        return jsonify(message="Invalid area format"), 400
+
+    try:
+        floors = int(form['floors'])
+        if floors <= 0:
+            return jsonify(message="Floors must be a positive integer"), 400
+    except (ValueError, TypeError):
+        return jsonify(message="Invalid floors format"), 400
 
     # Validate thumbnail
     if 'thumbnail' not in files:
@@ -233,14 +273,14 @@ def upload_plan():
                 form.get('project_type', 'Residential'),
                 form.get('description', ''),
                 form.get('target_audience', 'All'),
-                float(form['price']),
-                float(form.get('area', 0)),
-                float(form.get('plot_size', 0)) if form.get('plot_size') else None,
-                int(form.get('bedrooms', 0)) if form.get('bedrooms') else None,
-                int(form.get('bathrooms', 0)) if form.get('bathrooms') else None,
-                int(form.get('floors', 1)),
-                float(form.get('building_height', 0)) if form.get('building_height') else None,
-                int(form.get('parking_spaces', 0)),
+                price,  # already validated
+                area,   # already validated
+                safe_float(form.get('plot_size'), None),
+                safe_int(form.get('bedrooms'), None),
+                safe_int(form.get('bathrooms'), None),
+                floors,  # already validated
+                safe_float(form.get('building_height'), None),
+                safe_int(form.get('parking_spaces'), 0),
                 json.dumps(special_features),
                 json.dumps(disciplines_included),
                 form.get('includes_boq', 'false').lower() == 'true',
@@ -249,9 +289,9 @@ def upload_plan():
                 json.dumps(certifications),
                 form.get('license_type', 'single_use'),
                 form.get('customization_available', 'false').lower() == 'true',
-                int(form.get('support_duration', 0)),
-                float(form.get('estimated_cost_min', 0)) if form.get('estimated_cost_min') else None,
-                float(form.get('estimated_cost_max', 0)) if form.get('estimated_cost_max') else None,
+                safe_int(form.get('support_duration'), 0),
+                safe_float(form.get('estimated_cost_min'), None),
+                safe_float(form.get('estimated_cost_max'), None),
                 form.get('project_timeline_ref', ''),
                 form.get('material_specifications', ''),
                 form.get('construction_notes', ''),

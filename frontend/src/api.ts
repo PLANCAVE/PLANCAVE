@@ -29,7 +29,8 @@ export const registerDesigner = (email: string, password: string, firstName?: st
 
 // Plans
 export const browsePlans = (params?: Record<string, any>) =>
-  api.get('/plans', { params });
+  // Use trailing slash to avoid HTTP->HTTPS redirect issues in production
+  api.get('/plans/', { params });
 
 export const getPlanDetails = (id: string) =>
   api.get(`/plans/${id}/details`);

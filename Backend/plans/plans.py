@@ -393,9 +393,12 @@ def browse_plans():
 
         where_sql = " AND ".join(where_clauses)
 
-        count_query = f"SELECT COUNT(*) FROM plans WHERE {where_sql};"
+        # Use an alias so we can safely read the count when using dict_row
+        count_query = f"SELECT COUNT(*) AS total FROM plans WHERE {where_sql};"
         cur.execute(count_query, tuple(values))
-        total_count = cur.fetchone()[0]
+        count_row = cur.fetchone()
+        # count_row may be a dict (with row_factory=dict_row) or a sequence
+        total_count = count_row["total"] if isinstance(count_row, dict) else count_row[0]
 
         data_query = f"""
             SELECT id, name, project_type, description, package_level, price, area, 

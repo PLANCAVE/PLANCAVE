@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { browsePlans } from '../api';
 import { Search, Filter, Heart, ShoppingCart, Building2, Award, FileText } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Plan {
@@ -42,6 +42,7 @@ export default function BrowsePlans() {
   const [showSearch, setShowSearch] = useState(false);
 
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const planCategories = [
     'Mansion',
@@ -156,7 +157,7 @@ export default function BrowsePlans() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
       {/* Header with browse label and controls */}
-      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] h-20 overflow-hidden">
+      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] h-16 md:h-20 overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="absolute top-0 right-10 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-10 w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl"></div>
@@ -191,7 +192,7 @@ export default function BrowsePlans() {
       </div>
 
       {/* Search and Filters content */}
-      <div className="max-w-5xl mx-auto px-4 mt-4 relative z-10 space-y-3">
+      <div className="max-w-5xl mx-auto px-4 mt-2 md:mt-4 relative z-10 space-y-3">
         {/* Search Bar - only shows when user wants to search */}
         {showSearch && (
           <div className="flex justify-center">
@@ -324,7 +325,7 @@ export default function BrowsePlans() {
       </div>
 
       {/* Plans Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-600"></div>
@@ -352,6 +353,12 @@ export default function BrowsePlans() {
                   key={plan.id}
                   to={`/plans/${plan.id}`}
                   className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group overflow-hidden border border-gray-100"
+                  onClick={(e) => {
+                    if (!isAuthenticated) {
+                      e.preventDefault();
+                      navigate('/login');
+                    }
+                  }}
                 >
                   {/* Image */}
                   <div className="relative h-52 overflow-hidden -m-6 mb-4 bg-gray-100">

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
@@ -105,6 +105,17 @@ def health_check():
         "service": "PlanCave API",
         "version": "1.0.0"
     }), 200
+
+
+@app.route('/uploads/<path:filename>')
+def serve_uploads(filename):
+    """Serve uploaded plan files (thumbnails, galleries, documents).
+
+    This makes URLs like /uploads/plans/<plan_id>/images/<file> accessible
+    from the frontend using the backend base URL.
+    """
+    upload_root = os.path.join(os.getcwd(), 'uploads')
+    return send_from_directory(upload_root, filename)
 
 
 def get_db():

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMyProfile, updateMyProfile, uploadMyAvatar } from '../api';
-import { User as UserIcon, Image as ImageIcon } from 'lucide-react';
 
 export default function Profile() {
   const { user, refreshUserProfile } = useAuth();

@@ -259,46 +259,42 @@ def get_my_plans():
     
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
-    
+
     try:
         where_clauses = ["designer_id = %s"]
         values = [user_id]
-        
+
         if status:
             where_clauses.append("status = %s")
             values.append(status)
-        
+
         if category:
             where_clauses.append("category = %s")
             values.append(category)
-        
+
         where_sql = " AND ".join(where_clauses)
-        
+
         # Allowed sort fields
         allowed_sorts = ['created_at', 'price', 'sales_count', 'name']
         sort_by = sort_by if sort_by in allowed_sorts else 'created_at'
         order = 'ASC' if order == 'ASC' else 'DESC'
-        
+
         # Count total
         cur.execute(f"SELECT COUNT(*) FROM plans WHERE {where_sql}", tuple(values))
         total_count = cur.fetchone()[0]
-        
-        # Get plans
+
+        # Get plans for this designer only (no analytics join to avoid 500s)
         query = f"""
-            SELECT p.*, 
-                   COALESCE(SUM(pa.views_count), 0) as total_views,
-                   COALESCE(SUM(pa.downloads_count), 0) as total_downloads
-            FROM plans p
-            LEFT JOIN plan_analytics pa ON p.id = pa.plan_id
+            SELECT id, name, category, price, status, sales_count, created_at
+            FROM plans
             WHERE {where_sql}
-            GROUP BY p.id
             ORDER BY {sort_by} {order}
             LIMIT %s OFFSET %s
         """
-        
+
         cur.execute(query, tuple(values + [limit, offset]))
         plans = [dict(row) for row in cur.fetchall()]
-        
+
         return jsonify({
             "metadata": {
                 "total": total_count,
@@ -308,7 +304,7 @@ def get_my_plans():
             },
             "plans": plans
         }), 200
-        
+
     except Exception as e:
         return jsonify(error=str(e)), 500
     finally:

@@ -436,7 +436,8 @@ def browse_plans():
 
     except Exception as e:
         current_app.logger.error(f"Error browsing plans: {e}")
-        return jsonify(error="Something went wrong"), 500
+        # Return the actual error message for easier debugging in prototype
+        return jsonify(error=str(e)), 500
     finally:
         cur.close()
         conn.close()

@@ -8,6 +8,22 @@ export default function Header() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const getInitials = () => {
+    if (!user) return '';
+    const nameParts: string[] = [];
+    if (user.first_name) nameParts.push(user.first_name);
+    if (user.last_name) nameParts.push(user.last_name);
+
+    let base = nameParts.join(' ').trim();
+    if (!base && user.email) {
+      base = user.email.split('@')[0] || user.email;
+    }
+
+    const parts = base.split(' ').filter(Boolean);
+    const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('');
+    return initials || (user.email ? user.email[0].toUpperCase() : '');
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -40,15 +56,32 @@ export default function Header() {
                 </Link>
                 
                 <div className="flex items-center gap-4 ml-4 pl-4 border-l border-teal-400/40">
-                  <div className="hidden lg:flex items-center gap-2 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-gray-200">
-                      {user?.email}
-                    </span>
-                    <span className="px-2 py-0.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-bold rounded-full uppercase tracking-wide">
-                      {user?.role}
-                    </span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/profile')}
+                    className="hidden lg:flex items-center gap-3 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="relative w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden ring-2 ring-white/30">
+                      {user?.profile_picture_url ? (
+                        <img
+                          src={user.profile_picture_url}
+                          alt={user.email}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>{getInitials()}</span>
+                      )}
+                      <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-green-400 ring-1 ring-white" />
+                    </div>
+                    <div className="flex flex-col items-start text-left">
+                      <span className="text-sm font-medium text-gray-200 line-clamp-1 max-w-[160px]">
+                        {user?.email}
+                      </span>
+                      <span className="px-2 py-0.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-[10px] font-bold rounded-full uppercase tracking-wide">
+                        {user?.role}
+                      </span>
+                    </div>
+                  </button>
                   <button
                     onClick={handleLogout}
                     className="group relative bg-gradient-to-r from-red-500/20 to-orange-500/20 hover:from-red-500 hover:to-orange-500 text-white py-2.5 px-5 rounded-xl transition-all border border-red-500/30 hover:border-red-400 flex items-center gap-2 hover:shadow-xl hover:shadow-red-500/30 hover:scale-105 font-medium"
@@ -107,9 +140,29 @@ export default function Header() {
                     Dashboard
                   </Link>
                   <div className="pt-4 border-t border-teal-500/20">
-                    <p className="text-sm text-gray-300 mb-2">
-                      {user?.email} <span className="text-teal-400">({user?.role})</span>
-                    </p>
+                    <button
+                      onClick={() => {
+                        navigate('/profile');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="flex items-center gap-2 mb-3 text-sm text-gray-200"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden ring-2 ring-teal-300/60">
+                        {user?.profile_picture_url ? (
+                          <img
+                            src={user.profile_picture_url}
+                            alt={user.email}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{getInitials()}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium line-clamp-1 max-w-[160px]">{user?.email}</span>
+                        <span className="text-xs text-teal-300">{user?.role}</span>
+                      </div>
+                    </button>
                     <button
                       onClick={() => {
                         handleLogout();

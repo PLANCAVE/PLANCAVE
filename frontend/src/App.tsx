@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import BrowsePlans from './pages/BrowsePlans';
 import PlanDetailsPage from './pages/PlanDetailsPage';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import UserManagement from './pages/admin/UserManagement';
 import PlanManagement from './pages/admin/PlanManagement';
 import Analytics from './pages/admin/Analytics';
@@ -55,6 +56,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

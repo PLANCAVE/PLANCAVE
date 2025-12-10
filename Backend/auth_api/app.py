@@ -377,6 +377,7 @@ def init_db():
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name VARCHAR(100);")
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);")
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(500);")
         
         # Update existing users to be active
         cur.execute("UPDATE users SET is_active = TRUE WHERE is_active IS NULL;")
@@ -392,6 +393,85 @@ def init_db():
             cur.close()
         if conn:
             conn.close()
+
+
+@app.route('/me', methods=['GET'])
+@jwt_required()
+def get_profile():
+    """Return the current user's profile (name, email/username, role, avatar)."""
+    user_id, role = get_current_user()
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            "SELECT id, username, role, first_name, middle_name, last_name, profile_picture_url "
+            "FROM users WHERE id = %s;",
+            (user_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify(message="User not found"), 404
+
+        return jsonify({
+            "id": row["id"],
+            "email": row["username"],
+            "role": row["role"],
+            "first_name": row.get("first_name"),
+            "middle_name": row.get("middle_name"),
+            "last_name": row.get("last_name"),
+            "profile_picture_url": row.get("profile_picture_url"),
+        }), 200
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route('/me', methods=['PUT', 'PATCH'])
+@jwt_required()
+def update_profile():
+    """Update the current user's profile (names and profile picture). Email/username cannot be changed."""
+    user_id, role = get_current_user()
+    data = request.get_json() or {}
+
+    allowed_fields = ["first_name", "middle_name", "last_name", "profile_picture_url"]
+    updates = []
+    values = []
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f"{field} = %s")
+            values.append(data[field])
+
+    if not updates:
+        return jsonify(message="No updatable fields provided"), 400
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        sql = f"UPDATE users SET {', '.join(updates)} WHERE id = %s RETURNING id, username, role, first_name, middle_name, last_name, profile_picture_url;"
+        values.append(user_id)
+        cur.execute(sql, tuple(values))
+        row = cur.fetchone()
+        conn.commit()
+
+        if not row:
+            return jsonify(message="User not found"), 404
+
+        return jsonify({
+            "id": row["id"],
+            "email": row["username"],
+            "role": row["role"],
+            "first_name": row.get("first_name"),
+            "middle_name": row.get("middle_name"),
+            "last_name": row.get("last_name"),
+            "profile_picture_url": row.get("profile_picture_url"),
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message="Failed to update profile", error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
 
 @app.route('/admin/run-migrations', methods=['POST'])
 @jwt_required()

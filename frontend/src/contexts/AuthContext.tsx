@@ -5,6 +5,10 @@ interface User {
   id: number;
   email: string;
   role: 'admin' | 'designer' | 'customer';
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  profile_picture_url?: string;
 }
 
 interface AuthContextType {
@@ -12,6 +16,7 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshUserProfile: (profile: Partial<User>) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isDesigner: boolean;
@@ -169,11 +174,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
+  const refreshUserProfile = (profile: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...profile };
+
+      try {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          localStorage.setItem('user', JSON.stringify({ ...parsed, ...profile }));
+        }
+      } catch {
+        // ignore storage errors
+      }
+
+      return updated;
+    });
+  };
+
   const value = {
     user,
     token,
     login,
     logout,
+    refreshUserProfile,
     isAuthenticated: !!token,
     isAdmin: user?.role === 'admin',
     isDesigner: user?.role === 'designer' || user?.role === 'admin', // Admin can do everything designers can

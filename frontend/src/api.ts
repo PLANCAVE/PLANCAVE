@@ -28,6 +28,13 @@ export const registerCustomer = (email: string, password: string, firstName?: st
 export const registerDesigner = (email: string, password: string, firstName?: string, middleName?: string, lastName?: string) =>
   api.post('/register/designer', { username: email.toLowerCase(), password, first_name: firstName, middle_name: middleName, last_name: lastName });
 
+// Profile
+export const getMyProfile = () =>
+  api.get('/me');
+
+export const updateMyProfile = (data: any) =>
+  api.put('/me', data);
+
 // Plans
 export const browsePlans = (params?: Record<string, any>) =>
   // Use trailing slash to avoid HTTP->HTTPS redirect issues in production

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getAllPlans, deletePlan } from '../../api';
 import { FileText, Trash2, Eye } from 'lucide-react';
 
@@ -104,13 +105,13 @@ export default function PlanManagement() {
                     <td className="py-3 px-4 text-gray-600">{plan.designer_id}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <a
-                          href={`/plans/${plan.id}`}
+                        <Link
+                          to={`/plans/${plan.id}`}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                           title="View plan"
                         >
                           <Eye className="w-4 h-4" />
-                        </a>
+                        </Link>
                         <button
                           onClick={() => handleDelete(plan.id, plan.name)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded"

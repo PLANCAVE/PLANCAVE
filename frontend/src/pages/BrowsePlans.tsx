@@ -163,50 +163,49 @@ export default function BrowsePlans() {
       </div>
 
       {/* Search and Filters triggers */}
-      <div className="max-w-5xl mx-auto px-4 -mt-8 relative z-10">
-        <div className="card shadow-md border border-teal-100/60">
-          <div className="flex flex-col gap-3">
-            {/* Compact actions row */}
-            <div className="flex flex-wrap justify-center sm:justify-between gap-2 items-center">
-              <button
-                onClick={() => setShowSearch(!showSearch)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 hover:bg-gray-50 transition-all"
-              >
-                <Search className="w-4 h-4 text-gray-500" />
-                <span>Search plans</span>
-              </button>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                  showFilters 
-                    ? 'bg-teal-600 text-white border-teal-600 shadow-sm' 
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-                <span>Filter plans</span>
-              </button>
+      <div className="max-w-5xl mx-auto px-4 -mt-6 relative z-10 space-y-3">
+        {/* Compact actions row (no big bar) */}
+        <div className="flex flex-wrap justify-center sm:justify-start gap-3 items-center">
+          <button
+            onClick={() => setShowSearch(!showSearch)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 hover:bg-gray-50 transition-all shadow-sm"
+          >
+            <Search className="w-4 h-4 text-gray-500" />
+            <span>Search plans</span>
+          </button>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all shadow-sm ${
+              showFilters 
+                ? 'bg-teal-600 text-white border-teal-600' 
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            <span>Filter plans</span>
+          </button>
+        </div>
+
+        {/* Search Bar - only shows when user wants to search */}
+        {showSearch && (
+          <div className="flex justify-center">
+            <div className="relative flex-1 max-w-xl w-full">
+              <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by name or description..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="input-field pl-9 py-2 text-sm rounded-full shadow-sm"
+              />
             </div>
+          </div>
+        )}
 
-            {/* Search Bar - only shows when user wants to search */}
-            {showSearch && (
-              <div className="flex justify-center">
-                <div className="relative flex-1 max-w-xl w-full">
-                  <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search by name or description..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="input-field pl-9 py-2 text-sm rounded-full shadow-sm"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Advanced Filters */}
-            {showFilters && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+        {/* Advanced Filters */}
+        {showFilters && (
+          <div className="card shadow-md border border-teal-100/60 mt-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Project Type</label>
                   <select
@@ -314,9 +313,8 @@ export default function BrowsePlans() {
                   </button>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
       </div>
 
       {/* Plans Grid */}

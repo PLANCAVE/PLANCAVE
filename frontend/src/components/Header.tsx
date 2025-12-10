@@ -1,10 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
+import { Building2, LayoutDashboard, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Header() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -22,11 +22,6 @@ export default function Header() {
     const parts = base.split(' ').filter(Boolean);
     const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('');
     return initials || (user.email ? user.email[0].toUpperCase() : '');
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   return (
@@ -73,13 +68,6 @@ export default function Header() {
                       )}
                       <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-green-400 ring-1 ring-white" />
                     </div>
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="group relative bg-gradient-to-r from-red-500/20 to-orange-500/20 hover:from-red-500 hover:to-orange-500 text-white py-2.5 px-5 rounded-xl transition-all border border-red-500/30 hover:border-red-400 flex items-center gap-2 hover:shadow-xl hover:shadow-red-500/30 hover:scale-105 font-medium"
-                  >
-                    <LogOut className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                    Logout
                   </button>
                 </div>
               </>
@@ -137,7 +125,7 @@ export default function Header() {
                         navigate('/profile');
                         setMobileMenuOpen(false);
                       }}
-                      className="flex items-center gap-2 mb-3 text-sm text-gray-200"
+                      className="flex items-center gap-2 text-sm text-gray-200"
                     >
                       <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden ring-2 ring-teal-300/60">
                         {user?.profile_picture_url ? (
@@ -154,15 +142,6 @@ export default function Header() {
                         <span className="font-medium line-clamp-1 max-w-[160px]">{user?.email}</span>
                         <span className="text-xs text-teal-300">{user?.role}</span>
                       </div>
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setMobileMenuOpen(false);
-                      }}
-                      className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg transition-all border border-white/20 w-full"
-                    >
-                      Logout
                     </button>
                   </div>
                 </>

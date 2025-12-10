@@ -27,18 +27,27 @@ export default function Profile() {
       try {
         const res = await getMyProfile();
         const data = res.data;
+        const resolvedAvatar = resolveAvatarUrl(data.profile_picture_url);
         setFirstName(data.first_name || '');
         setMiddleName(data.middle_name || '');
         setLastName(data.last_name || '');
-        setAvatarUrl(resolveAvatarUrl(data.profile_picture_url));
+        setAvatarUrl(resolvedAvatar);
+        // Keep header/user context in sync with latest profile data
+        refreshUserProfile({
+          first_name: data.first_name,
+          middle_name: data.middle_name,
+          last_name: data.last_name,
+          profile_picture_url: resolvedAvatar,
+        });
       } catch (err: any) {
         console.error('Failed to load profile:', err);
         // Fallback to auth context data
         if (user) {
+          const resolvedAvatar = resolveAvatarUrl(user.profile_picture_url);
           setFirstName(user.first_name || '');
           setMiddleName(user.middle_name || '');
           setLastName(user.last_name || '');
-          setAvatarUrl(resolveAvatarUrl(user.profile_picture_url));
+          setAvatarUrl(resolvedAvatar);
         }
       }
     };
@@ -69,8 +78,14 @@ export default function Profile() {
         }
       }
 
-      // Update auth context
-      refreshUserProfile(data);
+      // Update auth context with resolved avatar URL so header updates too
+      const resolvedAvatar = resolveAvatarUrl(data.profile_picture_url);
+      refreshUserProfile({
+        first_name: data.first_name,
+        middle_name: data.middle_name,
+        last_name: data.last_name,
+        profile_picture_url: resolvedAvatar,
+      });
       setMessage('Profile updated successfully!');
     } catch (err: any) {
       setMessage(err?.response?.data?.message || 'Failed to update profile');

@@ -83,8 +83,12 @@ export const deleteUser = (userId: number) =>
 export const getAllPlans = (params?: Record<string, any>) =>
   api.get('/admin/plans', { params });
 
-export const updatePlan = (planId: string, data: Record<string, any>) =>
-  api.put(`/admin/plans/${planId}`, data);
+export const updatePlan = (planId: string, data: any) =>
+	// If called with FormData (designer edit with files), send as multipart.
+	// Otherwise, default to JSON body for admin updates.
+	data instanceof FormData
+		? api.put(`/plans/${planId}`, data, { headers: { 'Content-Type': 'multipart/form-data' } })
+		: api.put(`/admin/plans/${planId}`, data);
 
 export const deletePlan = (planId: string) =>
   api.delete(`/admin/plans/${planId}`);

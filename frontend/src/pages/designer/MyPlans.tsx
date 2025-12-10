@@ -107,17 +107,25 @@ export default function MyPlans() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-200">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      plan.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}
+                <div className="pt-4 border-t border-gray-200 flex items-center justify-between gap-2">
+                  <div>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        plan.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {plan.status}
+                    </span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      {new Date(plan.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/designer/upload?edit=${plan.id}`)}
+                    className="text-xs font-medium text-purple-600 hover:text-purple-800 hover:underline"
                   >
-                    {plan.status}
-                  </span>
-                  <span className="text-xs text-gray-500 ml-2">
-                    {new Date(plan.created_at).toLocaleDateString()}
-                  </span>
+                    Edit plan
+                  </button>
                 </div>
               </div>
             ))}

@@ -339,6 +339,160 @@ def upload_plan():
         return jsonify(message=f"Upload failed: {str(e)}"), 500
 
 
+@plans_bp.route('/<plan_id>', methods=['PUT', 'PATCH'])
+@jwt_required()
+def update_plan(plan_id):
+    """Edit an existing plan's details and media.
+
+    Designers can update their own plans; admins can update any plan.
+    All fields are optional; only provided ones are updated.
+    """
+    user_id, role = get_current_user()
+    if role not in ['admin', 'designer']:
+        return jsonify(message="Access denied: Admins and Designers only"), 403
+
+    form = request.form
+    files = request.files
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        # Check existing plan and ownership
+        cur.execute("SELECT * FROM plans WHERE id = %s", (plan_id,))
+        existing = cur.fetchone()
+        if not existing:
+            return jsonify(message="Plan not found"), 404
+
+        if role != 'admin' and existing['designer_id'] != user_id:
+            return jsonify(message="You do not have permission to edit this plan"), 403
+
+        update_fields = {}
+
+        # Simple text/number fields we allow updating
+        simple_fields = [
+            'name', 'project_type', 'description', 'target_audience', 'category',
+            'building_code', 'license_type', 'project_timeline_ref',
+            'material_specifications', 'construction_notes'
+        ]
+        for field in simple_fields:
+            if field in form:
+                update_fields[field] = form.get(field)
+
+        # Numeric fields
+        if 'price' in form:
+            price = safe_float(form.get('price'))
+            if price is not None and price > 0:
+                update_fields['price'] = price
+        if 'area' in form:
+            area = safe_float(form.get('area'))
+            if area is not None and area > 0:
+                update_fields['area'] = area
+        if 'plot_size' in form:
+            update_fields['plot_size'] = safe_float(form.get('plot_size'))
+        if 'bedrooms' in form:
+            update_fields['bedrooms'] = safe_int(form.get('bedrooms'))
+        if 'bathrooms' in form:
+            update_fields['bathrooms'] = safe_int(form.get('bathrooms'))
+        if 'floors' in form:
+            floors = safe_int(form.get('floors'))
+            if floors is not None and floors > 0:
+                update_fields['floors'] = floors
+        if 'building_height' in form:
+            update_fields['building_height'] = safe_float(form.get('building_height'))
+        if 'parking_spaces' in form:
+            update_fields['parking_spaces'] = safe_int(form.get('parking_spaces'))
+        if 'support_duration' in form:
+            update_fields['support_duration'] = safe_int(form.get('support_duration'))
+        if 'estimated_cost_min' in form:
+            update_fields['estimated_cost_min'] = safe_float(form.get('estimated_cost_min'))
+        if 'estimated_cost_max' in form:
+            update_fields['estimated_cost_max'] = safe_float(form.get('estimated_cost_max'))
+
+        # Booleans and enums
+        if 'includes_boq' in form:
+            update_fields['includes_boq'] = form.get('includes_boq', 'false').lower() == 'true'
+        if 'package_level' in form:
+            update_fields['package_level'] = form.get('package_level')
+        if 'customization_available' in form:
+            update_fields['customization_available'] = form.get('customization_available', 'false').lower() == 'true'
+
+        # JSON fields
+        if 'disciplines_included' in form:
+            try:
+                update_fields['disciplines_included'] = json.dumps(json.loads(form.get('disciplines_included') or '{}'))
+            except json.JSONDecodeError:
+                pass
+        if 'certifications' in form:
+            try:
+                update_fields['certifications'] = json.dumps(json.loads(form.get('certifications') or '[]'))
+            except json.JSONDecodeError:
+                pass
+        if 'special_features' in form:
+            try:
+                update_fields['special_features'] = json.dumps(json.loads(form.get('special_features') or '[]'))
+            except json.JSONDecodeError:
+                pass
+
+        # File paths JSON
+        file_paths = existing.get('file_paths')
+        if isinstance(file_paths, str):
+            try:
+                file_paths = json.loads(file_paths)
+            except Exception:
+                file_paths = {}
+        if not isinstance(file_paths, dict):
+            file_paths = {}
+
+        # Replace thumbnail if provided
+        if 'thumbnail' in files:
+            thumb = files['thumbnail']
+            if thumb and allowed_file(thumb.filename, ALLOWED_EXTENSIONS_IMAGES):
+                thumb_path = save_file_locally(thumb, plan_id, 'images', thumb.filename)
+                update_fields['image_url'] = thumb_path
+
+        # Add extra gallery images if provided
+        if 'gallery' in files:
+            gallery_files = request.files.getlist('gallery')
+            new_gallery_paths = []
+            for file in gallery_files:
+                if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMAGES):
+                    path = save_file_locally(file, plan_id, 'images/gallery', file.filename)
+                    new_gallery_paths.append(path)
+
+            if new_gallery_paths:
+                existing_gallery = file_paths.get('gallery') or []
+                file_paths['gallery'] = existing_gallery + new_gallery_paths
+
+        # Persist updated file_paths if changed
+        if file_paths != existing.get('file_paths'):
+            update_fields['file_paths'] = json.dumps(file_paths)
+
+        if not update_fields:
+            return jsonify(message="No changes provided"), 400
+
+        set_clauses = []
+        values = []
+        for col, val in update_fields.items():
+            set_clauses.append(f"{col} = %s")
+            values.append(val)
+        values.append(plan_id)
+
+        sql = f"UPDATE plans SET {', '.join(set_clauses)} WHERE id = %s"
+        cur.execute(sql, tuple(values))
+        conn.commit()
+
+        return jsonify(message="Plan updated successfully"), 200
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"Error updating plan {plan_id}: {e}")
+        return jsonify(message="Failed to update plan"), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @plans_bp.route('/', methods=['GET'])
 def browse_plans():
     """

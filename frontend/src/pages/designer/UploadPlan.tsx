@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../../api';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api, { updatePlan } from '../../api';
 import { Upload, FileText, Check, Building2, Hammer, Zap, Shield, Palette, DollarSign, Award } from 'lucide-react';
 
 export default function UploadPlan() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
+
+  const searchParams = new URLSearchParams(location.search);
+  const editingPlanId = searchParams.get('edit');
+  const isEditMode = !!editingPlanId;
 
   // Section 1: Basic Information
   const planCategories = [
@@ -233,11 +238,16 @@ export default function UploadPlan() {
         formDataToSend.append('gallery', file);
       });
 
-      await api.post('/plans/upload', formDataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      if (isEditMode && editingPlanId) {
+        await updatePlan(editingPlanId, formDataToSend);
+        alert('Plan updated successfully!');
+      } else {
+        await api.post('/plans/upload', formDataToSend, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
 
-      alert('Professional plan uploaded successfully!');
+        alert('Professional plan uploaded successfully!');
+      }
       navigate('/designer/my-plans');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to upload plan');

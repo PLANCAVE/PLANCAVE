@@ -314,8 +314,10 @@ def bulk_upload():
 
 @enhanced_uploads_bp.route('/<plan_id>/details', methods=['GET'])
 def get_plan_details(plan_id):
-    """
-    Get complete plan details including BOQs, specs, compliance, and files
+    """Get complete plan details including BOQs, specs, compliance, and files.
+
+    Also surface gallery images saved in plans.file_paths so the frontend
+    can build a full image gallery, even for uploads created via /plans/upload.
     """
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
@@ -347,9 +349,39 @@ def get_plan_details(plan_id):
         cur.execute("SELECT * FROM compliance_notes WHERE plan_id = %s", (plan_id,))
         plan_dict['compliance_notes'] = [dict(row) for row in cur.fetchall()]
         
-        # Get files
+        # Get files stored in plan_files
         cur.execute("SELECT * FROM plan_files WHERE plan_id = %s", (plan_id,))
-        plan_dict['files'] = [dict(row) for row in cur.fetchall()]
+        files = [dict(row) for row in cur.fetchall()]
+
+        # Also add gallery images from plans.file_paths JSON (used by /plans/upload)
+        try:
+            raw_file_paths = plan_dict.get('file_paths')
+            if isinstance(raw_file_paths, str):
+                file_paths = json.loads(raw_file_paths)
+            elif isinstance(raw_file_paths, dict):
+                file_paths = raw_file_paths
+            else:
+                file_paths = None
+
+            if file_paths and isinstance(file_paths, dict):
+                gallery_paths = file_paths.get('gallery') or []
+                image_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+                for path in gallery_paths:
+                    if not isinstance(path, str):
+                        continue
+                    _, ext = os.path.splitext(path)
+                    if ext.lower() in image_exts:
+                        files.append({
+                            'plan_id': plan_id,
+                            'file_type': ext.lstrip('.').lower(),
+                            'file_path': path,
+                        })
+        except Exception:
+            # If anything goes wrong while parsing gallery paths,
+            # fail silently and just return whatever files we have.
+            pass
+
+        plan_dict['files'] = files
         
         return jsonify(plan_dict), 200
         

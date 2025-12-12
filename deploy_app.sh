@@ -129,19 +129,19 @@ server {
     server_name $SERVER_NAME;
 
     location $API_PREFIX/ {
-        rewrite ^$API_PREFIX/(.*)	/$1 break;
+        rewrite ^$API_PREFIX/(.*)$ /\$1 break;
         proxy_pass http://$BACKEND_HOST:$BACKEND_PORT/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     root $FRONTEND_DIR/dist;
     index index.html;
 
     location / {
-        try_files $uri /index.html;
+        try_files \$uri /index.html;
     }
 }
 EOF

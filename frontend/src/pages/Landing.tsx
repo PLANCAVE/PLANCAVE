@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Building2, TrendingUp, CheckCircle, ArrowLeft, ArrowRight, Mail, Phone, MapPin, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { browsePlans } from '../api';
 
 interface Plan {
@@ -30,6 +30,9 @@ export default function Landing() {
   const [featuredPlans, setFeaturedPlans] = useState<Plan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
+  const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
+  const [isManualPause, setIsManualPause] = useState(false);
+  const manualPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const loadFeaturedPlans = async () => {
@@ -37,8 +40,9 @@ export default function Landing() {
         const response = await browsePlans();
         const results: Plan[] = response.data.results || [];
         // Get first 6 plans as featured
-        setFeaturedPlans(results.slice(0, 6));
-        setCurrentPlanIndex(0);
+        const curated = results.slice(0, 6);
+        setFeaturedPlans(curated);
+        setCurrentPlanIndex(curated.length ? Math.floor(Math.random() * curated.length) : 0);
       } catch (error) {
         console.error('Failed to load featured plans:', error);
       } finally {
@@ -47,6 +51,14 @@ export default function Landing() {
     };
 
     loadFeaturedPlans();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (manualPauseTimeout.current) {
+        clearTimeout(manualPauseTimeout.current);
+      }
+    };
   }, []);
 
   const getPackageBadgeColor = (level: string) => {
@@ -62,15 +74,33 @@ export default function Landing() {
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
   const currentPlan = featuredPlans[currentPlanIndex];
 
+  const triggerManualPause = () => {
+    setIsManualPause(true);
+    if (manualPauseTimeout.current) {
+      clearTimeout(manualPauseTimeout.current);
+    }
+    manualPauseTimeout.current = setTimeout(() => setIsManualPause(false), 6000);
+  };
+
   const handlePrevPlan = () => {
     if (!featuredPlans.length) return;
+    triggerManualPause();
     setCurrentPlanIndex((prev) => (prev - 1 + featuredPlans.length) % featuredPlans.length);
   };
 
   const handleNextPlan = () => {
     if (!featuredPlans.length) return;
+    triggerManualPause();
     setCurrentPlanIndex((prev) => (prev + 1) % featuredPlans.length);
   };
+
+  useEffect(() => {
+    if (!featuredPlans.length || isHoveringCarousel || isManualPause) return;
+    const autoplay = setInterval(() => {
+      setCurrentPlanIndex((prev) => (prev + 1) % featuredPlans.length);
+    }, 7000);
+    return () => clearInterval(autoplay);
+  }, [featuredPlans, isHoveringCarousel, isManualPause]);
 
   const handlePlanOpen = () => {
     if (!currentPlan) return;
@@ -108,11 +138,31 @@ export default function Landing() {
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
         {/* Full-bleed hero carousel */}
-        <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-20">
+        <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-12">
           <div
             className="relative h-[34rem] w-full overflow-hidden cursor-pointer"
             onClick={handlePlanOpen}
+            onMouseEnter={() => setIsHoveringCarousel(true)}
+            onMouseLeave={() => setIsHoveringCarousel(false)}
+            onTouchStart={() => setIsHoveringCarousel(true)}
+            onTouchEnd={() => setIsHoveringCarousel(false)}
+            onTouchCancel={() => setIsHoveringCarousel(false)}
           >
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center text-white/80 space-y-3 pointer-events-none z-20">
+              <div className="flex items-center gap-3 justify-center text-[0.6rem] tracking-[0.8em] text-white/70">
+                <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/30 to-white/70"></div>
+                <span>THE</span>
+                <div className="h-px w-20 bg-gradient-to-l from-transparent via-white/30 to-white/70"></div>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-serif tracking-[0.55em] text-white drop-shadow-2xl">
+                PLANCAVE
+              </h1>
+              <div className="flex items-center justify-center gap-6 text-[0.5rem] tracking-[0.45em] text-white/60">
+                <div className="h-px w-12 bg-white/60"></div>
+                <span>PREMIUM AFRICAN PLANS</span>
+                <div className="h-px w-12 bg-white/60"></div>
+              </div>
+            </div>
             <div className="absolute -inset-10 opacity-40 bg-gradient-to-br from-teal-300/20 via-white/10 to-transparent blur-3xl pointer-events-none"></div>
             {loadingPlans ? (
               <div className="flex items-center justify-center h-full">
@@ -217,11 +267,13 @@ export default function Landing() {
 
                 <div className="absolute bottom-5 inset-x-0 flex justify-center gap-2">
                   {featuredPlans.map((plan, idx) => (
-                    <Link
+                    <button
                       key={plan.id}
-                      to={`/plans/${plan.id}`}
+                      type="button"
+                      aria-label={`Go to plan ${plan.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
+                        triggerManualPause();
                         setCurrentPlanIndex(idx);
                       }}
                       className={`h-1 w-10 rounded-full transition-all ${idx === currentPlanIndex ? 'bg-white' : 'bg-white/30'}`}

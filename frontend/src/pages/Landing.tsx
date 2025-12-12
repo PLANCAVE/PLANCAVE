@@ -110,7 +110,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a]">
       {/* Hero Section with 3D Elements */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden min-h-[100vh]">
         {/* Animated Background Grid */}
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         {/* Floating 3D Elements */}
@@ -122,7 +122,7 @@ export default function Landing() {
         {/* Full-bleed hero carousel */}
         <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-0">
           <div
-            className="relative h-[calc(100vh-5rem)] min-h-[28rem] w-full overflow-hidden cursor-pointer"
+            className="relative h-[calc(100vh-5rem)] sm:h-[calc(100vh-6rem)] min-h-[32rem] w-full overflow-hidden cursor-pointer"
             onClick={handlePlanOpen}
             onMouseEnter={() => setIsHoveringCarousel(true)}
             onMouseLeave={() => setIsHoveringCarousel(false)}

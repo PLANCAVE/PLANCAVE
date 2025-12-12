@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Menu, X } from 'lucide-react';
+import { Heart, LayoutDashboard, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react';
 import api from '../api';
 import { useState } from 'react';
 
@@ -56,9 +56,47 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link to="/plans" className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-3 py-2 rounded-lg hover:bg-white/10">
-              Browse Plans
+            <Link
+              to="/plans"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/20 text-white/90 tracking-[0.2em] uppercase text-xs hover:bg-white/10 hover:text-white transition-all"
+            >
+              Browse More Plans
             </Link>
+
+            <div className="flex items-center gap-3 text-white/80">
+              <button
+                type="button"
+                className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                onClick={() => navigate('/favorites')}
+                aria-label="Saved plans"
+              >
+                <Heart className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                onClick={() => navigate('/plans')}
+                aria-label="Search plans"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                onClick={() => navigate('/login')}
+                aria-label="Account"
+              >
+                <UserRound className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                onClick={() => navigate('/cart')}
+                aria-label="Cart"
+              >
+                <ShoppingBag className="w-5 h-5" />
+              </button>
+            </div>
             
             {isAuthenticated ? (
               <>
@@ -87,18 +125,7 @@ export default function Header() {
                   </button>
                 </div>
               </>
-            ) : (
-              <>
-                <Link to="/login" className="relative group bg-white/5 hover:bg-white/10 backdrop-blur-sm text-white py-2.5 px-6 rounded-xl transition-all border border-white/20 hover:border-white/40 font-medium hover:scale-105 hover:shadow-xl hover:shadow-white/10">
-                  <span className="relative z-10">Sign In</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-teal-500/0 to-cyan-500/0 group-hover:from-teal-500/10 group-hover:to-cyan-500/10 rounded-xl transition-all"></div>
-                </Link>
-                <Link to="/register" className="relative group bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white py-2.5 px-6 rounded-xl font-bold hover:shadow-2xl hover:shadow-teal-500/60 transition-all hover:scale-110 ring-2 ring-teal-400/50 hover:ring-teal-300">
-                  <span className="relative z-10">Sign Up</span>
-                  <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity blur-xl"></div>
-                </Link>
-              </>
-            )}
+            ) : null}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -123,9 +150,42 @@ export default function Header() {
                 className="text-gray-300 hover:text-white"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Browse Plans
+                Explore Plans
               </Link>
-              
+              <div className="flex items-center gap-3 text-white/80">
+                <button
+                  type="button"
+                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  onClick={() => navigate('/favorites')}
+                  aria-label="Saved plans"
+                >
+                  <Heart className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  onClick={() => navigate('/plans')}
+                  aria-label="Search plans"
+                >
+                  <Search className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  onClick={() => navigate('/login')}
+                  aria-label="Account"
+                >
+                  <UserRound className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  onClick={() => navigate('/cart')}
+                  aria-label="Cart"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                </button>
+              </div>
               {isAuthenticated ? (
                 <>
                   <Link
@@ -168,14 +228,7 @@ export default function Header() {
                     className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg transition-all border border-white/20 text-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Sign In
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-teal-500/50 transition-all text-center"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign Up
+                    Sign In / Sign Up
                   </Link>
                 </>
               )}

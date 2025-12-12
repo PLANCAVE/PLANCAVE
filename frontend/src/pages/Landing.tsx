@@ -109,28 +109,10 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a]">
-      {/* Header Logo Strip */}
-      <header className="relative z-10 border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 py-4 text-center space-y-2">
-          <div className="flex items-center justify-center gap-3 text-white/70 text-[0.55rem] tracking-[0.7em]">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent via-white/30 to-white/80"></div>
-            <span>THE</span>
-            <div className="h-px w-16 bg-gradient-to-l from-transparent via-white/30 to-white/80"></div>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-serif tracking-[0.45em] text-white">PLANCAVE</h1>
-          <div className="flex items-center justify-center gap-5 opacity-60">
-            <div className="h-px w-14 bg-white"></div>
-            <div className="h-px w-10 bg-white"></div>
-            <div className="h-px w-14 bg-white"></div>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section with 3D Elements */}
       <div className="relative overflow-hidden">
         {/* Animated Background Grid */}
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        
         {/* Floating 3D Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-10 w-64 h-64 bg-teal-500/20 rounded-full blur-3xl animate-float"></div>
@@ -159,7 +141,6 @@ export default function Landing() {
               </h1>
               <div className="flex items-center justify-center gap-6 text-[0.5rem] tracking-[0.45em] text-white/60">
                 <div className="h-px w-12 bg-white/60"></div>
-                <span>PREMIUM AFRICAN PLANS</span>
                 <div className="h-px w-12 bg-white/60"></div>
               </div>
             </div>

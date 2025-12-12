@@ -138,61 +138,54 @@ export default function Landing() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 text-white">
-                  <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end justify-between">
-                    <div className="w-full max-w-3xl bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 px-5 py-4">
-                      <div className="flex items-center gap-3 text-[0.55rem] uppercase tracking-[0.45em] text-white/70">
+                <div className="absolute inset-x-0 bottom-0 px-4 pb-5 text-white">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex flex-col gap-2 bg-black/25 backdrop-blur-md rounded-2xl border border-white/10 px-4 py-3 max-w-2xl">
+                      <div className="flex items-center gap-2 text-[0.5rem] uppercase tracking-[0.4em] text-white/70">
                         <span>{currentPlan?.project_type}</span>
                         {currentPlan?.category && <span className="text-white/50">• {currentPlan.category}</span>}
                       </div>
-                      <h3 className="mt-3 text-2xl md:text-3xl font-semibold tracking-[0.3em] text-white">
-                        {currentPlan?.name}
-                      </h3>
-                      <p className="mt-2 text-sm text-white/85 line-clamp-2">
-                        {currentPlan?.description}
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2 text-[0.55rem] uppercase tracking-[0.4em] text-white/70">
-                        <span className="px-3 py-1 rounded-full bg-white/15 border border-white/25">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="text-xl md:text-2xl font-semibold tracking-[0.25em] text-white">
+                          {currentPlan?.name}
+                        </h3>
+                        <p className="text-xs md:text-sm text-white/80 line-clamp-2">
+                          {currentPlan?.description}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-[0.5rem] uppercase tracking-[0.35em] text-white/70">
+                        <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20">
                           KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
                         </span>
-                        <span className={`px-3 py-1 rounded-full border border-white/25 ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
+                        <span className={`px-3 py-1 rounded-full border border-white/20 ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
                           {currentPlan?.package_level?.toUpperCase()}
                         </span>
                         {currentPlan?.area && (
-                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/25">
+                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20">
                             {currentPlan.area} m²
                           </span>
                         )}
                         {typeof currentPlan?.bedrooms === 'number' && (
-                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/25">
+                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20">
                             {currentPlan.bedrooms} Beds
                           </span>
                         )}
                         {typeof currentPlan?.floors === 'number' && (
-                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/25">
+                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20">
                             {currentPlan.floors} Floors
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 w-full lg:w-auto">
-                      <div className="flex flex-wrap gap-3 bg-black/35 backdrop-blur-md rounded-2xl border border-white/10 px-5 py-3 text-center text-[0.55rem] uppercase tracking-[0.35em] text-white/70">
-                        <div className="flex-1 min-w-[90px]">
-                          <p className="text-xs text-white/60">AREA</p>
-                          <p className="text-2xl font-light text-white">{currentPlan?.area ?? '—'}</p>
-                        </div>
-                        <div className="flex-1 min-w-[90px]">
-                          <p className="text-xs text-white/60">BEDS</p>
-                          <p className="text-2xl font-light text-white">{currentPlan?.bedrooms ?? '—'}</p>
-                        </div>
-                        <div className="flex-1 min-w-[90px]">
-                          <p className="text-xs text-white/60">FLOORS</p>
-                          <p className="text-2xl font-light text-white">{currentPlan?.floors ?? '—'}</p>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-3 bg-black/25 backdrop-blur-md rounded-full border border-white/10 px-5 py-2 text-[0.55rem] uppercase tracking-[0.35em] text-white/70">
+                        <span className="text-white text-base font-light">{currentPlan?.area ?? '—'} m²</span>
+                        <span className="text-white text-base font-light">{currentPlan?.bedrooms ?? '—'} beds</span>
+                        <span className="text-white text-base font-light">{currentPlan?.floors ?? '—'} floors</span>
                       </div>
                       <button
-                        className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-white text-[#0b1a1a] font-semibold text-[0.6rem] uppercase tracking-[0.45em]"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-white/20 bg-white/10 text-[0.55rem] uppercase tracking-[0.4em] text-white hover:bg-white/20"
                         onClick={(e) => {
                           e.stopPropagation();
                           handlePlanOpen();

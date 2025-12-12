@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Building2, TrendingUp, CheckCircle, ArrowRight, Mail, Phone, MapPin, Zap, Heart, ShoppingCart, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
@@ -26,8 +26,10 @@ interface Plan {
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [featuredPlans, setFeaturedPlans] = useState<Plan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 
   useEffect(() => {
     const loadFeaturedPlans = async () => {
@@ -36,6 +38,7 @@ export default function Landing() {
         const results: Plan[] = response.data.results || [];
         // Get first 6 plans as featured
         setFeaturedPlans(results.slice(0, 6));
+        setCurrentPlanIndex(0);
       } catch (error) {
         console.error('Failed to load featured plans:', error);
       } finally {
@@ -57,6 +60,26 @@ export default function Landing() {
   };
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+  const currentPlan = featuredPlans[currentPlanIndex];
+
+  const handlePrevPlan = () => {
+    if (!featuredPlans.length) return;
+    setCurrentPlanIndex((prev) => (prev - 1 + featuredPlans.length) % featuredPlans.length);
+  };
+
+  const handleNextPlan = () => {
+    if (!featuredPlans.length) return;
+    setCurrentPlanIndex((prev) => (prev + 1) % featuredPlans.length);
+  };
+
+  const handlePlanOpen = () => {
+    if (!currentPlan) return;
+    if (isAuthenticated) {
+      navigate(`/plans/${currentPlan.id}`);
+    } else {
+      navigate('/login');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a]">
@@ -71,81 +94,147 @@ export default function Landing() {
           <div className="absolute top-40 right-20 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-float-delayed"></div>
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
+        <div className="relative max-w-5xl mx-auto px-4 pt-12 pb-6 text-center space-y-6">
+          <div className="flex items-center justify-center gap-4 text-white/70 text-xs tracking-[0.7em]">
+            <div className="h-px w-16 bg-gradient-to-r from-transparent via-white/30 to-white/80"></div>
+            <span>THE</span>
+            <div className="h-px w-16 bg-gradient-to-l from-transparent via-white/30 to-white/80"></div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-serif tracking-[0.35em] text-white">PLANCAVE</h1>
+          <div className="flex items-center justify-center gap-6 opacity-70">
+            <div className="h-px w-20 bg-white"></div>
+            <div className="h-px w-12 bg-white"></div>
+            <div className="h-px w-20 bg-white"></div>
+          </div>
+          <p className="text-sm uppercase tracking-[0.5em] text-white/60">Premium African architectural plans</p>
+        </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 py-24 md:py-32">
-          <div className="text-center">
-            {/* Elegant Logo/Heading */}
-            <div className="mb-8">
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <div className="h-px w-24 md:w-32 bg-gradient-to-r from-transparent to-white"></div>
-                <span className="text-lg md:text-xl font-light tracking-widest text-white">THE</span>
-                <div className="h-px w-24 md:w-32 bg-gradient-to-l from-transparent to-white"></div>
+        {/* Full-bleed hero carousel */}
+        <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-20">
+          <div
+            className="relative h-[34rem] w-full overflow-hidden cursor-pointer"
+            onClick={handlePlanOpen}
+          >
+            <div className="absolute -inset-10 opacity-40 bg-gradient-to-br from-teal-300/20 via-white/10 to-transparent blur-3xl pointer-events-none"></div>
+            {loadingPlans ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
               </div>
-              <h1 className="text-6xl md:text-8xl font-serif font-light tracking-[0.2em] text-white mb-4">
-                PLANCAVE
-              </h1>
-              <div className="flex items-center justify-center gap-8">
-                <div className="h-px w-16 md:w-24 bg-white"></div>
-                <div className="h-px w-16 md:w-24 bg-white"></div>
+            ) : featuredPlans.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-white/80">
+                <Building2 className="w-12 h-12 mb-4" />
+                <p>No featured plans yet</p>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="absolute inset-0">
+                  <img
+                    src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
+                    alt={currentPlan?.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+                </div>
 
-            <p className="text-2xl md:text-3xl text-teal-100 mb-8 max-w-3xl mx-auto font-light tracking-wide drop-shadow-lg">
-              Discover premium architectural plans from Africa's top designers
-            </p>
+                <div className="absolute inset-x-0 bottom-0 p-8 text-white">
+                  <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+                    <div className="space-y-3 max-w-3xl">
+                      <div className="flex items-center gap-3 text-xs uppercase tracking-[0.4em] text-white/70">
+                        <span>{currentPlan?.project_type}</span>
+                        {currentPlan?.category && <span className="text-white/50">• {currentPlan.category}</span>}
+                      </div>
+                      <h3 className="text-3xl md:text-4xl font-light tracking-widest">{currentPlan?.name}</h3>
+                      <p className="text-white/75 text-sm md:text-base line-clamp-2">
+                        {currentPlan?.description}
+                      </p>
+                      <div className="flex flex-wrap gap-3 text-[0.65rem] uppercase tracking-[0.3em] text-white/70">
+                        <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                          KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
+                        </span>
+                        <span className={`px-3 py-1 rounded-full border border-white/20 ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
+                          {currentPlan?.package_level?.toUpperCase()}
+                        </span>
+                        {currentPlan?.area && (
+                          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                            {currentPlan.area} m²
+                          </span>
+                        )}
+                        {typeof currentPlan?.bedrooms === 'number' && (
+                          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                            {currentPlan.bedrooms} Beds
+                          </span>
+                        )}
+                        {typeof currentPlan?.floors === 'number' && (
+                          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                            {currentPlan.floors} Floors
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      className="inline-flex items-center gap-3 px-6 py-3 rounded-full border border-white/30 text-white text-sm uppercase tracking-[0.4em]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlanOpen();
+                      }}
+                    >
+                      View Details
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    to="/plans"
-                    className="group px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-teal-500/50 transition-all duration-300 flex items-center gap-2"
-                  >
-                    Browse Plans
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                  <Link
-                    to="/dashboard"
-                    className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-xl font-semibold text-lg hover:bg-white/20 transition-all duration-300 border border-white/20"
-                  >
-                    Go to Dashboard
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/register"
-                    className="group px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-teal-500/50 transition-all duration-300 flex items-center gap-2"
-                  >
-                    Get Started Free
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                  <Link
-                    to="/plans"
-                    className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-xl font-semibold text-lg hover:bg-white/20 transition-all duration-300 border border-white/20"
-                  >
-                    Browse Plans
-                  </Link>
-                </>
-              )}
-            </div>
+                  <div className="grid grid-cols-3 gap-4 mt-8 text-center text-xs uppercase tracking-[0.4em] text-white/70">
+                    <div>
+                      <div className="text-2xl font-light text-white">{currentPlan?.area ?? '—'}</div>
+                      <span>AREA (m²)</span>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-light text-white">{currentPlan?.bedrooms ?? '—'}</div>
+                      <span>BEDS</span>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-light text-white">{currentPlan?.floors ?? '—'}</div>
+                      <span>FLOORS</span>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Trust Indicators */}
-            <div className="mt-16 flex flex-wrap justify-center items-center gap-8 text-gray-400">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-400" />
-                <span>1000+ Plans</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-400" />
-                <span>Expert Designers</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-400" />
-                <span>Instant Download</span>
-              </div>
-            </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevPlan();
+                  }}
+                  className="absolute left-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition"
+                  aria-label="Previous plan"
+                >
+                  <ArrowLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextPlan();
+                  }}
+                  className="absolute right-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition"
+                  aria-label="Next plan"
+                >
+                  <ArrowRight className="w-6 h-6" />
+                </button>
+
+                <div className="absolute bottom-5 inset-x-0 flex justify-center gap-2">
+                  {featuredPlans.map((plan, idx) => (
+                    <button
+                      key={plan.id}
+                      aria-label={`Go to plan ${plan.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentPlanIndex(idx);
+                      }}
+                      className={`h-1 w-10 rounded-full transition-all ${idx === currentPlanIndex ? 'bg-white' : 'bg-white/30'}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -280,202 +369,6 @@ export default function Landing() {
               )}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Premium Featured Plans Section */}
-      <div className="relative py-32 bg-gradient-to-b from-slate-900/50 via-[#0f2a2a] to-[#0f2a2a] overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 relative z-10">
-          {/* Section Header */}
-          <div className="text-center mb-20">
-            <div className="inline-block mb-4">
-              <span className="px-4 py-2 bg-teal-500/20 text-teal-300 rounded-full text-sm font-semibold border border-teal-500/30">
-                ✨ TOP RATED PLANS
-              </span>
-            </div>
-            <h2 className="text-5xl md:text-6xl font-bold text-white mb-6 drop-shadow-2xl">
-              Discover Premium Plans
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto font-light">
-              Handpicked architectural designs from Africa's most talented designers. Ready to build, instantly downloadable.
-            </p>
-          </div>
-
-          {loadingPlans ? (
-            <div className="flex justify-center items-center py-32">
-              <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-teal-600"></div>
-            </div>
-          ) : featuredPlans.length === 0 ? (
-            <div className="text-center py-32">
-              <Building2 className="w-20 h-20 text-gray-400 mx-auto mb-6" />
-              <h3 className="text-3xl font-bold text-gray-300 mb-3">No plans available yet</h3>
-              <p className="text-gray-400 text-lg">Check back soon for amazing architectural plans</p>
-            </div>
-          ) : (
-            <>
-              {/* Featured Plans Grid - Premium Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-                {featuredPlans.map((plan, index) => (
-                  <Link
-                    key={plan.id}
-                    to={isAuthenticated ? `/plans/${plan.id}` : '/login'}
-                    className={`group relative overflow-hidden rounded-3xl transition-all duration-500 transform hover:-translate-y-4 hover:shadow-2xl ${
-                      index === 0 ? 'lg:col-span-1 lg:row-span-2' : ''
-                    }`}
-                  >
-                    {/* Premium Glow Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600/30 via-pink-600/20 to-red-600/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
-                    
-                    {/* Card Container */}
-                    <div className="relative h-full bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-2xl border border-white/20 rounded-3xl overflow-hidden hover:border-white/40 transition-all duration-500 shadow-2xl">
-                      {/* Image Section */}
-                      <div className={`relative overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 ${index === 0 ? 'h-96' : 'h-64'}`}>
-                        <img
-                          src={(plan.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg')}
-                          alt={plan.name}
-                          className="w-full h-full object-cover group-hover:scale-125 transition-transform duration-700"
-                        />
-                        
-                        {/* Premium Overlay Gradient */}
-                        <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent ${index === 0 ? 'from-black/95' : ''}`}></div>
-                        
-                        {/* Top Badges */}
-                        <div className="absolute top-6 left-6 right-6 flex items-start justify-between gap-3">
-                          <div className="flex gap-2 flex-wrap">
-                            {plan.sales_count > 50 && (
-                              <span className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-                                ⭐ TOP RATED
-                              </span>
-                            )}
-                            {plan.includes_boq && (
-                              <span className="px-4 py-2 bg-green-500/90 text-white rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
-                                <FileText className="w-3 h-3" />
-                                BOQ INCLUDED
-                              </span>
-                            )}
-                          </div>
-                          <span className={`px-4 py-2 rounded-full text-xs font-bold shadow-lg ${getPackageBadgeColor(plan.package_level)}`}>
-                            {plan.package_level?.toUpperCase()}
-                          </span>
-                        </div>
-
-                        {/* Bottom Content Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-6">
-                          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3 leading-tight drop-shadow-lg">
-                            {plan.name.trim()}
-                          </h3>
-                          <div className="flex items-end justify-between">
-                            <div>
-                              <p className="text-gray-300 text-sm mb-1">Starting from</p>
-                              <p className="text-4xl font-bold text-teal-300 drop-shadow-lg">
-                                KSH {Number(plan.price).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Content Section */}
-                      <div className="p-8 space-y-6">
-                        {/* Description */}
-                        <p className="text-gray-300 text-base leading-relaxed line-clamp-3">
-                          {plan.description}
-                        </p>
-
-                        {/* Specs Grid - Premium */}
-                        <div className="grid grid-cols-3 gap-4 py-6 border-y border-white/10">
-                          <div className="text-center">
-                            <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Area</div>
-                            <div className="text-2xl font-bold text-teal-300">{plan.area}</div>
-                            <div className="text-xs text-gray-400">m²</div>
-                          </div>
-                          {plan.bedrooms && (
-                            <div className="text-center">
-                              <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Bedrooms</div>
-                              <div className="text-2xl font-bold text-cyan-300">{plan.bedrooms}</div>
-                            </div>
-                          )}
-                          <div className="text-center">
-                            <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Floors</div>
-                            <div className="text-2xl font-bold text-purple-300">{plan.floors}</div>
-                          </div>
-                        </div>
-
-                        {/* Meta Tags */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-medium">
-                            <Building2 className="w-4 h-4" />
-                            {plan.project_type}
-                          </span>
-                          {plan.category && (
-                            <span className="px-3 py-2 rounded-full bg-gray-500/20 text-gray-300 border border-gray-500/30 text-xs font-medium">
-                              {plan.category}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Disciplines - Premium Display */}
-                        <div className="flex flex-wrap gap-2">
-                          {plan.disciplines_included?.architectural && (
-                            <span className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded-lg text-xs font-semibold border border-blue-500/30">📐 Architecture</span>
-                          )}
-                          {plan.disciplines_included?.structural && (
-                            <span className="px-3 py-2 bg-green-500/20 text-green-300 rounded-lg text-xs font-semibold border border-green-500/30">🏗️ Structural</span>
-                          )}
-                          {(plan.disciplines_included?.mep?.electrical || plan.disciplines_included?.mep?.plumbing || plan.disciplines_included?.mep?.mechanical) && (
-                            <span className="px-3 py-2 bg-amber-500/20 text-amber-300 rounded-lg text-xs font-semibold border border-amber-500/30">⚡ MEP</span>
-                          )}
-                        </div>
-
-                        {/* Footer Stats */}
-                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                            <span className="text-sm text-gray-400">
-                              {plan.sales_count} customers
-                            </span>
-                          </div>
-                          {isAuthenticated && (
-                            <div className="flex gap-3">
-                              <button 
-                                onClick={(e) => {e.preventDefault();}}
-                                className="p-2 hover:bg-red-500/20 rounded-full transition-all duration-300 hover:scale-110"
-                              >
-                                <Heart className="w-5 h-5 text-gray-400 hover:text-red-400" />
-                              </button>
-                              <button 
-                                onClick={(e) => {e.preventDefault();}}
-                                className="p-2 hover:bg-green-500/20 rounded-full transition-all duration-300 hover:scale-110"
-                              >
-                                <ShoppingCart className="w-5 h-5 text-gray-400 hover:text-green-400" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              {/* CTA Button */}
-              <div className="text-center">
-                <Link
-                  to="/plans"
-                  className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 text-white rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-teal-500/50 transition-all duration-300 transform hover:scale-110 hover:-translate-y-1 group"
-                >
-                  Explore All Plans
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
-                </Link>
-              </div>
-            </>
-          )}
         </div>
       </div>
 

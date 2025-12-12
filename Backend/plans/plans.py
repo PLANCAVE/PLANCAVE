@@ -79,7 +79,7 @@ def upload_plan():
     files = request.files
 
     # Validate required fields
-    required_fields = ['name', 'project_type', 'description', 'price', 'area', 'floors', 'package_level']
+    required_fields = ['name', 'category', 'project_type', 'description', 'price', 'area', 'floors', 'package_level']
     for field in required_fields:
         if field not in form or str(form[field]).strip() == '':
             return jsonify(message=f"Missing or empty required field: {field}"), 400
@@ -251,7 +251,7 @@ def upload_plan():
         try:
             cur.execute("""
                 INSERT INTO plans (
-                    id, name, project_type, description, target_audience,
+                    id, name, category, project_type, description, target_audience,
                     price, area, plot_size, bedrooms, bathrooms, floors,
                     building_height, parking_spaces, special_features,
                     disciplines_included, includes_boq, package_level,
@@ -261,7 +261,7 @@ def upload_plan():
                     project_timeline_ref, material_specifications, construction_notes,
                     file_paths, image_url, designer_id, status, created_at
                 ) VALUES (
-                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s,
                     %s, %s, %s,
                     %s, %s, %s,
@@ -274,6 +274,7 @@ def upload_plan():
             """, (
                 plan_id,
                 form['name'],
+                form.get('category', ''),  
                 form.get('project_type', 'Residential'),
                 form.get('description', ''),
                 form.get('target_audience', 'All'),

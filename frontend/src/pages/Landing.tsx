@@ -74,11 +74,7 @@ export default function Landing() {
 
   const handlePlanOpen = () => {
     if (!currentPlan) return;
-    if (isAuthenticated) {
-      navigate(`/plans/${currentPlan.id}`);
-    } else {
-      navigate('/login');
-    }
+    navigate(`/plans/${currentPlan.id}`);
   };
 
   return (
@@ -221,9 +217,9 @@ export default function Landing() {
 
                 <div className="absolute bottom-5 inset-x-0 flex justify-center gap-2">
                   {featuredPlans.map((plan, idx) => (
-                    <button
+                    <Link
                       key={plan.id}
-                      aria-label={`Go to plan ${plan.name}`}
+                      to={`/plans/${plan.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setCurrentPlanIndex(idx);

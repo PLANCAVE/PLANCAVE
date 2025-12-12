@@ -137,7 +137,6 @@ server {
     server_name $SERVER_NAME;
 
     location $API_PREFIX/ {
-        rewrite ^$API_PREFIX/(.*)$ /\$1 break;
         proxy_pass http://$BACKEND_HOST:$BACKEND_PORT/;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;

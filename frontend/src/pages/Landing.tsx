@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, TrendingUp, CheckCircle, ArrowRight, Mail, Phone, MapPin, Zap, Heart, ShoppingCart, FileText } from 'lucide-react';
+import { Building2, TrendingUp, CheckCircle, ArrowLeft, ArrowRight, Mail, Phone, MapPin, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { browsePlans } from '../api';

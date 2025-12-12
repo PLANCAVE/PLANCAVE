@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 import psycopg
+from psycopg import errors
 from psycopg.rows import dict_row
 from datetime import datetime
 import json
@@ -42,6 +43,23 @@ def save_file_locally(file, plan_id, file_type='image'):
     file.save(file_path)
     
     return file_path, os.path.getsize(file_path)
+
+
+def parse_json_field(field_name, expected_type=list, default_value='[]'):
+    """Parse JSON payloads from multipart form-data with helpful errors."""
+    raw_value = request.form.get(field_name, default_value)
+    if raw_value in (None, ''):
+        return expected_type()
+
+    try:
+        parsed = json.loads(raw_value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{field_name} contains invalid JSON: {exc.msg}") from exc
+
+    if expected_type and not isinstance(parsed, expected_type):
+        raise ValueError(f"{field_name} must be a {expected_type.__name__}")
+
+    return parsed
 
 
 @enhanced_uploads_bp.route('/detailed-upload', methods=['POST'])
@@ -105,14 +123,10 @@ def detailed_upload():
                     'file_size': file_size
                 })
 
-        # Parse BOQs from JSON
-        boqs = json.loads(request.form.get('boqs', '[]'))
-        
-        # Parse structural specs from JSON
-        structural_specs = json.loads(request.form.get('structural_specs', '[]'))
-        
-        # Parse compliance notes from JSON
-        compliance_notes = json.loads(request.form.get('compliance_notes', '[]'))
+        # Parse JSON payloads with explicit validation so we can bubble up rich errors
+        boqs = parse_json_field('boqs', list)
+        structural_specs = parse_json_field('structural_specs', list)
+        compliance_notes = parse_json_field('compliance_notes', list)
 
         # Database operations
         conn = get_db()
@@ -228,19 +242,49 @@ def detailed_upload():
                 "compliance_notes": len(compliance_notes)
             }), 201
 
+        except errors.UndefinedTable as e:
+            conn.rollback()
+            return jsonify(
+                message="Database tables required for plan uploads are missing",
+                detail=str(e),
+                hint="Run the admin migrations endpoint or psql migrations.sql"
+            ), 500
+        except errors.ForeignKeyViolation as e:
+            conn.rollback()
+            return jsonify(
+                message="Foreign key validation failed while saving plan",
+                detail=str(e),
+                hint="Confirm related IDs (designer, files) exist"
+            ), 400
+        except errors.DataError as e:
+            conn.rollback()
+            return jsonify(
+                message="Invalid data format detected while saving plan",
+                detail=str(e),
+                hint="Check number fields (price, area, bedrooms, etc.)"
+            ), 400
         except Exception as e:
             conn.rollback()
             # Cleanup files on error
             plan_dir = os.path.join(UPLOAD_FOLDER, plan_id)
             if os.path.exists(plan_dir):
                 shutil.rmtree(plan_dir)
-            return jsonify(message=f"Database error: {str(e)}"), 500
+            sqlstate = getattr(e, 'sqlstate', None)
+            return jsonify(
+                message="Database error while saving plan",
+                detail=str(e),
+                sqlstate=sqlstate
+            ), 500
         finally:
             cur.close()
             conn.close()
 
     except Exception as e:
-        return jsonify(message=f"Upload error: {str(e)}"), 500
+        status_code = 400 if isinstance(e, ValueError) else 500
+        return jsonify(
+            message="Upload error",
+            detail=str(e)
+        ), status_code
 
 
 @enhanced_uploads_bp.route('/bulk-upload', methods=['POST'])

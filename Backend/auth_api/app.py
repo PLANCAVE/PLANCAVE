@@ -99,6 +99,7 @@ app.register_blueprint(customer_bp)
 
 
 @app.route('/')
+@app.route('/api/health', strict_slashes=False)
 def health_check():
     """Health check endpoint for Render and monitoring"""
     return jsonify({

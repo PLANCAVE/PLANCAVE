@@ -319,7 +319,11 @@ export default function UploadPlan() {
       }
       navigate('/designer/my-plans');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to upload plan');
+      const apiError = err.response?.data;
+      const parts = [apiError?.message || 'Failed to upload plan'];
+      if (apiError?.detail) parts.push(apiError.detail);
+      if (apiError?.hint) parts.push(apiError.hint);
+      setError(parts.filter(Boolean).join(' — '));
     } finally {
       setLoading(false);
     }

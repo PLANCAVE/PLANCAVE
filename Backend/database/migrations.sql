@@ -1,9 +1,19 @@
+-- migrations.sql - Extended schema and application-specific tables
+-- This file builds on top of db.sql and is designed to be idempotent.
+
 -- Enhanced Users table
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(500);
+
+-- Ensure existing users are active
+UPDATE users SET is_active = TRUE WHERE is_active IS NULL;
 
 -- Purchases/Transactions table
 CREATE TABLE IF NOT EXISTS purchases (
@@ -14,9 +24,20 @@ CREATE TABLE IF NOT EXISTS purchases (
     payment_method VARCHAR(50),
     payment_status VARCHAR(50) DEFAULT 'completed', -- 'pending', 'completed', 'failed', 'refunded'
     transaction_id VARCHAR(255),
-    purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, plan_id)
+    purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Ensure uniqueness of user/plan purchases
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_purchases_user_plan'
+    ) THEN
+        ALTER TABLE purchases
+            ADD CONSTRAINT uniq_purchases_user_plan UNIQUE (user_id, plan_id);
+    END IF;
+END$$;
 
 -- User Activity Tracking
 CREATE TABLE IF NOT EXISTS user_activity (
@@ -36,18 +57,38 @@ CREATE TABLE IF NOT EXISTS user_quotas (
     quota_limit INTEGER DEFAULT -1, -- -1 = unlimited
     quota_used INTEGER DEFAULT 0,
     reset_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, quota_type)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_user_quotas_user_type'
+    ) THEN
+        ALTER TABLE user_quotas
+            ADD CONSTRAINT uniq_user_quotas_user_type UNIQUE (user_id, quota_type);
+    END IF;
+END$$;
 
 -- Favorites table
 CREATE TABLE IF NOT EXISTS favorites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     plan_id UUID REFERENCES plans(id) ON DELETE CASCADE,
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, plan_id)
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_favorites_user_plan'
+    ) THEN
+        ALTER TABLE favorites
+            ADD CONSTRAINT uniq_favorites_user_plan UNIQUE (user_id, plan_id);
+    END IF;
+END$$;
 
 -- User Reviews/Ratings
 CREATE TABLE IF NOT EXISTS plan_reviews (
@@ -57,9 +98,19 @@ CREATE TABLE IF NOT EXISTS plan_reviews (
     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
     review TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(plan_id, user_id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_plan_reviews_plan_user'
+    ) THEN
+        ALTER TABLE plan_reviews
+            ADD CONSTRAINT uniq_plan_reviews_plan_user UNIQUE (plan_id, user_id);
+    END IF;
+END$$;
 
 -- Enhanced Plans table with detailed upload fields
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS description TEXT;
@@ -128,9 +179,19 @@ CREATE TABLE IF NOT EXISTS team_members (
     team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     role VARCHAR(50) NOT NULL, -- 'owner', 'editor', 'viewer'
-    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(team_id, user_id)
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_team_members_team_user'
+    ) THEN
+        ALTER TABLE team_members
+            ADD CONSTRAINT uniq_team_members_team_user UNIQUE (team_id, user_id);
+    END IF;
+END$$;
 
 -- Team collections (shared favorites)
 CREATE TABLE IF NOT EXISTS team_collections (
@@ -148,9 +209,19 @@ CREATE TABLE IF NOT EXISTS collection_plans (
     collection_id UUID REFERENCES team_collections(id) ON DELETE CASCADE,
     plan_id UUID REFERENCES plans(id) ON DELETE CASCADE,
     added_by INTEGER REFERENCES users(id),
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(collection_id, plan_id)
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_collection_plans_collection_plan'
+    ) THEN
+        ALTER TABLE collection_plans
+            ADD CONSTRAINT uniq_collection_plans_collection_plan UNIQUE (collection_id, plan_id);
+    END IF;
+END$$;
 
 -- Plan analytics table
 CREATE TABLE IF NOT EXISTS plan_analytics (
@@ -159,9 +230,19 @@ CREATE TABLE IF NOT EXISTS plan_analytics (
     views_count INTEGER DEFAULT 0,
     downloads_count INTEGER DEFAULT 0,
     favorites_count INTEGER DEFAULT 0,
-    date DATE NOT NULL,
-    UNIQUE(plan_id, date)
+    date DATE NOT NULL
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_plan_analytics_plan_date'
+    ) THEN
+        ALTER TABLE plan_analytics
+            ADD CONSTRAINT uniq_plan_analytics_plan_date UNIQUE (plan_id, date);
+    END IF;
+END$$;
 
 -- User views tracking
 CREATE TABLE IF NOT EXISTS plan_views (
@@ -172,7 +253,38 @@ CREATE TABLE IF NOT EXISTS plan_views (
     ip_address VARCHAR(45)
 );
 
--- Create indexes for performance
+-- Additional plan fields from update_plans_schema.sql
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS project_type VARCHAR(50) DEFAULT 'Residential';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS target_audience VARCHAR(50) DEFAULT 'All';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS disciplines_included JSONB DEFAULT '{"architectural": false, "structural": false, "mep": {"mechanical": false, "electrical": false, "plumbing": false}, "civil": false, "fire_safety": false, "interior": false}';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS includes_boq BOOLEAN DEFAULT FALSE;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS estimated_cost_min DECIMAL(12,2);
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS estimated_cost_max DECIMAL(12,2);
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS package_level VARCHAR(20) DEFAULT 'basic';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS building_code VARCHAR(100);
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS certifications JSONB DEFAULT '[]';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS plot_size DECIMAL(10,2);
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS building_height DECIMAL(10,2);
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS parking_spaces INTEGER DEFAULT 0;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS special_features JSONB DEFAULT '[]';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS license_type VARCHAR(50) DEFAULT 'single_use';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS customization_available BOOLEAN DEFAULT FALSE;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS support_duration INTEGER DEFAULT 0; -- in months
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS file_paths JSONB DEFAULT '{"architectural": [], "structural": [], "mep": [], "civil": [], "fire_safety": [], "interior": [], "boq": [], "renders": []}';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS project_timeline_ref TEXT;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS material_specifications TEXT;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS construction_notes TEXT;
+
+-- Update existing plans with default values where missing
+UPDATE plans
+SET 
+    project_type = COALESCE(project_type, 'Residential'),
+    target_audience = COALESCE(target_audience, 'All'),
+    disciplines_included = COALESCE(disciplines_included, '{"architectural": true, "structural": false, "mep": {"mechanical": false, "electrical": false, "plumbing": false}, "civil": false, "fire_safety": false, "interior": false}'),
+    package_level = COALESCE(package_level, 'basic'),
+    license_type = COALESCE(license_type, 'single_use');
+
+-- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_boqs_plan_id ON boqs(plan_id);
 CREATE INDEX IF NOT EXISTS idx_structural_specs_plan_id ON structural_specs(plan_id);
 CREATE INDEX IF NOT EXISTS idx_compliance_notes_plan_id ON compliance_notes(plan_id);
@@ -189,6 +301,6 @@ CREATE INDEX IF NOT EXISTS idx_purchases_plan_id ON purchases(plan_id);
 CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_activity_type ON user_activity(activity_type);
 CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
-CREATE INDEX IF NOT EXISTS idx_favorites_plan_id ON favorites(plan_id);
+CREATE INDEX IF NOT_EXISTS idx_favorites_plan_id ON favorites(plan_id);
 CREATE INDEX IF NOT EXISTS idx_plan_reviews_plan_id ON plan_reviews(plan_id);
 CREATE INDEX IF NOT EXISTS idx_plan_reviews_user_id ON plan_reviews(user_id);

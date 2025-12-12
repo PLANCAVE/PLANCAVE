@@ -120,9 +120,9 @@ export default function Landing() {
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
         {/* Full-bleed hero carousel */}
-        <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-12">
+        <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-0">
           <div
-            className="relative h-[34rem] w-full overflow-hidden cursor-pointer"
+            className="relative h-[calc(100vh-5rem)] min-h-[28rem] w-full overflow-hidden cursor-pointer"
             onClick={handlePlanOpen}
             onMouseEnter={() => setIsHoveringCarousel(true)}
             onMouseLeave={() => setIsHoveringCarousel(false)}

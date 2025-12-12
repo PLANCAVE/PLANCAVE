@@ -138,9 +138,9 @@ export default function Landing() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 px-4 pb-3 text-white">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="flex flex-col gap-2 bg-black/10 backdrop-blur-sm rounded-2xl border border-white/5 px-4 py-3 max-w-2xl">
+                <div className="absolute inset-x-0 bottom-0 px-4 pb-2 text-white">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex flex-col gap-1 bg-black/5 backdrop-blur-[1px] rounded-2xl border border-white/5/0 px-3 py-2 max-w-2xl">
                       <div className="flex items-center gap-2 text-[0.5rem] uppercase tracking-[0.4em] text-white/70">
                         <span>{currentPlan?.project_type}</span>
                         {currentPlan?.category && <span className="text-white/50">• {currentPlan.category}</span>}
@@ -153,39 +153,39 @@ export default function Landing() {
                           {currentPlan?.description}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2 text-[0.5rem] uppercase tracking-[0.35em] text-white/70">
-                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                      <div className="flex flex-wrap gap-2 text-[0.5rem] uppercase tracking-[0.35em] text-white/80">
+                        <span className="px-3 py-1 rounded-full bg-white/0 border border-white/20">
                           KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
                         </span>
-                        <span className={`px-3 py-1 rounded-full border border-white/10 ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
+                        <span className={`px-3 py-1 rounded-full border border-white/20 ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
                           {currentPlan?.package_level?.toUpperCase()}
                         </span>
                         {currentPlan?.area && (
-                          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                          <span className="px-3 py-1 rounded-full bg-white/0 border border-white/15">
                             {currentPlan.area} m²
                           </span>
                         )}
                         {typeof currentPlan?.bedrooms === 'number' && (
-                          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                          <span className="px-3 py-1 rounded-full bg-white/0 border border-white/15">
                             {currentPlan.bedrooms} Beds
                           </span>
                         )}
                         {typeof currentPlan?.floors === 'number' && (
-                          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                          <span className="px-3 py-1 rounded-full bg-white/0 border border-white/15">
                             {currentPlan.floors} Floors
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-3 bg-black/10 backdrop-blur-sm rounded-full border border-white/5 px-5 py-2 text-[0.55rem] uppercase tracking-[0.35em] text-white/70">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-3 bg-black/5 backdrop-blur-[1px] rounded-full border border-white/5 px-4 py-1.5 text-[0.55rem] uppercase tracking-[0.35em] text-white/80">
                         <span className="text-white text-base font-light">{currentPlan?.area ?? '—'} m²</span>
                         <span className="text-white text-base font-light">{currentPlan?.bedrooms ?? '—'} beds</span>
                         <span className="text-white text-base font-light">{currentPlan?.floors ?? '—'} floors</span>
                       </div>
                       <button
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 text-[0.55rem] uppercase tracking-[0.4em] text-white hover:bg-white/10"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full border border-white/15 bg-white/0 text-[0.55rem] uppercase tracking-[0.4em] text-white hover:bg-white/10"
                         onClick={(e) => {
                           e.stopPropagation();
                           handlePlanOpen();

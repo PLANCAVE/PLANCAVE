@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, LayoutDashboard, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Menu, X } from 'lucide-react';
 import api from '../api';
 import { useState } from 'react';
 
@@ -38,11 +38,20 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 relative">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 font-serif font-light text-xl tracking-wider text-white group hover:text-teal-300 transition-all">
-            <div className="w-11 h-11 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center group-hover:shadow-2xl group-hover:shadow-teal-400/80 group-hover:scale-110 transition-all duration-300 ring-2 ring-white/20">
-              <Building2 className="w-6 h-6 text-white drop-shadow-lg" />
+          <Link to="/" className="group text-white hover:text-teal-200 transition-all">
+            <div className="flex flex-col items-start leading-tight">
+              <div className="flex items-center gap-2 text-[0.5rem] tracking-[0.75em] text-white/70 group-hover:text-white">
+                <div className="h-px w-10 bg-gradient-to-r from-transparent via-white/40 to-white"></div>
+                <span>THE</span>
+                <div className="h-px w-10 bg-gradient-to-l from-transparent via-white/40 to-white"></div>
+              </div>
+              <span className="mt-1 text-2xl font-serif tracking-[0.45em] drop-shadow-lg">PLANCAVE</span>
+              <div className="mt-1 flex items-center gap-2 opacity-70">
+                <div className="h-px w-8 bg-white"></div>
+                <div className="h-px w-6 bg-white/80"></div>
+                <div className="h-px w-8 bg-white"></div>
+              </div>
             </div>
-            <span className="drop-shadow-lg text-2xl font-medium">The Plancave</span>
           </Link>
 
           {/* Desktop Navigation */}

@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Heart, LayoutDashboard, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react';
 import api from '../api';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 const resolveAvatarUrl = (url?: string | null) => {
   if (!url) return '';
@@ -15,26 +15,6 @@ export default function Header() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
-  const statusTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (statusTimeout.current) {
-        clearTimeout(statusTimeout.current);
-      }
-    };
-  }, []);
-
-  const showStatus = (message: string) => {
-    setStatusMessage(message);
-    if (statusTimeout.current) {
-      clearTimeout(statusTimeout.current);
-    }
-    statusTimeout.current = setTimeout(() => {
-      setStatusMessage('');
-    }, 4000);
-  };
 
   const getInitials = () => {
     if (!user) return '';
@@ -87,7 +67,7 @@ export default function Header() {
               <button
                 type="button"
                 className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                onClick={() => showStatus('Favorites is empty. Save plans you love to revisit them here.')}
+                onClick={() => navigate('/favorites')}
                 aria-label="Saved plans"
               >
                 <Heart className="w-5 h-5" />
@@ -111,7 +91,7 @@ export default function Header() {
               <button
                 type="button"
                 className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                onClick={() => showStatus('Cart is empty. Add a plan to begin checkout.')}
+                onClick={() => navigate('/cart')}
                 aria-label="Cart"
               >
                 <ShoppingBag className="w-5 h-5" />
@@ -161,12 +141,6 @@ export default function Header() {
           </button>
         </div>
 
-        {statusMessage && (
-          <div className="mt-2 text-center text-xs tracking-[0.35em] text-white/70">
-            {statusMessage}
-          </div>
-        )}
-
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-teal-500/20">
@@ -182,7 +156,10 @@ export default function Header() {
                 <button
                   type="button"
                   className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                  onClick={() => showStatus('Favorites is empty. Save plans you love to revisit them here.')}
+                  onClick={() => {
+                    navigate('/favorites');
+                    setMobileMenuOpen(false);
+                  }}
                   aria-label="Saved plans"
                 >
                   <Heart className="w-5 h-5" />
@@ -190,7 +167,10 @@ export default function Header() {
                 <button
                   type="button"
                   className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                  onClick={() => navigate('/plans')}
+                  onClick={() => {
+                    navigate('/plans');
+                    setMobileMenuOpen(false);
+                  }}
                   aria-label="Search plans"
                 >
                   <Search className="w-5 h-5" />
@@ -198,7 +178,10 @@ export default function Header() {
                 <button
                   type="button"
                   className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                  onClick={() => navigate('/login')}
+                  onClick={() => {
+                    navigate('/login');
+                    setMobileMenuOpen(false);
+                  }}
                   aria-label="Account"
                 >
                   <UserRound className="w-5 h-5" />
@@ -206,7 +189,10 @@ export default function Header() {
                 <button
                   type="button"
                   className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                  onClick={() => navigate('/cart')}
+                  onClick={() => {
+                    navigate('/cart');
+                    setMobileMenuOpen(false);
+                  }}
                   aria-label="Cart"
                 >
                   <ShoppingBag className="w-5 h-5" />

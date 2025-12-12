@@ -8,6 +8,8 @@ import BrowsePlans from './pages/BrowsePlans';
 import PlanDetailsPage from './pages/PlanDetailsPage';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
+import Favorites from './pages/Favorites';
+import Cart from './pages/Cart';
 import UserManagement from './pages/admin/UserManagement';
 import PlanManagement from './pages/admin/PlanManagement';
 import Analytics from './pages/admin/Analytics';
@@ -44,6 +46,8 @@ function AppContent() {
           <Route path="/plans/:id" element={<PlanDetailsPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/cart" element={<Cart />} />
           <Route
             path="/dashboard"
             element={

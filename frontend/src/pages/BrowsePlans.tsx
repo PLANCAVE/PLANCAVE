@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { browsePlans } from '../api';
 import { Search, Filter, Heart, ShoppingCart, Building2, Award, FileText } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Plan {
@@ -42,7 +42,6 @@ export default function BrowsePlans() {
   const [showSearch, setShowSearch] = useState(false);
 
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
 
   const planCategories = [
     'Mansion',
@@ -353,12 +352,6 @@ export default function BrowsePlans() {
                   key={plan.id}
                   to={`/plans/${plan.id}`}
                   className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group overflow-hidden border border-gray-100"
-                  onClick={(e) => {
-                    if (!isAuthenticated) {
-                      e.preventDefault();
-                      navigate('/login');
-                    }
-                  }}
                 >
                   {/* Image */}
                   <div className="relative h-52 overflow-hidden -m-6 mb-4 bg-gray-100">

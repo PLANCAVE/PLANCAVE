@@ -160,7 +160,7 @@ export default function Landing() {
                   <img
                     src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
                     alt={currentPlan?.name}
-                    className="w-full h-full object-contain md:object-cover"
+                    className="w-full h-full object-cover object-top"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
                 </div>

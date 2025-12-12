@@ -94,19 +94,18 @@ export default function Landing() {
           <div className="absolute top-40 right-20 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-float-delayed"></div>
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
-        <div className="relative max-w-5xl mx-auto px-4 pt-12 pb-6 text-center space-y-6">
-          <div className="flex items-center justify-center gap-4 text-white/70 text-xs tracking-[0.7em]">
+        <div className="relative max-w-4xl mx-auto px-4 pt-8 pb-2 text-center space-y-4">
+          <div className="flex items-center justify-center gap-3 text-white/70 text-[0.6rem] tracking-[0.7em]">
             <div className="h-px w-16 bg-gradient-to-r from-transparent via-white/30 to-white/80"></div>
             <span>THE</span>
             <div className="h-px w-16 bg-gradient-to-l from-transparent via-white/30 to-white/80"></div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-serif tracking-[0.35em] text-white">PLANCAVE</h1>
-          <div className="flex items-center justify-center gap-6 opacity-70">
-            <div className="h-px w-20 bg-white"></div>
-            <div className="h-px w-12 bg-white"></div>
-            <div className="h-px w-20 bg-white"></div>
+          <h1 className="text-3xl md:text-4xl font-serif tracking-[0.4em] text-white">PLANCAVE</h1>
+          <div className="flex items-center justify-center gap-6 opacity-60">
+            <div className="h-px w-16 bg-white"></div>
+            <div className="h-px w-10 bg-white"></div>
+            <div className="h-px w-16 bg-white"></div>
           </div>
-          <p className="text-sm uppercase tracking-[0.5em] text-white/60">Premium African architectural plans</p>
         </div>
 
         {/* Full-bleed hero carousel */}
@@ -136,65 +135,76 @@ export default function Landing() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 p-8 text-white">
-                  <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-                    <div className="space-y-3 max-w-3xl">
-                      <div className="flex items-center gap-3 text-xs uppercase tracking-[0.4em] text-white/70">
+                <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10 text-white">
+                  <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-6">
+                    <div className="bg-white/5/10 rounded-3xl border border-white/15 bg-white/5 backdrop-blur-lg p-6 shadow-2xl shadow-black/40">
+                      <div className="flex items-center gap-3 text-[0.65rem] uppercase tracking-[0.4em] text-white/70">
                         <span>{currentPlan?.project_type}</span>
                         {currentPlan?.category && <span className="text-white/50">• {currentPlan.category}</span>}
                       </div>
-                      <h3 className="text-3xl md:text-4xl font-light tracking-widest">{currentPlan?.name}</h3>
-                      <p className="text-white/75 text-sm md:text-base line-clamp-2">
+                      <h3 className="mt-4 text-3xl md:text-4xl font-semibold tracking-[0.35em] text-white">
+                        {currentPlan?.name}
+                      </h3>
+                      <p className="mt-3 text-sm md:text-base text-white/80 line-clamp-3">
                         {currentPlan?.description}
                       </p>
-                      <div className="flex flex-wrap gap-3 text-[0.65rem] uppercase tracking-[0.3em] text-white/70">
-                        <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+
+                      <div className="mt-5 flex flex-wrap gap-3 text-[0.6rem] uppercase tracking-[0.35em] text-white/70">
+                        <span className="px-3 py-1 rounded-full bg-white/15 border border-white/30">
                           KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
                         </span>
-                        <span className={`px-3 py-1 rounded-full border border-white/20 ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
+                        <span className={`px-3 py-1 rounded-full border border-white/30 ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
                           {currentPlan?.package_level?.toUpperCase()}
                         </span>
                         {currentPlan?.area && (
-                          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/30">
                             {currentPlan.area} m²
                           </span>
                         )}
                         {typeof currentPlan?.bedrooms === 'number' && (
-                          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/30">
                             {currentPlan.bedrooms} Beds
                           </span>
                         )}
                         {typeof currentPlan?.floors === 'number' && (
-                          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                          <span className="px-3 py-1 rounded-full bg-white/15 border border-white/30">
                             {currentPlan.floors} Floors
                           </span>
                         )}
                       </div>
                     </div>
-                    <button
-                      className="inline-flex items-center gap-3 px-6 py-3 rounded-full border border-white/30 text-white text-sm uppercase tracking-[0.4em]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePlanOpen();
-                      }}
-                    >
-                      View Details
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-4 mt-8 text-center text-xs uppercase tracking-[0.4em] text-white/70">
-                    <div>
-                      <div className="text-2xl font-light text-white">{currentPlan?.area ?? '—'}</div>
-                      <span>AREA (m²)</span>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-light text-white">{currentPlan?.bedrooms ?? '—'}</div>
-                      <span>BEDS</span>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-light text-white">{currentPlan?.floors ?? '—'}</div>
-                      <span>FLOORS</span>
+                    <div className="bg-black/50 rounded-3xl border border-white/10 p-6 backdrop-blur-xl flex flex-col justify-between shadow-2xl shadow-black/40">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.5em] text-white/60">Starting at</p>
+                        <p className="mt-2 text-4xl font-semibold text-white">
+                          KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
+                        </p>
+                        <div className="grid grid-cols-3 gap-3 mt-6 text-center text-[0.6rem] uppercase tracking-[0.35em] text-white/60">
+                          <div>
+                            <div className="text-2xl font-light text-white">{currentPlan?.area ?? '—'}</div>
+                            <span>m²</span>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-light text-white">{currentPlan?.bedrooms ?? '—'}</div>
+                            <span>beds</span>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-light text-white">{currentPlan?.floors ?? '—'}</div>
+                            <span>floors</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        className="mt-6 inline-flex items-center justify-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-teal-400 via-cyan-400 to-blue-400 text-[#0b1a1a] font-semibold text-xs uppercase tracking-[0.5em]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePlanOpen();
+                        }}
+                      >
+                        View Details
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>

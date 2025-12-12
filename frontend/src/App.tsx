@@ -41,14 +41,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/plans" element={<BrowsePlans />} />
-          <Route
-            path="/plans/:id"
-            element={
-              <ProtectedRoute>
-                <PlanDetailsPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/plans/:id" element={<PlanDetailsPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route

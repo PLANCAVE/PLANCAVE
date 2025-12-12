@@ -49,6 +49,7 @@ CONFIGURE_UFW="${PLANCAVE_CONFIGURE_UFW:-true}"
 SYSTEMD_UNIT="/etc/systemd/system/${SERVICE_NAME}.service"
 NGINX_SITE="/etc/nginx/sites-available/${SERVICE_NAME}"
 NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${SERVICE_NAME}"
+METADATA_HEADER="Metadata-Flavor: Google"
 
 log() { echo "[deploy] $*"; }
 
@@ -94,6 +95,13 @@ build_frontend() {
   npm install --legacy-peer-deps
   npm run build
   popd >/dev/null
+}
+
+prepare_frontend_assets() {
+  if [[ -d "$FRONTEND_DIR/dist" ]]; then
+    chown -R "$APP_USER":"$APP_GROUP" "$FRONTEND_DIR/dist"
+    chmod -R 755 "$FRONTEND_DIR/dist"
+  fi
 }
 
 ensure_upload_dir() {
@@ -164,6 +172,18 @@ configure_firewall() {
   ufw allow 443/tcp || true
 }
 
+get_internal_ip() {
+  curl -fs -H "$METADATA_HEADER" \
+    "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip" \
+    || hostname -I | awk '{print $1}'
+}
+
+get_external_ip() {
+  curl -fs -H "$METADATA_HEADER" \
+    "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" \
+    || curl -fs https://ifconfig.me 2>/dev/null || echo "<server-ip>"
+}
+
 reload_services() {
   systemctl daemon-reload
   systemctl enable --now "$SERVICE_NAME"
@@ -171,13 +191,17 @@ reload_services() {
 }
 
 print_summary() {
+  local internal_ip external_ip
+  internal_ip="$(get_internal_ip)"
+  external_ip="$(get_external_ip)"
   cat <<EOF
 
 [deploy] Done!
 Backend service : systemctl status $SERVICE_NAME
 Nginx site      : $NGINX_SITE
-Frontend URL    : http://<server-ip>/
-API base URL    : http://<server-ip>$API_PREFIX/
+Frontend URL    : http://$external_ip/
+API base URL    : http://$external_ip$API_PREFIX/
+Internal IP     : http://$internal_ip/
 
 If you changed DATABASE_URL or secrets, update $ENV_FILE before rerunning.
 EOF
@@ -187,6 +211,7 @@ ensure_packages
 ensure_node
 setup_python
 build_frontend
+prepare_frontend_assets
 ensure_upload_dir
 write_systemd_unit
 write_nginx_site

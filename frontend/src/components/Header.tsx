@@ -83,8 +83,8 @@ export default function Header() {
               <button
                 type="button"
                 className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                onClick={() => navigate('/login')}
-                aria-label="Account"
+                onClick={() => navigate(isAuthenticated ? '/profile' : '/login')}
+                aria-label={isAuthenticated ? 'Profile' : 'Account'}
               >
                 <UserRound className="w-5 h-5" />
               </button>
@@ -179,10 +179,10 @@ export default function Header() {
                   type="button"
                   className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
                   onClick={() => {
-                    navigate('/login');
+                    navigate(isAuthenticated ? '/profile' : '/login');
                     setMobileMenuOpen(false);
                   }}
-                  aria-label="Account"
+                  aria-label={isAuthenticated ? 'Profile' : 'Account'}
                 >
                   <UserRound className="w-5 h-5" />
                 </button>

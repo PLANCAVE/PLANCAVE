@@ -69,6 +69,15 @@ export const addFavorite = (plan_id: string) =>
 export const removeFavorite = (plan_id: string) =>
   api.delete(`/customer/favorites/${plan_id}`);
 
+export const getCartItems = () =>
+  api.get('/customer/cart');
+
+export const addCartItem = (plan_id: string) =>
+  api.post('/customer/cart', { plan_id });
+
+export const removeCartItem = (plan_id: string) =>
+  api.delete(`/customer/cart/${plan_id}`);
+
 export const getCustomerDashboard = () =>
   api.get('/customer/dashboard');
 

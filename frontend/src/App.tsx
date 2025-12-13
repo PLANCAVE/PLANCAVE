@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CustomerDataProvider } from './contexts/CustomerDataContext';
 import Header from './components/Header';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -115,7 +116,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <CustomerDataProvider>
+        <AppContent />
+      </CustomerDataProvider>
     </AuthProvider>
   );
 }

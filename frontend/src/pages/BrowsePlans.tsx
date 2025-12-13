@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { browsePlans } from '../api';
 import { Search, Filter, Heart, ShoppingCart, Building2, Award, FileText } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useCustomerData } from '../contexts/CustomerDataContext';
 
 interface Plan {
   id: string;
@@ -42,6 +43,10 @@ export default function BrowsePlans() {
   const [showSearch, setShowSearch] = useState(false);
 
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { favoriteIds, cartIds, toggleFavorite, toggleCartItem } = useCustomerData();
+  const [favoriteBusyId, setFavoriteBusyId] = useState<string | null>(null);
+  const [cartBusyId, setCartBusyId] = useState<string | null>(null);
 
   const planCategories = [
     'Mansion',
@@ -139,6 +144,34 @@ export default function BrowsePlans() {
     setMaxPrice('');
     setIncludesBoq('');
     setBedrooms('');
+  };
+
+  const ensureAuthenticated = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return false;
+    }
+    return true;
+  };
+
+  const handleFavoriteClick = async (planId: string) => {
+    if (!ensureAuthenticated()) return;
+    setFavoriteBusyId(planId);
+    try {
+      await toggleFavorite(planId);
+    } finally {
+      setFavoriteBusyId(null);
+    }
+  };
+
+  const handleCartClick = async (planId: string) => {
+    if (!ensureAuthenticated()) return;
+    setCartBusyId(planId);
+    try {
+      await toggleCartItem(planId);
+    } finally {
+      setCartBusyId(null);
+    }
   };
 
   const getPackageBadgeColor = (level: string) => {
@@ -438,27 +471,38 @@ export default function BrowsePlans() {
                     )}
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
-                      <span className="text-xs text-gray-500">
-                        {plan.sales_count} sold
-                      </span>
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div>
+                        <p className="text-xs text-gray-500">Starting from</p>
+                        <p className="text-base font-semibold text-gray-900">
+                          KSH {Number(plan.price).toLocaleString()}
+                        </p>
+                      </div>
                       <div className="flex gap-2">
-                        {isAuthenticated && (
-                          <>
-                            <button 
-                              onClick={(e) => {e.preventDefault(); /* Add to favorites */}}
-                              className="p-2 hover:bg-red-50 rounded-full transition-colors"
-                            >
-                              <Heart className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                            </button>
-                            <button 
-                              onClick={(e) => {e.preventDefault(); /* Add to cart */}}
-                              className="p-2 hover:bg-green-50 rounded-full transition-colors"
-                            >
-                              <ShoppingCart className="w-5 h-5 text-gray-400 hover:text-green-500" />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleFavoriteClick(plan.id);
+                          }}
+                          disabled={favoriteBusyId === plan.id}
+                          className={`p-2 rounded-full transition-colors border ${favoriteIds.has(plan.id) ? 'bg-red-50 border-red-100 text-red-500' : 'border-gray-200 hover:bg-red-50 text-gray-400 hover:text-red-500'}`}
+                          aria-pressed={favoriteIds.has(plan.id)}
+                          aria-label={favoriteIds.has(plan.id) ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <Heart className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleCartClick(plan.id);
+                          }}
+                          disabled={cartBusyId === plan.id}
+                          className={`p-2 rounded-full transition-colors border ${cartIds.has(plan.id) ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'border-gray-200 hover:bg-green-50 text-gray-400 hover:text-emerald-600'}`}
+                          aria-pressed={cartIds.has(plan.id)}
+                          aria-label={cartIds.has(plan.id) ? 'Remove from cart' : 'Add to cart'}
+                        >
+                          <ShoppingCart className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
                   </div>

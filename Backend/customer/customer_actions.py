@@ -123,6 +123,128 @@ def purchase_plan():
         conn.close()
 
 
+@customer_bp.route('/cart', methods=['POST'])
+@jwt_required()
+def add_to_cart():
+    """Add a plan to the authenticated user's cart"""
+    user_id, role = get_current_user()
+    data = request.get_json() or {}
+
+    plan_id = data.get('plan_id')
+
+    if not plan_id:
+        return jsonify(message="plan_id is required"), 400
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        # Ensure plan exists and is available
+        cur.execute("SELECT id, name FROM plans WHERE id = %s AND status = 'Available'", (plan_id,))
+        plan = cur.fetchone()
+
+        if not plan:
+            return jsonify(message="Plan not found or unavailable"), 404
+
+        cur.execute(
+            """
+            INSERT INTO cart_items (user_id, plan_id)
+            VALUES (%s, %s)
+            ON CONFLICT (user_id, plan_id) DO NOTHING
+            RETURNING id
+            """,
+            (user_id, plan_id)
+        )
+
+        # Only log when a new row was created
+        inserted = cur.fetchone()
+        if inserted:
+            log_user_activity(user_id, 'cart_add', {
+                'plan_id': plan_id,
+                'plan_name': plan['name']
+            }, conn)
+
+        conn.commit()
+
+        return jsonify(message="Added to cart"), 201
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@customer_bp.route('/cart', methods=['GET'])
+@jwt_required()
+def get_cart_items():
+    """Retrieve the authenticated user's cart items"""
+    user_id, role = get_current_user()
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        cur.execute(
+            """
+            SELECT 
+                c.added_at,
+                p.*, 
+                u.username AS designer_name
+            FROM cart_items c
+            JOIN plans p ON c.plan_id = p.id
+            LEFT JOIN users u ON p.designer_id = u.id
+            WHERE c.user_id = %s AND p.status = 'Available'
+            ORDER BY c.added_at DESC
+            """,
+            (user_id,)
+        )
+
+        cart = [dict(row) for row in cur.fetchall()]
+
+        return jsonify(cart), 200
+
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@customer_bp.route('/cart/<plan_id>', methods=['DELETE'])
+@jwt_required()
+def remove_from_cart(plan_id):
+    """Remove a plan from the authenticated user's cart"""
+    user_id, role = get_current_user()
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            DELETE FROM cart_items
+            WHERE user_id = %s AND plan_id = %s
+            """,
+            (user_id, plan_id)
+        )
+
+        if cur.rowcount == 0:
+            return jsonify(message="Cart item not found"), 404
+
+        conn.commit()
+
+        return jsonify(message="Removed from cart"), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @customer_bp.route('/purchases', methods=['GET'])
 @jwt_required()
 def get_my_purchases():

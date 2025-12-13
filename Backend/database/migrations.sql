@@ -39,6 +39,25 @@ BEGIN
     END IF;
 END$$;
 
+-- Cart items table
+CREATE TABLE IF NOT EXISTS cart_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    plan_id UUID REFERENCES plans(id) ON DELETE CASCADE,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_cart_user_plan'
+    ) THEN
+        ALTER TABLE cart_items
+            ADD CONSTRAINT uniq_cart_user_plan UNIQUE (user_id, plan_id);
+    END IF;
+END$$;
+
 -- User Activity Tracking
 CREATE TABLE IF NOT EXISTS user_activity (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

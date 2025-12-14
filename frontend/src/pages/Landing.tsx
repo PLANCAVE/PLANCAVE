@@ -169,8 +169,8 @@ export default function Landing() {
 
                 <div className="absolute inset-x-0 bottom-0 px-4 pb-4 text-white">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between max-w-6xl mx-auto">
-                    <div className="flex flex-col gap-2 bg-black/60 backdrop-blur-md rounded-2xl border border-white/20 px-4 py-3 max-w-2xl shadow-xl">
-                      <div className="flex items-center gap-2 text-[0.55rem] uppercase tracking-[0.4em] text-white/80">
+                    <div className="flex flex-col gap-2 bg-black/5 backdrop-blur-[1px] rounded-2xl border border-white/5 px-3 py-2 max-w-2xl">
+                      <div className="flex items-center gap-2 text-[0.55rem] uppercase tracking-[0.4em] text-white/70">
                         <span>{currentPlan?.project_type}</span>
                         {currentPlan?.category && <span className="text-white/60">• {currentPlan.category}</span>}
                       </div>
@@ -208,7 +208,7 @@ export default function Landing() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-4 bg-black/60 backdrop-blur-md rounded-full border border-white/20 px-4 py-2 text-[0.6rem] uppercase tracking-[0.35em] text-white/90 shadow-xl">
+                      <div className="flex items-center gap-4 bg-black/5 backdrop-blur-[1px] rounded-full border border-white/5 px-4 py-2 text-[0.6rem] uppercase tracking-[0.35em] text-white/90">
                         <span className="text-white text-lg font-light drop-shadow">{currentPlan?.area ?? '—'} m²</span>
                         <span className="text-white text-lg font-light drop-shadow">{currentPlan?.bedrooms ?? '—'} beds</span>
                         <span className="text-white text-lg font-light drop-shadow">{currentPlan?.floors ?? '—'} floors</span>

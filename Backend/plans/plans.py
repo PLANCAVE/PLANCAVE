@@ -560,7 +560,7 @@ def browse_plans():
         total_count = count_row["total"] if isinstance(count_row, dict) else count_row[0]
 
         data_query = f"""
-            SELECT id, name, project_type, description, package_level, price, area, 
+            SELECT id, name, category, project_type, description, package_level, price, area, 
                    bedrooms, bathrooms, floors, includes_boq, disciplines_included,
                    sales_count, image_url, created_at, certifications
             FROM plans

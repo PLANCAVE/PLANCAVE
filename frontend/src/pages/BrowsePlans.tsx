@@ -118,7 +118,7 @@ export default function BrowsePlans() {
 
     if (selectedStyle) {
       const normalizedStyle = selectedStyle.toLowerCase();
-      filtered = filtered.filter((plan) => (plan.category || '').toLowerCase() === normalizedStyle);
+      filtered = filtered.filter((plan) => (plan.project_type || '').toLowerCase() === normalizedStyle);
     }
 
     if (selectedSize) {

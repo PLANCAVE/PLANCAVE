@@ -230,122 +230,120 @@ export default function BrowsePlans() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4" ref={filterBarRef}>
           <div className="flex flex-wrap items-center gap-4 overflow-x-auto py-4">
+            <button
+              onClick={() => setShowSearch((prev) => !prev)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold tracking-wide transition border ${
+                showSearch
+                  ? 'bg-[#0f4c45] text-white border-[#0f4c45]'
+                  : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+              }`}
+            >
+              <Search className="w-4 h-4" />
+              <span>Search plans</span>
+            </button>
+            <button
+              onClick={() => {
+                clearFilters();
+                setActivePreset('shop');
+              }}
+              className={presetButtonClass(activePreset === 'shop' && !selectedStyle && !selectedSize && !selectedBudget)}
+            >
+              Show All
+            </button>
+            <button
+              onClick={() => {
+                setActivePreset(activePreset === 'best-sellers' ? 'shop' : 'best-sellers');
+              }}
+              className={presetButtonClass(activePreset === 'best-sellers')}
+            >
+              Best Sellers
+            </button>
+
+            <div className="relative">
               <button
-                onClick={() => setShowSearch((prev) => !prev)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold tracking-wide transition border ${
-                  showSearch
-                    ? 'bg-[#0f4c45] text-white border-[#0f4c45]'
-                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
-                }`}
+                onClick={() => toggleDropdown('size')}
+                className={dropdownButtonClass(!!selectedSize || openDropdown === 'size')}
               >
-                <Search className="w-4 h-4" />
-                <span>Search plans</span>
+                By Size <ChevronDown className="w-4 h-4" />
               </button>
+              {openDropdown === 'size' && (
+                <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
+                  {sizeOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedSize(option.id === selectedSize ? '' : option.id);
+                        setOpenDropdown(null);
+                        setActivePreset('shop');
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        selectedSize === option.id ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
               <button
-                onClick={() => {
-                  clearFilters();
-                  setActivePreset('shop');
-                }}
-                className={presetButtonClass(activePreset === 'shop' && !selectedStyle && !selectedSize && !selectedBudget)}
+                onClick={() => toggleDropdown('style')}
+                className={dropdownButtonClass(!!selectedStyle || openDropdown === 'style')}
               >
-                Show All
+                By Style <ChevronDown className="w-4 h-4" />
               </button>
+              {openDropdown === 'style' && (
+                <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
+                  {planCategories.map((entry) => (
+                    <button
+                      key={entry}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedStyle(selectedStyle === entry ? '' : entry);
+                        setOpenDropdown(null);
+                        setActivePreset('shop');
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        selectedStyle === entry ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {entry}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
               <button
-                onClick={() => {
-                  setActivePreset(activePreset === 'best-sellers' ? 'shop' : 'best-sellers');
-                }}
-                className={presetButtonClass(activePreset === 'best-sellers')}
+                onClick={() => toggleDropdown('budget')}
+                className={dropdownButtonClass(!!selectedBudget || openDropdown === 'budget')}
               >
-                Best Sellers
+                By Budget <ChevronDown className="w-4 h-4" />
               </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => toggleDropdown('size')}
-                  className={dropdownButtonClass(!!selectedSize || openDropdown === 'size')}
-                >
-                  By Size <ChevronDown className="w-4 h-4" />
-                </button>
-                {openDropdown === 'size' && (
-                  <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
-                    {sizeOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedSize(option.id === selectedSize ? '' : option.id);
-                          setOpenDropdown(null);
-                          setActivePreset('shop');
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
-                          selectedSize === option.id ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="relative">
-                <button
-                  onClick={() => toggleDropdown('style')}
-                  className={dropdownButtonClass(!!selectedStyle || openDropdown === 'style')}
-                >
-                  By Style <ChevronDown className="w-4 h-4" />
-                </button>
-                {openDropdown === 'style' && (
-                  <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
-                    {planCategories.map((entry) => (
-                      <button
-                        key={entry}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedStyle(selectedStyle === entry ? '' : entry);
-                          setOpenDropdown(null);
-                          setActivePreset('shop');
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
-                          selectedStyle === entry ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
-                        }`}
-                      >
-                        {entry}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="relative">
-                <button
-                  onClick={() => toggleDropdown('budget')}
-                  className={dropdownButtonClass(!!selectedBudget || openDropdown === 'budget')}
-                >
-                  By Budget <ChevronDown className="w-4 h-4" />
-                </button>
-                {openDropdown === 'budget' && (
-                  <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
-                    {budgetOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedBudget(selectedBudget === option.id ? '' : option.id);
-                          setOpenDropdown(null);
-                          setActivePreset('shop');
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
-                          selectedBudget === option.id ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
+              {openDropdown === 'budget' && (
+                <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
+                  {budgetOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedBudget(selectedBudget === option.id ? '' : option.id);
+                        setOpenDropdown(null);
+                        setActivePreset('shop');
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        selectedBudget === option.id ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

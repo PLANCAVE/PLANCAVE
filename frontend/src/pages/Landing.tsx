@@ -120,7 +120,7 @@ export default function Landing() {
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
         {/* Full-bleed hero carousel */}
-        <div className="relative w-full px-0 pb-0">
+        <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-0">
           <div
             className="relative w-full min-h-[420px] max-h-[900px] h-[min(90vh,900px)] sm:h-[min(95vh,950px)] lg:h-[calc(100vh-5rem)] overflow-hidden cursor-pointer"
             onClick={handlePlanOpen}
@@ -159,7 +159,7 @@ export default function Landing() {
                 <div className="absolute inset-0 overflow-hidden">
                   <img
                     src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
-                    className="absolute inset-0 w-full h-full object-cover object-center"
+                    className="absolute inset-0 w-full h-full object-cover object-top sm:object-center"
                     alt="Featured plan"
                   />
                   <div className="absolute inset-0 bg-black/25" />

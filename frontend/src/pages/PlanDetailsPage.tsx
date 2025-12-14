@@ -599,30 +599,74 @@ export default function PlanDetailsPage() {
           </div>
 
           {(hasStructural || availableFileTypes.length > 0) && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" />
-                Technical files
-              </h3>
-              
-              {hasStructural && (
-                <p className="text-sm text-gray-700 mb-4">
-                  Includes {structuralSpecs.length} structural specification{structuralSpecs.length === 1 ? '' : 's'}
-                </p>
-              )}
-              
+            <section className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 text-white p-6 shadow-[0_25px_60px_-40px_rgba(15,23,42,0.9)]">
+              <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-800 text-teal-300">
+                    <FileText className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Technical bundle</p>
+                    <h3 className="text-2xl font-semibold">Technical contents</h3>
+                  </div>
+                </div>
+                <span className="px-4 py-1 rounded-full text-xs uppercase tracking-wide bg-white/5 border border-white/10 text-teal-200">
+                  Secure delivery
+                </span>
+              </header>
+
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-3">What's included</div>
+                  <ul className="space-y-2 text-sm text-white/90">
+                    {hasStructural && (
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-300" />
+                        Structural specs ({structuralSpecs.length})
+                      </li>
+                    )}
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-300" />
+                      Permit-ready PDFs & CAD sets
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+                      BOQ + schedules + notes
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-3">Delivery</div>
+                  <ul className="space-y-2 text-sm text-white/90">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                      One-time secure link post-purchase
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-300" />
+                      Watermarked per customer
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-300" />
+                      Instant email + dashboard access
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 {purchaseSuccess && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-green-800">Purchase successful! Download started...</span>
+                  <div className="p-3 rounded-2xl border border-emerald-400/40 bg-emerald-400/10 flex items-center gap-2 text-sm text-white">
+                    <CheckCircle className="w-5 h-5 text-emerald-300" />
+                    Purchase complete — download starting
                   </div>
                 )}
 
                 {downloadError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-red-600" />
-                    <span className="text-sm text-red-800">{downloadError}</span>
+                  <div className="p-3 rounded-2xl border border-rose-400/40 bg-rose-400/10 flex items-center gap-2 text-sm text-white">
+                    <AlertCircle className="w-5 h-5 text-rose-300" />
+                    {downloadError}
                   </div>
                 )}
 
@@ -630,7 +674,7 @@ export default function PlanDetailsPage() {
                   <button
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-teal-400 text-slate-900 font-semibold hover:bg-teal-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isDownloading ? (
                       <>
@@ -647,26 +691,26 @@ export default function PlanDetailsPage() {
                 ) : !isAuthenticated ? (
                   <button
                     onClick={() => navigate('/login')}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-white/20 text-white/80 hover:text-white"
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    Login to Purchase Plan
+                    Login to purchase
                   </button>
                 ) : purchaseStatus === 'purchased' ? (
                   <button
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-teal-400 text-slate-900 font-semibold hover:bg-teal-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isDownloading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Generating download link...
+                        Generating link...
                       </>
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        Download Technical Files
+                        Download technical files
                       </>
                     )}
                   </button>
@@ -674,33 +718,33 @@ export default function PlanDetailsPage() {
                   <button
                     onClick={handlePurchase}
                     disabled={isPurchasing}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-purple-500 to-indigo-500 font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isPurchasing ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing purchase...
+                        Processing...
                       </>
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4" />
-                        Purchase Plan - KSH {Number(plan.price).toLocaleString()}
+                        Purchase plan · KSH {Number(plan.price).toLocaleString()}
                       </>
                     )}
                   </button>
                 )}
 
-                <p className="text-xs text-gray-500 text-center mt-2">
+                <p className="text-[11px] text-slate-400 text-center">
                   {isAdmin ? (
-                    "Admin access: Direct download of all technical files"
+                    "Admin: instant access to every technical file"
                   ) : purchaseStatus === 'purchased' ? (
-                    "One-time download link will be generated and revoked after use"
+                    "One-time download link issued and revoked after use"
                   ) : (
-                    "Secure payment processing. Download access granted immediately after purchase"
+                    "Secure checkout • access delivered instantly after payment"
                   )}
                 </p>
               </div>
-            </div>
+            </section>
           )}
 
           {plan.certifications && plan.certifications.length > 0 && (

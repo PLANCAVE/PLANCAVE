@@ -38,7 +38,7 @@ export default function BrowsePlans() {
   const [selectedBudget, setSelectedBudget] = useState('');
   const [selectedBedrooms, setSelectedBedrooms] = useState('');
   const [selectedFloors, setSelectedFloors] = useState('');
-  const [activePreset, setActivePreset] = useState<'shop' | 'best-sellers'>('shop');
+  const [activePreset, setActivePreset] = useState<'shop' | 'top-selling'>('shop');
   const [openDropdown, setOpenDropdown] = useState<null | 'size' | 'style' | 'budget' | 'bedrooms' | 'floors'>(null);
   const [showSearch, setShowSearch] = useState(false);
   const filterBarRef = useRef<HTMLDivElement>(null);
@@ -178,7 +178,7 @@ export default function BrowsePlans() {
       });
     }
 
-    if (activePreset === 'best-sellers') {
+    if (activePreset === 'top-selling') {
       filtered = [...filtered].sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
     }
 
@@ -238,8 +238,8 @@ export default function BrowsePlans() {
       label: floorOptions.find((option) => option.id === selectedFloors)?.label || 'Floors',
       onRemove: () => setSelectedFloors(''),
     },
-    activePreset === 'best-sellers' && {
-      label: 'Best sellers',
+    activePreset === 'top-selling' && {
+      label: 'Top selling',
       onRemove: () => setActivePreset('shop'),
     },
   ].filter(Boolean) as { label: string; onRemove: () => void }[];
@@ -319,11 +319,11 @@ export default function BrowsePlans() {
             </button>
             <button
               onClick={() => {
-                setActivePreset(activePreset === 'best-sellers' ? 'shop' : 'best-sellers');
+                setActivePreset(activePreset === 'top-selling' ? 'shop' : 'top-selling');
               }}
-              className={presetButtonClass(activePreset === 'best-sellers')}
+              className={presetButtonClass(activePreset === 'top-selling')}
             >
-              Best Sellers
+              Top Selling
             </button>
 
             <div className="relative">

@@ -98,18 +98,59 @@ def fetch_plan_bundle(plan_id: str, conn):
         cur.close()
 
 
+ARCHIVE_FOLDERS = {
+    'ARCHITECTURAL': 'technical/architectural',
+    'STRUCTURAL': 'technical/structural',
+    'MEP_MECHANICAL': 'technical/mep/mechanical',
+    'MEP_ELECTRICAL': 'technical/mep/electrical',
+    'MEP_PLUMBING': 'technical/mep/plumbing',
+    'CIVIL': 'technical/civil',
+    'FIRE_SAFETY': 'technical/fire-safety',
+    'INTERIOR': 'technical/interior',
+    'RENDER': 'media/renders',
+    'THUMBNAIL': 'media/thumbnail',
+    'GALLERY': 'media/gallery',
+    'BOQ_ARCHITECTURAL': 'boq/architectural',
+    'BOQ_STRUCTURAL': 'boq/structural',
+    'BOQ_MEP': 'boq/mep',
+    'BOQ_COST_SUMMARY': 'boq/cost-summary',
+}
+
+
+def resolve_archive_path(plan_file: dict, default_folder: str = 'files') -> str:
+    file_type = (plan_file.get('file_type') or '').upper()
+    base_folder = ARCHIVE_FOLDERS.get(file_type)
+
+    if not base_folder:
+        if file_type in {'PDF', 'DWG', 'DXF', 'RVT', 'IFC', 'SKP', 'BLEND'}:
+            base_folder = f"technical/{file_type.lower()}"
+        else:
+            base_folder = f"{default_folder}/{file_type.lower()}" if file_type else default_folder
+
+    filename = plan_file.get('file_name')
+    if not filename:
+        path = plan_file.get('file_path') or ''
+        filename = os.path.basename(path) or 'file'
+
+    return f"{base_folder}/{filename}"
+
+
 def build_plan_zip(bundle):
     zip_buffer = io.BytesIO()
     files_added = 0
 
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        organized_files = []
         for plan_file in bundle['files']:
             resolved_path = resolve_plan_file_path(plan_file.get('file_path'))
             if not resolved_path or not os.path.exists(resolved_path):
                 continue
 
-            arcname = plan_file.get('file_name') or os.path.basename(resolved_path)
-            zip_file.write(resolved_path, arcname)
+            archive_path = resolve_archive_path(plan_file)
+            zip_file.write(resolved_path, archive_path)
+            organized_entry = dict(plan_file)
+            organized_entry['archive_path'] = archive_path
+            organized_files.append(organized_entry)
             files_added += 1
 
         manifest = {
@@ -118,7 +159,7 @@ def build_plan_zip(bundle):
             "boqs": bundle['boqs'],
             "structural_specs": bundle['structural_specs'],
             "compliance_notes": bundle['compliance_notes'],
-            "files": bundle['files'],
+            "files": organized_files,
         }
         zip_file.writestr('plan_manifest.json', json.dumps(manifest, default=json_default, indent=2))
 

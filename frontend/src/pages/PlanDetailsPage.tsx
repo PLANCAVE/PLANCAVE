@@ -650,14 +650,6 @@ export default function PlanDetailsPage() {
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
                       One-time secure link post-purchase
                     </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-300" />
-                      Watermarked per customer
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-300" />
-                      Instant email + dashboard access
-                    </li>
                   </ul>
                 </div>
               </div>

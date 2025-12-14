@@ -444,64 +444,41 @@ export default function PlanDetailsPage() {
 
             {/* Quick Actions */}
             {isAuthenticated && !isAdmin && (
-              <div className="mb-6">
-                <div className="text-sm text-gray-600 mb-3">Quick Actions</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={isAddingToCart || isInCart}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isAddingToCart ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Adding...
-                      </>
-                    ) : isInCart ? (
-                      <>
-                        <ShoppingCart className="w-4 h-4" />
-                        In Cart
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        Add to Cart
-                      </>
-                    )}
-                  </button>
+              <div className="flex items-center gap-2 mb-6">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart || isInCart}
+                  className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title={isInCart ? "In Cart" : "Add to Cart"}
+                >
+                  {isAddingToCart ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
+                  ) : isInCart ? (
+                    <ShoppingCart className="w-5 h-5 text-teal-600" />
+                  ) : (
+                    <Plus className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
 
-                  <button
-                    onClick={handleToggleFavorite}
-                    disabled={isAddingToFavorites}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isAddingToFavorites ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <Heart className={`w-4 h-4 ${isInFavorites ? 'fill-current' : ''}`} />
-                        {isInFavorites ? 'Favorited' : 'Favorite'}
-                      </>
-                    )}
-                  </button>
-                </div>
-                
+                <button
+                  onClick={handleToggleFavorite}
+                  disabled={isAddingToFavorites}
+                  className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title={isInFavorites ? "Remove from Favorites" : "Add to Favorites"}
+                >
+                  {isAddingToFavorites ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
+                  ) : (
+                    <Heart className={`w-5 h-5 ${isInFavorites ? 'fill-current text-pink-600' : 'text-gray-600'}`} />
+                  )}
+                </button>
+
                 {cartSuccess && (
-                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-green-800">Added to cart successfully!</span>
-                  </div>
+                  <div className="text-xs text-green-600 font-medium">Added to cart</div>
                 )}
-
                 {favoriteSuccess && (
-                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-green-800">
-                      {isInFavorites ? 'Removed from favorites' : 'Added to favorites'}!
-                    </span>
+                  <div className="text-xs text-pink-600 font-medium">
+                    {isInFavorites ? 'Favorited' : 'Removed'}
                   </div>
                 )}
               </div>
@@ -622,133 +599,30 @@ export default function PlanDetailsPage() {
           </div>
 
           {(hasStructural || availableFileTypes.length > 0) && (
-            <section className="bg-slate-900/60 border border-white/10 rounded-3xl p-8 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.8)]">
-              <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.3em] text-violet-300">Blueprint access</p>
-                  <h3 className="text-2xl md:text-3xl font-semibold text-white mt-2 flex items-center gap-3">
-                    <span className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 text-white">
-                      <FileText className="w-5 h-5" />
-                    </span>
-                    Technical contents
-                  </h3>
-                </div>
-                <span className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm text-white/80">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Secure delivery ready
-                </span>
-              </header>
-
-              <div className="grid md:grid-cols-2 gap-6 mb-8">
-                <div className="space-y-4 bg-white/5 rounded-2xl p-5 border border-white/10">
-                  <p className="text-sm text-white/70">
-                    Get the architect-approved construction set with every engineering detail required for permitting, contractor bidding, and site execution.
-                  </p>
-                  {hasStructural && (
-                    <div className="flex items-center justify-between text-sm text-white/80">
-                      <span>Structural specifications</span>
-                      <span className="px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-medium">
-                        {structuralSpecs.length} item{structuralSpecs.length === 1 ? '' : 's'}
-                      </span>
-                    </div>
-                  )}
-                  <p className="text-xs text-white/60 italic">
-                    Purchase unlocks CAD/PDF sets, BOQs, schedules, and construction notes in the exact format our designers use with clients.
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-violet-600/20 via-purple-500/10 to-pink-500/10 rounded-2xl p-5 border border-white/10">
-                  <p className="text-sm text-white/80 mb-3">Delivery highlights</p>
-                  <ul className="space-y-3 text-sm text-white/90">
-                    <li className="flex items-center gap-3">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                      One-time secure download link generated post purchase
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-                      Files watermarked & tracked per customer
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                      Instant access with purchase receipt
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="border-t border-white/10 pt-6 space-y-4">
-                {cartSuccess && (
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-400/30 rounded-2xl flex items-center gap-2 text-white">
-                    <CheckCircle className="w-5 h-5 text-emerald-300" />
-                    <span className="text-sm">Added to cart successfully!</span>
-                  </div>
-                )}
-
-                {favoriteSuccess && (
-                  <div className="p-3 bg-fuchsia-500/10 border border-fuchsia-400/30 rounded-2xl flex items-center gap-2 text-white">
-                    <CheckCircle className="w-5 h-5 text-fuchsia-300" />
-                    <span className="text-sm">
-                      {isInFavorites ? 'Removed from favorites' : 'Added to favorites'}!
-                    </span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={isAddingToCart || isAdmin || isInCart}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-medium shadow-lg shadow-sky-500/30 hover:shadow-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isAddingToCart ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Adding...
-                      </>
-                    ) : isInCart ? (
-                      <>
-                        <ShoppingCart className="w-4 h-4" />
-                        In Cart
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        Add to Cart
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleToggleFavorite}
-                    disabled={isAddingToFavorites || isAdmin}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-rose-500 to-pink-500 text-white font-medium shadow-lg shadow-fuchsia-500/30 hover:shadow-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isAddingToFavorites ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <Heart className={`w-4 h-4 ${isInFavorites ? 'fill-current' : ''}`} />
-                        {isInFavorites ? 'Favorited' : 'Favorite'}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="border-t border-white/10 pt-6 space-y-4">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-teal-600" />
+                Technical files
+              </h3>
+              
+              {hasStructural && (
+                <p className="text-sm text-gray-700 mb-4">
+                  Includes {structuralSpecs.length} structural specification{structuralSpecs.length === 1 ? '' : 's'}
+                </p>
+              )}
+              
+              <div className="space-y-3">
                 {purchaseSuccess && (
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-400/30 rounded-2xl flex items-center gap-2 text-white">
-                    <CheckCircle className="w-5 h-5 text-emerald-300" />
-                    <span className="text-sm">Purchase successful! Download started...</span>
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-sm text-green-800">Purchase successful! Download started...</span>
                   </div>
                 )}
 
                 {downloadError && (
-                  <div className="p-3 bg-rose-500/10 border border-rose-400/30 rounded-2xl flex items-center gap-2 text-white">
-                    <AlertCircle className="w-5 h-5 text-rose-300" />
-                    <span className="text-sm">{downloadError}</span>
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <span className="text-sm text-red-800">{downloadError}</span>
                   </div>
                 )}
 
@@ -756,7 +630,7 @@ export default function PlanDetailsPage() {
                   <button
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className="w-full flex items-center justify-center gap-3 px-5 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isDownloading ? (
                       <>
@@ -773,7 +647,7 @@ export default function PlanDetailsPage() {
                 ) : !isAuthenticated ? (
                   <button
                     onClick={() => navigate('/login')}
-                    className="w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl border border-white/20 text-white bg-white/5 hover:bg-white/10 transition-all"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                   >
                     <ShoppingCart className="w-4 h-4" />
                     Login to Purchase Plan
@@ -782,7 +656,7 @@ export default function PlanDetailsPage() {
                   <button
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className="w-full flex items-center justify-center gap-3 px-5 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isDownloading ? (
                       <>
@@ -800,7 +674,7 @@ export default function PlanDetailsPage() {
                   <button
                     onClick={handlePurchase}
                     disabled={isPurchasing}
-                    className="w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 text-white font-semibold shadow-xl shadow-fuchsia-500/30 hover:shadow-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isPurchasing ? (
                       <>
@@ -816,7 +690,7 @@ export default function PlanDetailsPage() {
                   </button>
                 )}
 
-                <p className="text-xs text-white/60 text-center mt-3">
+                <p className="text-xs text-gray-500 text-center mt-2">
                   {isAdmin ? (
                     "Admin access: Direct download of all technical files"
                   ) : purchaseStatus === 'purchased' ? (
@@ -826,7 +700,7 @@ export default function PlanDetailsPage() {
                   )}
                 </p>
               </div>
-            </section>
+            </div>
           )}
 
           {plan.certifications && plan.certifications.length > 0 && (

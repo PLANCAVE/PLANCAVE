@@ -120,9 +120,9 @@ export default function Landing() {
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
         {/* Full-bleed hero carousel */}
-        <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-0">
+        <div className="relative w-full px-0 pb-0">
           <div
-            className="relative h-[calc(100vh-5rem)] sm:h-[calc(100vh-6rem)] min-h-[32rem] w-full overflow-hidden cursor-pointer"
+            className="relative w-full min-h-[420px] max-h-[900px] h-[min(90vh,900px)] sm:h-[min(95vh,950px)] lg:h-[calc(100vh-5rem)] overflow-hidden cursor-pointer"
             onClick={handlePlanOpen}
             onMouseEnter={() => setIsHoveringCarousel(true)}
             onMouseLeave={() => setIsHoveringCarousel(false)}
@@ -156,17 +156,17 @@ export default function Landing() {
               </div>
             ) : (
               <>
-                <div className="relative w-full h-[calc(100vh-5rem)] min-h-[300px] max-h-[600px] overflow-hidden">
+                <div className="absolute inset-0 overflow-hidden">
                   <img
                     src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
-                    className="w-full h-full object-cover object-center"
+                    className="absolute inset-0 w-full h-full object-cover object-center"
                     alt="Featured plan"
                   />
-                  <div className="absolute inset-0 bg-black/20" />
+                  <div className="absolute inset-0 bg-black/25" />
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 px-4 pb-4 text-white">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between max-w-6xl mx-auto">
+                <div className="absolute inset-x-0 bottom-0 px-4 pb-6 text-white z-10">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between max-w-6xl mx-auto">
                     <div className="flex flex-col gap-2 bg-black/5 backdrop-blur-[1px] rounded-2xl border border-white/5 px-3 py-2 max-w-2xl">
                       <div className="flex items-center gap-2 text-[0.55rem] uppercase tracking-[0.4em] text-white/70">
                         <span>{currentPlan?.project_type}</span>
@@ -230,7 +230,7 @@ export default function Landing() {
                     e.stopPropagation();
                     handlePrevPlan();
                   }}
-                  className="absolute left-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition"
+                  className="absolute left-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition z-10"
                   aria-label="Previous plan"
                 >
                   <ArrowLeft className="w-6 h-6" />
@@ -240,13 +240,13 @@ export default function Landing() {
                     e.stopPropagation();
                     handleNextPlan();
                   }}
-                  className="absolute right-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition"
+                  className="absolute right-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition z-10"
                   aria-label="Next plan"
                 >
                   <ArrowRight className="w-6 h-6" />
                 </button>
 
-                <div className="absolute bottom-5 inset-x-0 flex justify-center gap-2">
+                <div className="absolute bottom-5 inset-x-0 flex justify-center gap-2 z-10">
                   {featuredPlans.map((plan, idx) => (
                     <button
                       key={plan.id}

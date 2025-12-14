@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPlanDetails, purchasePlan, generateDownloadLink, downloadPlanFile, adminDownloadPlan, verifyPurchase, addCartItem, addFavorite, removeFavorite } from '../api';
+import { getPlanDetails, generateDownloadLink, downloadPlanFile } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
 import {
@@ -21,7 +21,6 @@ import {
   CreditCard,
   Heart,
   Plus,
-  Minus,
 } from 'lucide-react';
 
 interface PlanFile {
@@ -73,7 +72,7 @@ export default function PlanDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin } = useAuth();
-  const { favorites, addFavoriteHandler, removeFavoriteHandler, cartItems, addCartItemHandler, removeCartItemHandler } = useCustomerData();
+  const { favorites, addFavorite, removeFavorite, cartItems, addCartItem } = useCustomerData();
   const [plan, setPlan] = useState<PlanDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,8 +95,8 @@ export default function PlanDetailsPage() {
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 
   // Helper functions to check cart and favorites status
-  const isInCart = cartItems.some(item => item.plan_id === id);
-  const isInFavorites = favorites.some(item => item.plan_id === id);
+  const isInCart = cartItems.some(item => item.id === id);
+  const isInFavorites = favorites.some(item => item.id === id);
 
   // Cart and favorites handlers
   const handleAddToCart = async () => {
@@ -111,7 +110,7 @@ export default function PlanDetailsPage() {
     setDownloadError(null);
 
     try {
-      await addCartItemHandler(id);
+      await addCartItem(id);
       setCartSuccess(true);
       setTimeout(() => setCartSuccess(false), 3000);
     } catch (err: any) {
@@ -133,9 +132,9 @@ export default function PlanDetailsPage() {
 
     try {
       if (isInFavorites) {
-        await removeFavoriteHandler(id);
+        await removeFavorite(id);
       } else {
-        await addFavoriteHandler(id);
+        await addFavorite(id);
       }
       setFavoriteSuccess(true);
       setTimeout(() => setFavoriteSuccess(false), 3000);

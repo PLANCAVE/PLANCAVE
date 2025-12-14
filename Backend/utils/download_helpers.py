@@ -42,7 +42,7 @@ def fetch_plan_bundle(plan_id: str, conn):
     try:
         cur.execute(
             """
-            SELECT p*,
+            SELECT p.*, 
                    u.first_name AS designer_first_name,
                    u.last_name AS designer_last_name,
                    u.email AS designer_email,

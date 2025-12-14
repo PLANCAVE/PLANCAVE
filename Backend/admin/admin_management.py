@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_jwt_extended import jwt_required
 import psycopg
 from psycopg.rows import dict_row
@@ -8,6 +8,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.auth_utils import get_current_user, require_admin
+from utils.download_helpers import fetch_plan_bundle, build_plan_zip
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -129,6 +130,42 @@ def admin_dashboard():
         return jsonify(error=str(e)), 500
     finally:
         cur.close()
+        conn.close()
+
+
+@admin_bp.route('/plans/<plan_id>/download', methods=['GET'])
+@jwt_required()
+@require_admin
+def admin_download_plan(plan_id):
+    """Allow admins to download full plan technical bundle without tokens."""
+    conn = get_db()
+
+    try:
+        bundle = fetch_plan_bundle(plan_id, conn)
+        if not bundle:
+            return jsonify(message="Plan not found"), 404
+
+        if not bundle['files']:
+            return jsonify(message="No technical files available for this plan"), 404
+
+        zip_buffer, download_name, files_added = build_plan_zip(bundle)
+
+        if files_added == 0:
+            return jsonify(message="Plan files could not be located on the server"), 404
+
+        zip_buffer.seek(0)
+        response = send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=download_name
+        )
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+    finally:
         conn.close()
 
 

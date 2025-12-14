@@ -180,37 +180,48 @@ export default function PlanDetailsPage() {
 
     try {
       if (isAdmin) {
-        // Mock admin download
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        console.log('Mock admin download for plan:', id);
-        
-        // Create a mock file for download
-        const mockContent = `Mock technical files for ${plan?.name || 'plan'}\n\nThis is a placeholder download.\nActual files will be available when backend is implemented.`;
-        const blob = new Blob([mockContent], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${plan?.name || 'plan'}-technical-files.txt`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        // Admin direct download - get all technical files
+        if (plan.files && plan.files.length > 0) {
+          for (const file of plan.files) {
+            const fileUrl = `${apiBaseUrl}${file.file_path}`;
+            const response = await fetch(fileUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${plan.name}-${file.file_path.split('/').pop()}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Small delay between downloads
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
       } else {
-        // Mock customer one-time download link generation
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        console.log('Mock one-time download link generated for plan:', id);
+        // Customer download - generate one-time link and download files
+        // For now, simulate the one-time link generation but download actual files
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate link generation
         
-        // Create a mock file for download
-        const mockContent = `Mock technical files for ${plan?.name || 'plan'}\n\nThis is a placeholder download.\nActual files will be available when backend is implemented.\n\nDownload link would be revoked after use.`;
-        const blob = new Blob([mockContent], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${plan?.name || 'plan'}-technical-files.txt`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        if (plan.files && plan.files.length > 0) {
+          for (const file of plan.files) {
+            const fileUrl = `${apiBaseUrl}${file.file_path}`;
+            const response = await fetch(fileUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${plan.name}-${file.file_path.split('/').pop()}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Small delay between downloads
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
       }
     } catch (err: any) {
       setDownloadError('Download failed. Please try again.');

@@ -122,7 +122,7 @@ export default function Landing() {
         {/* Full-bleed hero carousel */}
         <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-0">
           <div
-            className="relative w-full h-screen max-h-[100dvh] overflow-hidden cursor-pointer"
+            className="relative w-screen h-screen max-h-[100dvh] overflow-hidden cursor-pointer"
             onClick={handlePlanOpen}
             onMouseEnter={() => setIsHoveringCarousel(true)}
             onMouseLeave={() => setIsHoveringCarousel(false)}
@@ -158,12 +158,14 @@ export default function Landing() {
               <>
                 <div className="absolute inset-0 bg-black">
                   <div className="relative w-full h-full">
-                    <img
-                      src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
-                      className="absolute inset-0 w-full h-full object-cover object-center"
-                      alt="Featured plan"
-                    />
-                    <div className="absolute inset-0 bg-black/25" />
+                    <div className="absolute inset-0 bg-black flex items-center justify-center">
+                      <img
+                        src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
+                        className="max-w-full max-h-full object-contain"
+                        alt="Featured plan"
+                      />
+                      <div className="absolute inset-0 bg-black/25" />
+                    </div>
                   </div>
                 </div>
 

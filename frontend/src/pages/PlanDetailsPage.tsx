@@ -66,12 +66,13 @@ interface PlanDetailsData {
   created_at?: string;
   files?: PlanFile[];
   structural_specs?: StructuralSpec[];
+  designer_id?: number;
 }
 
 export default function PlanDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isDesigner, user } = useAuth();
   const { favorites, addFavorite, removeFavorite, cartItems, addCartItem } = useCustomerData();
   const [plan, setPlan] = useState<PlanDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -233,6 +234,8 @@ export default function PlanDetailsPage() {
     }
   };
 
+  const isPlanOwnerDesigner = Boolean(isDesigner && user && plan?.designer_id === user.id);
+
   const handleDownload = async () => {
     if (!id || !plan) return;
 
@@ -240,8 +243,8 @@ export default function PlanDetailsPage() {
     setDownloadError(null);
 
     try {
-      if (isAdmin) {
-        // Admin direct download - get all technical files
+      if (isAdmin || isPlanOwnerDesigner) {
+        // Admin direct download - get all technical files individually
         if (plan.files && plan.files.length > 0) {
           for (const file of plan.files) {
             const fileUrl = `${apiBaseUrl}${file.file_path}`;
@@ -255,35 +258,29 @@ export default function PlanDetailsPage() {
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            
+
             // Small delay between downloads
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise((resolve) => setTimeout(resolve, 500));
           }
         }
       } else {
-        // Customer download - generate one-time link and download files
+        // Customer download - generate one-time link and receive zipped package
         const linkResponse = await generateDownloadLink(id);
         const { download_token } = linkResponse.data;
-        
-        if (plan.files && plan.files.length > 0) {
-          for (const file of plan.files) {
-            const response = await downloadPlanFile(download_token);
-            const blob = new Blob([response.data], { type: 'application/octet-stream' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${plan.name || 'plan'}-${file.file_path.split('/').pop()}`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            // Small delay between downloads
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
+
+        const response = await downloadPlanFile(download_token);
+        const blob = new Blob([response.data], { type: 'application/zip' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${plan.name || 'plan'}-technical-files.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
       }
     } catch (err: any) {
+      console.error('Download error', err);
       setDownloadError('Download failed. Please try again.');
     } finally {
       setIsDownloading(false);

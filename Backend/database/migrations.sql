@@ -182,6 +182,22 @@ CREATE TABLE IF NOT EXISTS plan_files (
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Download tokens table for secure, one-time customer downloads
+CREATE TABLE IF NOT EXISTS download_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    plan_id UUID REFERENCES plans(id) ON DELETE CASCADE,
+    token UUID UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    download_count INTEGER DEFAULT 0,
+    max_downloads INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_download_tokens_user ON download_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_download_tokens_plan ON download_tokens(plan_id);
+
 -- Teams table
 CREATE TABLE IF NOT EXISTS teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

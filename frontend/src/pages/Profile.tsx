@@ -12,7 +12,7 @@ const resolveAvatarUrl = (url?: string | null) => {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, refreshUserProfile, logout } = useAuth();
+  const { user, refreshUserProfile, logout, isAuthenticated, token } = useAuth() as any;
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -24,6 +24,7 @@ export default function Profile() {
   useEffect(() => {
     // Load profile data
     const loadProfile = async () => {
+      if (!isAuthenticated || !token) return;
       try {
         const res = await getMyProfile();
         const data = res.data;
@@ -100,7 +101,7 @@ export default function Profile() {
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() || '')
+      .map((p: string) => p[0]?.toUpperCase() || '')
       .join('');
   })();
 

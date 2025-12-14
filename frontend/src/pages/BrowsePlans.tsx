@@ -279,17 +279,17 @@ export default function BrowsePlans() {
       {/* Header with browse label and controls */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4" ref={filterBarRef}>
-          <div className="flex items-center gap-4 py-4">
+          <div className="flex flex-wrap items-center gap-2 py-4 md:flex-nowrap">
             <button
               onClick={() => setShowSearch((prev) => !prev)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold tracking-wide transition border ${
+              className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm font-semibold tracking-wide transition border ${
                 showSearch
                   ? 'bg-[#0f4c45] text-white border-[#0f4c45]'
                   : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
               }`}
             >
               <Search className="w-4 h-4" />
-              <span>Search plans</span>
+              <span className="hidden sm:inline">Search plans</span>
             </button>
             <button
               onClick={() => {
@@ -531,19 +531,19 @@ export default function BrowsePlans() {
               </h2>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {plans.map((plan) => (
                 <Link
                   key={plan.id}
                   to={`/plans/${plan.id}`}
-                  className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group overflow-hidden border border-gray-100"
+                  className="card hover:shadow-lg transition-all duration-300 border border-gray-100 rounded-lg overflow-hidden"
                 >
                   {/* Image */}
-                  <div className="relative h-52 overflow-hidden -m-6 mb-4 bg-gray-100">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
                     <img
                       src={(plan.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg')}
                       alt={plan.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                     <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-2">

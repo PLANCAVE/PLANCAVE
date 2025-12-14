@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     token,
     login,
@@ -108,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUserProfile,
     isAuthenticated: !!token,
     isAdmin: user?.role === 'admin',
-    isDesigner: user?.role === 'designer' || user?.role === 'admin', // Admin can do everything designers can
-    isCustomer: user?.role === 'customer' || user?.role === 'admin', // Admin can do everything customers can
+    isDesigner: user?.role === 'designer' || user?.role === 'admin',
+    isCustomer: user?.role === 'customer' || user?.role === 'admin',
   };
 
   if (loading) {

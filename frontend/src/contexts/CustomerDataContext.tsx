@@ -45,7 +45,7 @@ interface CustomerDataContextValue {
 const CustomerDataContext = createContext<CustomerDataContextValue | undefined>(undefined);
 
 export function CustomerDataProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token } = useAuth() as { isAuthenticated: boolean; token: string | null };
   const [favorites, setFavorites] = useState<PlanListItem[]>([]);
   const [cartItems, setCartItems] = useState<PlanListItem[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
@@ -57,7 +57,7 @@ export function CustomerDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshFavorites = useCallback(async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !token) {
       clearData();
       return;
     }
@@ -65,15 +65,20 @@ export function CustomerDataProvider({ children }: { children: ReactNode }) {
     try {
       const response = await getFavorites();
       setFavorites(response.data || []);
-    } catch (error) {
-      console.error('Failed to load favorites', error);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status !== 401) {
+        console.error('Failed to load favorites', error);
+      } else {
+        setFavorites([]);
+      }
     } finally {
       setLoadingFavorites(false);
     }
-  }, [isAuthenticated, clearData]);
+  }, [isAuthenticated, token, clearData]);
 
   const refreshCart = useCallback(async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !token) {
       clearData();
       return;
     }
@@ -81,21 +86,26 @@ export function CustomerDataProvider({ children }: { children: ReactNode }) {
     try {
       const response = await getCartItems();
       setCartItems(response.data || []);
-    } catch (error) {
-      console.error('Failed to load cart items', error);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status !== 401) {
+        console.error('Failed to load cart items', error);
+      } else {
+        setCartItems([]);
+      }
     } finally {
       setLoadingCart(false);
     }
-  }, [isAuthenticated, clearData]);
+  }, [isAuthenticated, token, clearData]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && token) {
       refreshFavorites();
       refreshCart();
     } else {
       clearData();
     }
-  }, [isAuthenticated, refreshFavorites, refreshCart, clearData]);
+  }, [isAuthenticated, token, refreshFavorites, refreshCart, clearData]);
 
   const addFavoriteHandler = useCallback(
     async (planId: string) => {

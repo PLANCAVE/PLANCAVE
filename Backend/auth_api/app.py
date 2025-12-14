@@ -152,7 +152,7 @@ def register_user(data, role):
     Returns:
         Response: JSON response indicating success or failure of the registration process.
     """
-    username = data.get('username')
+    username = (data.get('username') or '').strip()
     password = data.get('password')
     first_name = data.get('first_name', '')
     middle_name = data.get('middle_name', '')
@@ -161,29 +161,53 @@ def register_user(data, role):
     if not username or not password:
         return jsonify(message="Username and password are required"), 400
 
+    # Normalize username (email) to lowercase for consistency
+    username_lc = username.lower()
+
     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
 
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
     try:
-        # First try to add columns if they don't exist
+        # Ensure columns exist (idempotent)
         try:
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name VARCHAR(100);")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;")
             conn.commit()
-        except:
+        except Exception:
             conn.rollback()
-        
+
+        # Check duplicate by case-insensitive match
+        cur.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(%s);", (username_lc,))
+        if cur.fetchone():
+            return jsonify(message="This email/username is already registered"), 409
+
+        # Insert user
         cur.execute(
-            "INSERT INTO users (username, password, role, first_name, middle_name, last_name) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;",
-            (username, hashed_pw, role, first_name, middle_name, last_name)
+            "INSERT INTO users (username, password, role, first_name, middle_name, last_name, is_active) VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING id;",
+            (username_lc, hashed_pw, role, first_name, middle_name, last_name)
         )
-        user_id = cur.fetchone()['id']
+        row = cur.fetchone()
         conn.commit()
-    except psycopg.OperationalError as e:
+        user_id = row['id'] if row else None
+        return jsonify({
+            "id": user_id,
+            "email": username_lc,
+            "role": role,
+            "message": f"{role.capitalize()} registered successfully"
+        }), 201
+    except Exception as e:
         conn.rollback()
-        return jsonify(message="Username already exists"), 409
+        # If a unique constraint exists, this could still fire; map to 409 where possible
+        try:
+            from psycopg.errors import UniqueViolation  # type: ignore
+            if isinstance(e, UniqueViolation):
+                return jsonify(message="This email/username is already registered"), 409
+        except Exception:
+            pass
+        return jsonify(message="Registration failed", error=str(e)), 500
     finally:
         cur.close()
         conn.close()
@@ -252,8 +276,7 @@ def upload_avatar():
         cur.close()
         conn.close()
 
-    return jsonify(message=f"{role.capitalize()} registered", user_id=user_id), 201
-
+    
 
 @app.route('/register/customer', methods=['POST'])
 def register_customer():

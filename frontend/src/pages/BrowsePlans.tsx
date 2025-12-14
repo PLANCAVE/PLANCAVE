@@ -224,11 +224,11 @@ export default function BrowsePlans() {
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30 relative">
       {/* Header with browse label and controls */}
-      <div className="bg-white border-b border-gray-200 relative z-40">
-        <div className="max-w-6xl mx-auto px-4 overflow-visible" ref={filterBarRef}>
-          <div className="flex flex-wrap items-center gap-4 overflow-x-auto py-4">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4" ref={filterBarRef}>
+          <div className="flex items-center gap-4 py-4">
             <button
               onClick={() => setShowSearch((prev) => !prev)}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold tracking-wide transition border ${
@@ -266,7 +266,7 @@ export default function BrowsePlans() {
                 By Size <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'size' && (
-                <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-50">
+                <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-[60]">
                   {sizeOptions.map((option) => (
                     <button
                       key={option.id}
@@ -295,7 +295,7 @@ export default function BrowsePlans() {
                 By Style <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'style' && (
-                <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-50">
+                <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-[60]">
                   {planCategories.map((entry) => (
                     <button
                       key={entry}
@@ -324,7 +324,7 @@ export default function BrowsePlans() {
                 By Budget <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'budget' && (
-                <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-50">
+                <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-[60]">
                   {budgetOptions.map((option) => (
                     <button
                       key={option.id}

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Building2, TrendingUp, CheckCircle, ArrowLeft, ArrowRight, Mail, Phone, MapPin, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { browsePlans } from '../api';
 
 interface Plan {
@@ -24,6 +24,79 @@ interface Plan {
   created_at: string;
 }
 
+const PlanShowcase = ({ title, subtitle, plans, cta, badge }: PlanShowcaseProps) => {
+  if (!plans.length) return null;
+
+  const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+
+  return (
+    <section className="relative py-16 border-t border-white/10 bg-gradient-to-b from-transparent to-slate-900/20">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+          <div>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-3">{title}</h3>
+            <p className="text-gray-300 text-lg">{subtitle}</p>
+          </div>
+          <button className="self-start inline-flex items-center gap-2 text-sm uppercase tracking-[0.4em] text-white/70 hover:text-white transition">
+            {cta}
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          {plans.map((plan) => (
+            <div key={plan.id} className="group relative rounded-3xl overflow-hidden bg-white/5 border border-white/10 shadow-2xl">
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <img
+                  src={plan?.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg'}
+                  alt={plan.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  {badge && (
+                    <span className="text-xs uppercase tracking-[0.35em] px-3 py-1 rounded-full bg-white/20 text-white backdrop-blur">
+                      {badge}
+                    </span>
+                  )}
+                  <span className="text-xs uppercase tracking-[0.35em] px-3 py-1 rounded-full bg-white/20 text-white backdrop-blur">
+                    {plan.package_level}
+                  </span>
+                </div>
+                <div className="absolute bottom-4 left-4 right-4 text-white">
+                  <h4 className="text-xl font-semibold drop-shadow">{plan.name}</h4>
+                  <p className="text-sm text-white/80 line-clamp-2">{plan.description}</p>
+                </div>
+              </div>
+              <div className="p-6 flex items-center justify-between text-white">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.35em] text-white/60">From</p>
+                  <p className="text-2xl font-bold">KSH {Number(plan.price).toLocaleString()}</p>
+                </div>
+                <Link
+                  to={`/plans/${plan.id}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/30 hover:bg-white/10 transition"
+                >
+                  View
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+interface PlanShowcaseProps {
+  title: string;
+  subtitle: string;
+  plans: Plan[];
+  cta: string;
+  badge?: string;
+}
+
 export default function Landing() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -38,8 +111,7 @@ export default function Landing() {
       try {
         const response = await browsePlans();
         const results: Plan[] = response.data.results || [];
-        // Get first 6 plans as featured
-        const curated = results.slice(0, 6);
+        const curated = results.slice(0, 24);
         setFeaturedPlans(curated);
         setCurrentPlanIndex(curated.length ? Math.floor(Math.random() * curated.length) : 0);
       } catch (error) {
@@ -72,6 +144,27 @@ export default function Landing() {
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
   const currentPlan = featuredPlans[currentPlanIndex];
+
+  const { budgetPlans, bestSellingPlans, newPlans, familyPlans } = useMemo(() => {
+    const shuffle = (plans: Plan[]) => {
+      const copy = [...plans];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+
+    const randomized = shuffle(featuredPlans);
+    const chunk = (start: number, end: number) => randomized.slice(start, end);
+
+    return {
+      budgetPlans: chunk(0, 4),
+      bestSellingPlans: chunk(4, 8),
+      newPlans: chunk(8, 12),
+      familyPlans: chunk(12, 16),
+    };
+  }, [featuredPlans]);
 
   const triggerManualPause = () => {
     setIsManualPause(true);
@@ -107,7 +200,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a]">
+    <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] overflow-x-hidden">
       {/* Hero Section with 3D Elements */}
       <div className="relative overflow-hidden min-h-[100vh]">
         {/* Animated Background Grid */}
@@ -119,7 +212,7 @@ export default function Landing() {
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
         {/* Full-bleed hero carousel */}
-        <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-0">
+        <div className="relative w-full left-1/2 -translate-x-1/2 px-0 pb-0">
           <div
             className="relative w-screen h-screen max-h-[100dvh] overflow-hidden cursor-pointer"
             onClick={handlePlanOpen}
@@ -142,10 +235,10 @@ export default function Landing() {
             </div>
 
             {/* Hero image */}
-            <div className="absolute inset-0">
+            <div className="absolute inset-0 w-full h-full">
               <img
                 src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
-                className="absolute inset-0 w-full h-full object-cover object-center"
+                className="w-full h-full object-cover object-center"
                 alt="Featured plan"
               />
               <div className="absolute inset-0 bg-black/25" />
@@ -252,7 +345,24 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* 3D Architectural Cards Section */}
+      {/* Stats Strip */}
+      <div className="relative py-16 border-t border-white/10 bg-gradient-to-b from-transparent to-slate-900/30">
+        <div className="max-w-6xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8">
+          {[
+            { value: '1000+', label: 'Design Plans', gradient: 'from-purple-400 via-pink-400 to-rose-400' },
+            { value: '500+', label: 'Designers', gradient: 'from-blue-400 via-cyan-400 to-teal-400' },
+            { value: '5000+', label: 'Happy Customers', gradient: 'from-emerald-400 via-green-400 to-lime-400' },
+            { value: '24/7', label: 'Support', gradient: 'from-amber-400 via-orange-400 to-yellow-400' },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <div className={`text-5xl md:text-6xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent drop-shadow-2xl`}>{stat.value}</div>
+              <p className="mt-3 text-gray-300 tracking-[0.3em] text-xs uppercase">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Why Choose */}
       <div className="relative py-24 bg-gradient-to-b from-transparent to-slate-900/50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
@@ -310,49 +420,12 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="relative py-24 border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center group cursor-pointer">
-              <div className="relative inline-block mb-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
-                <div className="relative text-6xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent drop-shadow-2xl">
-                  1000+
-                </div>
-              </div>
-              <div className="text-gray-300 text-lg font-medium">Design Plans</div>
-            </div>
-            <div className="text-center group cursor-pointer">
-              <div className="relative inline-block mb-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
-                <div className="relative text-6xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent drop-shadow-2xl">
-                  500+
-                </div>
-              </div>
-              <div className="text-gray-300 text-lg font-medium">Designers</div>
-            </div>
-            <div className="text-center group cursor-pointer">
-              <div className="relative inline-block mb-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
-                <div className="relative text-6xl font-bold bg-gradient-to-r from-emerald-400 via-green-400 to-lime-400 bg-clip-text text-transparent drop-shadow-2xl">
-                  5000+
-                </div>
-              </div>
-              <div className="text-gray-300 text-lg font-medium">Happy Customers</div>
-            </div>
-            <div className="text-center group cursor-pointer">
-              <div className="relative inline-block mb-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
-                <div className="relative text-6xl font-bold bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400 bg-clip-text text-transparent drop-shadow-2xl">
-                  24/7
-                </div>
-              </div>
-              <div className="text-gray-300 text-lg font-medium">Support</div>
-            </div>
-          </div>
-        </div>
-      </div>
+
+      {/* Plan Collections */}
+      <PlanShowcase title="Plans for every budget" subtitle="Smart cost-saving designs without sacrificing aesthetics." plans={budgetPlans} cta="View all" />
+      <PlanShowcase title="Best selling plans" subtitle="Functional, beautiful homes our buyers love." plans={bestSellingPlans} cta="View all" badge="Best Seller" />
+      <PlanShowcase title="New plans every week" subtitle="Fresh drops curated weekly by top architects." plans={newPlans} cta="View all" />
+      <PlanShowcase title="Plans for every family size" subtitle="Layouts tuned for how your household really lives." plans={familyPlans} cta="View all" />
 
       {/* CTA Section */}
       <div className="relative py-24">

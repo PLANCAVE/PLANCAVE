@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { browsePlans } from '../api';
 import { Search, Heart, ShoppingCart, Building2, Award, FileText, ChevronDown } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
 
@@ -45,6 +45,7 @@ export default function BrowsePlans() {
 
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { favoriteIds, cartIds, toggleFavorite, toggleCartItem } = useCustomerData();
   const [favoriteBusyId, setFavoriteBusyId] = useState<string | null>(null);
   const [cartBusyId, setCartBusyId] = useState<string | null>(null);
@@ -112,6 +113,70 @@ export default function BrowsePlans() {
 
     loadAllPlans();
   }, []);
+
+  // Parse quick param and map to filters
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const quick = params.get('quick');
+    if (!quick) return;
+
+    // Reset all filters first
+    setSearch('');
+    setSelectedStyle('');
+    setSelectedSize('');
+    setSelectedBudget('');
+    setSelectedBedrooms('');
+    setSelectedFloors('');
+    setActivePreset('shop');
+
+    const q = decodeURIComponent(quick).toLowerCase();
+
+    // Predefined shortcuts
+    if (q === 'top' || q === 'top-selling') {
+      setActivePreset('top-selling');
+      return;
+    }
+    if (q === 'new') {
+      // No server-side created_at filter client-side; approximate by sorting by created_at desc later if needed
+      // For now, show all but scroll to grid.
+      return;
+    }
+    if (q === 'budget') {
+      setSelectedBudget('budget');
+      return;
+    }
+    if (q === 'family') {
+      setSelectedBedrooms('3-4');
+      return;
+    }
+
+    // Expression parsing: key op value
+    // Supported: area<120, bedrooms>=3, category=villa, project_type=duplex
+    const match = q.match(/^(area|bedrooms|category|project_type)\s*(<=|>=|=|<|>)\s*([^\s]+)$/);
+    if (match) {
+      const [, key, op, rawVal] = match;
+      const value = rawVal.replace(/"|'/g, '');
+
+      if (key === 'area') {
+        if (op === '<' && !isNaN(Number(value))) {
+          // Map to predefined size if possible else set a temp ad-hoc range via sizeOptions 'small' is 50-100; just set search to guide for now
+          // We don't have direct range UI here for arbitrary values; best effort: pick 'small' when <120
+          setSelectedSize('small');
+        }
+      } else if (key === 'bedrooms') {
+        const n = Number(value);
+        if (!isNaN(n)) {
+          if (op === '>=' && n >= 3) setSelectedBedrooms('3-4');
+          else if (op === '>=' && n >= 5) setSelectedBedrooms('5+');
+          else if (op === '<=' && n <= 2) setSelectedBedrooms('1-2');
+        }
+      } else if (key === 'category') {
+        setSelectedStyle(value);
+      } else if (key === 'project_type') {
+        setSelectedStyle(value);
+      }
+    }
+  }, [location.search]);
 
   // Client-side filtering so all plans are visible by default
   useEffect(() => {

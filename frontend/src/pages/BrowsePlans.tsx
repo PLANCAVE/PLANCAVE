@@ -334,9 +334,8 @@ export default function BrowsePlans() {
                 By Size <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'size' && (
-                <div className="absolute left-0 md:left-auto right-0 mt-4 w-[calc(100vw-2rem)] md:w-72 bg-white/95 text-gray-800 rounded-3xl shadow-2xl p-3 border border-teal-50 backdrop-blur-xl z-[60]">
-                  <p className="text-[11px] uppercase tracking-[0.35em] text-gray-400 mb-2">Plan size</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="absolute left-0 md:left-auto right-0 mt-2 w-56 bg-white text-gray-800 rounded-md shadow-lg z-50">
+                  <div className="grid grid-cols-1 gap-1 p-1">
                     {sizeOptions.map((option) => (
                       <button
                         key={option.id}
@@ -346,10 +345,8 @@ export default function BrowsePlans() {
                           setOpenDropdown(null);
                           setActivePreset('shop');
                         }}
-                        className={`w-full text-left px-4 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
-                          selectedSize === option.id
-                            ? 'bg-gradient-to-r from-[#0f4c45] to-teal-500 text-white shadow-md border-transparent'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-[#0f4c45]/40'
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded ${
+                          selectedSize === option.id ? 'bg-gray-100 font-medium' : ''
                         }`}
                       >
                         {option.label}
@@ -368,9 +365,8 @@ export default function BrowsePlans() {
                 By Style <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'style' && (
-                <div className="absolute left-0 md:left-auto right-0 mt-4 w-[calc(100vw-2rem)] md:w-[22rem] bg-white/95 text-gray-800 rounded-3xl shadow-2xl p-4 border border-teal-50 backdrop-blur-xl z-[60]">
-                  <p className="text-[11px] uppercase tracking-[0.35em] text-gray-400 mb-3">Project styles</p>
-                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+                <div className="absolute left-0 md:left-auto right-0 mt-2 w-64 bg-white text-gray-800 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
+                  <div className="grid grid-cols-1 gap-1 p-1">
                     {planCategories.map((entry) => (
                       <button
                         key={entry}
@@ -380,10 +376,8 @@ export default function BrowsePlans() {
                           setOpenDropdown(null);
                           setActivePreset('shop');
                         }}
-                        className={`text-left px-4 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
-                          selectedStyle === entry
-                            ? 'bg-gradient-to-r from-[#0f4c45] to-teal-500 text-white shadow-md border-transparent'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-[#0f4c45]/40'
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded ${
+                          selectedStyle === entry ? 'bg-gray-100 font-medium' : ''
                         }`}
                       >
                         {entry}
@@ -402,26 +396,25 @@ export default function BrowsePlans() {
                 By Budget <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'budget' && (
-                <div className="absolute left-0 md:left-auto right-0 mt-4 w-[calc(100vw-2rem)] md:w-72 bg-white/95 text-gray-800 rounded-3xl shadow-2xl p-3 border border-teal-50 backdrop-blur-xl z-[60]">
-                  <p className="text-[11px] uppercase tracking-[0.35em] text-gray-400 mb-2">Budget range</p>
-                  {budgetOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSelectedBudget(selectedBudget === option.id ? '' : option.id);
-                        setOpenDropdown(null);
-                        setActivePreset('shop');
-                      }}
-                      className={`w-full text-left px-4 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
-                        selectedBudget === option.id
-                          ? 'bg-gradient-to-r from-[#0f4c45] to-teal-500 text-white shadow-md border-transparent'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-[#0f4c45]/40'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                <div className="absolute left-0 md:left-auto right-0 mt-2 w-56 bg-white text-gray-800 rounded-md shadow-lg z-50">
+                  <div className="grid grid-cols-1 gap-1 p-1">
+                    {budgetOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedBudget(selectedBudget === option.id ? '' : option.id);
+                          setOpenDropdown(null);
+                          setActivePreset('shop');
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded ${
+                          selectedBudget === option.id ? 'bg-gray-100 font-medium' : ''
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -434,25 +427,24 @@ export default function BrowsePlans() {
                 By Bedrooms <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'bedrooms' && (
-                <div className="absolute left-0 md:left-auto right-0 mt-4 w-[calc(100vw-2rem)] md:w-64 bg-white/95 text-gray-800 rounded-3xl shadow-2xl p-3 border border-teal-50 backdrop-blur-xl z-[60]">
-                  <p className="text-[11px] uppercase tracking-[0.35em] text-gray-400 mb-2">Bedrooms</p>
-                  {bedroomOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedBedrooms(option.id === selectedBedrooms ? '' : option.id);
-                        setOpenDropdown(null);
-                      }}
-                      className={`w-full text-left px-4 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
-                        selectedBedrooms === option.id
-                          ? 'bg-gradient-to-r from-[#0f4c45] to-teal-500 text-white shadow-md border-transparent'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-[#0f4c45]/40'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                <div className="absolute left-0 md:left-auto right-0 mt-2 w-48 bg-white text-gray-800 rounded-md shadow-lg z-50">
+                  <div className="grid grid-cols-1 gap-1 p-1">
+                    {bedroomOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedBedrooms(option.id === selectedBedrooms ? '' : option.id);
+                          setOpenDropdown(null);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded ${
+                          selectedBedrooms === option.id ? 'bg-gray-100 font-medium' : ''
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -465,25 +457,24 @@ export default function BrowsePlans() {
                 By Floors <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'floors' && (
-                <div className="absolute left-0 md:left-auto right-0 mt-4 w-[calc(100vw-2rem)] md:w-56 bg-white/95 text-gray-800 rounded-3xl shadow-2xl p-3 border border-teal-50 backdrop-blur-xl z-[60]">
-                  <p className="text-[11px] uppercase tracking-[0.35em] text-gray-400 mb-2">Floors</p>
-                  {floorOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFloors(option.id === selectedFloors ? '' : option.id);
-                        setOpenDropdown(null);
-                      }}
-                      className={`w-full text-left px-4 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
-                        selectedFloors === option.id
-                          ? 'bg-gradient-to-r from-[#0f4c45] to-teal-500 text-white shadow-md border-transparent'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-[#0f4c45]/40'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                <div className="absolute left-0 md:left-auto right-0 mt-2 w-48 bg-white text-gray-800 rounded-md shadow-lg z-50">
+                  <div className="grid grid-cols-1 gap-1 p-1">
+                    {floorOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFloors(option.id === selectedFloors ? '' : option.id);
+                          setOpenDropdown(null);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded ${
+                          selectedFloors === option.id ? 'bg-gray-100 font-medium' : ''
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

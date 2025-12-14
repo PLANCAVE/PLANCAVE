@@ -212,7 +212,7 @@ export default function PlanDetailsPage() {
                 <img
                   src={mainImageUrl}
                   alt={plan.name}
-                  className="w-full h-96 object-cover rounded-lg cursor-pointer"
+                  className="w-full h-64 sm:h-80 lg:h-96 object-cover rounded-lg cursor-pointer"
                   onClick={() => setIsFullscreen(true)}
                 />
                 {/* Fullscreen button */}

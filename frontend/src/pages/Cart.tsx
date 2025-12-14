@@ -103,7 +103,7 @@ export default function Cart() {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((plan) => (
               <div key={plan.id} className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 p-4 md:p-6 flex gap-4">
-                <div className="w-28 h-28 rounded-2xl overflow-hidden flex-shrink-0 bg-white/10 border border-white/10">
+                <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl overflow-hidden flex-shrink-0 bg-white/10 border border-white/10">
                   <img
                     src={plan.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg'}
                     alt={plan.name}

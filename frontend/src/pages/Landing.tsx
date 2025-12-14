@@ -122,7 +122,7 @@ export default function Landing() {
         {/* Full-bleed hero carousel */}
         <div className="relative w-screen left-1/2 -translate-x-1/2 px-0 pb-0">
           <div
-            className="relative w-full min-h-[420px] max-h-[900px] h-[min(90vh,900px)] sm:h-[min(95vh,950px)] lg:h-[calc(100vh-5rem)] overflow-hidden cursor-pointer"
+            className="relative w-full h-screen max-h-[100dvh] overflow-hidden cursor-pointer"
             onClick={handlePlanOpen}
             onMouseEnter={() => setIsHoveringCarousel(true)}
             onMouseLeave={() => setIsHoveringCarousel(false)}
@@ -156,13 +156,15 @@ export default function Landing() {
               </div>
             ) : (
               <>
-                <div className="absolute inset-0 overflow-hidden bg-black">
-                  <img
-                    src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
-                    className="absolute inset-0 w-full h-full object-contain sm:object-cover sm:object-center"
-                    alt="Featured plan"
-                  />
-                  <div className="absolute inset-0 bg-black/25" />
+                <div className="absolute inset-0 bg-black">
+                  <div className="relative w-full h-full">
+                    <img
+                      src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
+                      className="absolute inset-0 w-full h-full object-cover object-center"
+                      alt="Featured plan"
+                    />
+                    <div className="absolute inset-0 bg-black/25" />
+                  </div>
                 </div>
 
                 <div className="absolute inset-x-0 bottom-0 px-4 pb-6 text-white z-10">

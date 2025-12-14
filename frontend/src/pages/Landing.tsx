@@ -156,13 +156,15 @@ export default function Landing() {
               </div>
             ) : (
               <>
-                <div className="absolute inset-0">
-                  <img
-                    src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
-                    alt={currentPlan?.name}
-                    className="w-full h-full object-cover object-top"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+                <div className="w-full max-w-[100vw] overflow-hidden">
+                  <div className="relative w-full h-[50vh] min-h-[300px]">
+                    <img
+                      src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      alt="Featured plan"
+                    />
+                    <div className="absolute inset-0 bg-black/20" />
+                  </div>
                 </div>
 
                 <div className="absolute inset-x-0 bottom-0 px-4 pb-2 text-white">

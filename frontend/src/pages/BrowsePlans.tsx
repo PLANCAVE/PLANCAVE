@@ -316,7 +316,7 @@ export default function BrowsePlans() {
                 clearFilters();
                 setActivePreset('shop');
               }}
-              className={presetButtonClass(activePreset === 'shop' && !selectedStyle && !selectedSize && !selectedBudget && !selectedBedrooms && !selectedFloors && !selectedFeatures.length)}
+              className={presetButtonClass(activePreset === 'shop' && !selectedStyle && !selectedSize && !selectedBudget && !selectedBedrooms && !selectedFloors)}
             >
               Show All
             </button>

@@ -174,12 +174,12 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
     c = canvas.Canvas(buffer, pagesize=LETTER)
     width, height = LETTER
     margin = 72  # 1 inch
-    header_height = 110
+    header_height = 120
 
     def new_text_object():
         text_obj = c.beginText()
         text_obj.setTextOrigin(margin, height - margin)
-        text_obj.setLeading(14)
+        text_obj.setLeading(16)
         return text_obj
 
     text = new_text_object()
@@ -191,18 +191,53 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
             c.showPage()
             text = new_text_object()
 
+    def format_value(value, default="N/A"):
+        if value is None:
+            return default
+        if isinstance(value, (list, tuple, set)):
+            cleaned = [str(v) for v in value if v not in (None, '', [])]
+            return ', '.join(cleaned) if cleaned else default
+        if isinstance(value, (datetime, date)):
+            return value.strftime('%Y-%m-%d')
+        if isinstance(value, bool):
+            return 'Yes' if value else 'No'
+        if value == '' or (isinstance(value, str) and not value.strip()):
+            return default
+        return str(value)
+
+    def format_currency(value):
+        if value in (None, ''):
+            return 'N/A'
+        try:
+            return f"KSH {float(value):,.2f}"
+        except (ValueError, TypeError):
+            return str(value)
+
     def write_section(title: str, items: list[str], accent: str = '#0f766e'):
         ensure_space(len(items) + 3)
         text.setFillColor(colors.HexColor(accent))
-        text.setFont("Helvetica-Bold", 12)
+        text.setFont("Helvetica-Bold", 13)
         text.textLine(title.upper())
         text.setFillColor(colors.black)
-        text.setFont("Helvetica", 10)
-        wrapper = textwrap.TextWrapper(width=82)
+        text.setFont("Helvetica", 11)
+        wrapper = textwrap.TextWrapper(width=90)
         for item in items:
             for wrapped_line in wrapper.wrap(item):
                 ensure_space()
                 text.textLine(f"• {wrapped_line}")
+        text.textLine("")
+
+    def write_paragraph(title: str, body: str, accent: str = '#0f766e'):
+        ensure_space(4)
+        text.setFillColor(colors.HexColor(accent))
+        text.setFont("Helvetica-Bold", 13)
+        text.textLine(title.upper())
+        text.setFillColor(colors.black)
+        text.setFont("Helvetica", 11)
+        wrapper = textwrap.TextWrapper(width=95)
+        for wrapped_line in wrapper.wrap(body or 'N/A'):
+            ensure_space()
+            text.textLine(wrapped_line)
         text.textLine("")
 
     def draw_logo_banner():
@@ -263,11 +298,12 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
     plan_name = plan.get('name') or 'Plan Manifest'
 
     draw_logo_banner()
-    text.setTextOrigin(margin, height - margin - header_height + 30)
-    text.setFont('Helvetica-Bold', 16)
+    text.setTextOrigin(margin, height - margin - header_height + 36)
+    text.setFont('Helvetica-Bold', 18)
     text.textLine(plan_name)
-    text.setFont('Helvetica', 11)
-    text.textLine(f"Plan ID: {plan.get('id', 'N/A')}  |  Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+    text.setFont('Helvetica', 12)
+    generated_line = f"Plan ID: {plan.get('id', 'N/A')}  |  Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+    text.textLine(generated_line)
     text.textLine("")
 
     if customer_info:
@@ -275,20 +311,42 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
         honorific = 'Mr/Mrs '
         write_section('Delivered to', [f"{honorific}{full_name}", f"Email: {customer_info.get('email', 'N/A')}"])
 
-    overview_lines = [
-        f"Category: {plan.get('category') or 'N/A'}",
-        f"Project type: {plan.get('project_type') or 'N/A'}",
-        f"Package level: {plan.get('package_level') or 'N/A'}",
-        f"Price: KSH {plan.get('price'):,}" if plan.get('price') else "Price: Not specified",
-        f"Area: {plan.get('area')} m²" if plan.get('area') else "Area: Not specified",
-        f"Bedrooms: {plan.get('bedrooms') or 'N/A'}  |  Bathrooms: {plan.get('bathrooms') or 'N/A'}  |  Floors: {plan.get('floors') or 'N/A'}",
-        f"License: {plan.get('license_type') or 'N/A'}  |  Customization: {'Available' if plan.get('customization_available') else 'Not available'}",
+    overview_pairs = [
+        ("Status", plan.get('status')),
+        ("Category", plan.get('category')),
+        ("Project type", plan.get('project_type')),
+        ("Package level", plan.get('package_level')),
+        ("Design code", plan.get('design_code')),
+        ("Primary image", plan.get('image_url')),
+        ("Tags", plan.get('tags')),
+        ("Created", plan.get('created_at')),
+        ("Updated", plan.get('updated_at')),
     ]
-    if plan.get('estimated_cost_min') and plan.get('estimated_cost_max'):
-        overview_lines.append(
-            f"Estimated build cost: KSH {plan['estimated_cost_min']:,} - {plan['estimated_cost_max']:,}"
-        )
+    overview_lines = [f"{label}: {format_value(value)}" for label, value in overview_pairs]
     write_section("Plan Overview", overview_lines)
+
+    layout_lines = [
+        f"Price: {format_currency(plan.get('price'))}",
+        f"Area: {format_value(plan.get('area'))} m²" if plan.get('area') else "Area: N/A",
+        f"Bedrooms: {format_value(plan.get('bedrooms'))}",
+        f"Bathrooms: {format_value(plan.get('bathrooms'))}",
+        f"Floors: {format_value(plan.get('floors'))}",
+        f"Plot Size: {format_value(plan.get('plot_size'))}",
+    ]
+    write_section("Dimensions & Layout", layout_lines)
+
+    license_lines = [
+        f"License: {format_value(plan.get('license_type'))}",
+        f"Customization Available: {format_value(plan.get('customization_available'))}",
+        f"Estimated Cost Range: {format_currency(plan.get('estimated_cost_min'))} - {format_currency(plan.get('estimated_cost_max'))}",
+        f"Construction Timeline: {format_value(plan.get('construction_timeline'))}",
+    ]
+    write_section("Costing & Permissions", license_lines)
+
+    if plan.get('description'):
+        write_paragraph("Plan Description", plan.get('description'))
+    else:
+        write_paragraph("Plan Description", "N/A")
 
     designer_name = ' '.join(filter(None, [designer.get('first_name'), designer.get('last_name')])).strip()
     designer_email = designer.get('email') or designer.get('username') or 'Not provided'
@@ -299,14 +357,42 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
     ]
     write_section("Designer", designer_lines)
 
-    # Compliance sections summary
-    write_section(
-        "Technical Components",
-        [
-            f"Bill of Quantities entries: {len(bundle['boqs'])}",
-            f"Structural specifications: {len(bundle['structural_specs'])}",
-            f"Compliance notes: {len(bundle['compliance_notes'])}",
-        ]
+    technical_summary = [
+        f"Bill of Quantities entries: {len(bundle['boqs'])}",
+        f"Structural specifications: {len(bundle['structural_specs'])}",
+        f"Compliance notes: {len(bundle['compliance_notes'])}",
+        f"Attached files: {len(organized_files)}",
+    ]
+    write_section("Technical Components", technical_summary)
+
+    def summarize_collection(title: str, records: list[dict], formatter, limit: int = 12):
+        if not records:
+            write_section(title, ["N/A"])
+            return
+        lines = []
+        for record in records[:limit]:
+            lines.append(formatter(record))
+        remaining = len(records) - limit
+        if remaining > 0:
+            lines.append(f"…and {remaining} more entries")
+        write_section(title, lines)
+
+    summarize_collection(
+        "Bill of Quantities",
+        bundle['boqs'],
+        lambda boq: f"{format_value(boq.get('item_name'), 'Item')} · Qty: {format_value(boq.get('quantity'))} {format_value(boq.get('unit'), '')} · Unit cost: {format_currency(boq.get('unit_cost'))} · Total: {format_currency(boq.get('total_cost'))}"
+    )
+
+    summarize_collection(
+        "Structural Specifications",
+        bundle['structural_specs'],
+        lambda spec: f"{format_value(spec.get('spec_type'), 'Spec')} – {format_value(spec.get('specification'))} (Standard: {format_value(spec.get('standard'))})"
+    )
+
+    summarize_collection(
+        "Compliance Notes",
+        bundle['compliance_notes'],
+        lambda note: f"{format_value(note.get('authority'), 'Authority')} · Requirement: {format_value(note.get('requirement'))} · Status: {format_value(note.get('status'), 'N/A')} · Notes: {format_value(note.get('notes'))}"
     )
 
     discipline_badges = []
@@ -332,6 +418,8 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
         if disciplines.get('interior'):
             discipline_badges.append('Interior fit-out package')
         write_section("Disciplines Included", discipline_badges)
+    else:
+        write_section("Disciplines Included", ["N/A"])
 
     file_lines = []
     for f in organized_files:
@@ -345,7 +433,7 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
         write_section("Files & Deliverables", file_lines)
 
     c.drawText(text)
-    c.setFont('Helvetica-Oblique', 9)
+    c.setFont('Helvetica-Oblique', 10)
     c.setFillColor(colors.HexColor('#4b5563'))
     c.drawCentredString(width / 2, 40, 'PlanCave · Confidential technical package · Auto-generated manifest')
     c.save()

@@ -24,7 +24,7 @@ interface Plan {
   created_at: string;
 }
 
-const PlanShowcase = ({ title, subtitle, plans, cta, badge }: PlanShowcaseProps) => {
+const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge }: PlanShowcaseProps) => {
   if (!plans.length) return null;
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
@@ -37,10 +37,15 @@ const PlanShowcase = ({ title, subtitle, plans, cta, badge }: PlanShowcaseProps)
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-3">{title}</h3>
             <p className="text-lg text-gray-300 max-w-2xl">{subtitle}</p>
           </div>
-          <button className="flex items-center gap-2 text-sm uppercase tracking-[0.3em] text-white/70 hover:text-white transition">
-            {cta}
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          {cta && (
+            <Link
+              to={ctaLink || '/plans'}
+              className="flex items-center gap-2 text-sm uppercase tracking-[0.3em] text-white/70 hover:text-white transition"
+            >
+              {cta}
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -102,53 +107,10 @@ interface PlanShowcaseProps {
   subtitle: string;
   plans: Plan[];
   cta: string;
+  ctaLink?: string;
   badge?: string;
 }
 
-const SizeShowcase = ({ plans }: { plans: Plan[] }) => {
-  const sizeGroups = useMemo(() => ({
-    small: plans.filter(p => p.area < 100),
-    medium: plans.filter(p => p.area >= 100 && p.area < 200),
-    large: plans.filter(p => p.area >= 200)
-  }), [plans]);
-
-  return (
-    <section className="py-16 bg-gradient-to-b from-slate-900/20 to-transparent">
-      <div className="max-w-7xl mx-auto px-4">
-        <h3 className="text-3xl font-bold text-white mb-8">Browse by Size</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            { title: "Compact (<100m²)", plans: sizeGroups.small.slice(0,4), color: "from-blue-500 to-cyan-500" },
-            { title: "Family (100-200m²)", plans: sizeGroups.medium.slice(0,4), color: "from-teal-500 to-emerald-500" },
-            { title: "Estates (200m²+)", plans: sizeGroups.large.slice(0,4), color: "from-purple-500 to-pink-500" }
-          ].map((group) => (
-            <div key={group.title} className="group">
-              <div className={`h-1 bg-gradient-to-r ${group.color} rounded-full`}></div>
-              <div className="pt-6">
-                <h4 className="text-xl font-bold text-white mb-4">{group.title}</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  {group.plans.map(plan => (
-                    <div key={plan.id} className="bg-slate-800/50 rounded-lg overflow-hidden border border-white/5 hover:border-white/20 transition-all">
-                      <div className="aspect-[4/3] relative">
-                        <img src={plan.image_url || '/placeholder.jpg'} className="w-full h-full object-cover" alt={plan.name} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                      </div>
-                      <div className="p-4">
-                        <h5 className="text-sm font-medium text-white">{plan.name}</h5>
-                        <p className="text-xs text-gray-300">{plan.area}m² • {plan.bedrooms || '--'} beds</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
@@ -198,7 +160,7 @@ export default function Landing() {
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
   const currentPlan = featuredPlans[currentPlanIndex];
 
-  const { budgetPlans, bestSellingPlans, newPlans, familyPlans } = useMemo(() => {
+  const { budgetPlans, bestSellingPlans, newPlans, popularCategoryPlans } = useMemo(() => {
     const shuffle = (plans: Plan[]) => {
       const copy = [...plans];
       for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -211,11 +173,30 @@ export default function Landing() {
     const randomized = shuffle(featuredPlans);
     const chunk = (start: number, end: number) => randomized.slice(start, end);
 
+    // Build popular categories based on existing data
+    const groupByType = randomized.reduce((acc: Record<string, Plan[]>, p) => {
+      const key = (p.project_type || '').trim();
+      if (!key) return acc;
+      acc[key] = acc[key] || [];
+      acc[key].push(p);
+      return acc;
+    }, {});
+
+    // Sort categories by availability (desc) then name
+    const sortedTypes = Object.keys(groupByType).sort((a, b) => {
+      const diff = (groupByType[b]?.length || 0) - (groupByType[a]?.length || 0);
+      return diff !== 0 ? diff : a.localeCompare(b);
+    });
+
+    // Take top category and slice some plans
+    const topType = sortedTypes[0];
+    const popular = topType ? (groupByType[topType] || []).slice(0, 4) : randomized.slice(12, 16);
+
     return {
       budgetPlans: chunk(0, 4),
       bestSellingPlans: chunk(4, 8),
       newPlans: chunk(8, 12),
-      familyPlans: chunk(12, 16),
+      popularCategoryPlans: popular,
     };
   }, [featuredPlans]);
 
@@ -415,7 +396,40 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Why Choose */}
+      {/* Plan Collections - redesigned order and logic */}
+      <PlanShowcase title="This month’s new releases" subtitle="Fresh arrivals published this month by our designers." plans={newPlans} cta="See new arrivals" ctaLink="/plans?quick=new" />
+      <PlanShowcase title="Top-selling plans" subtitle="Proven choices customers keep choosing." plans={bestSellingPlans} cta="Shop bestsellers" ctaLink="/plans?quick=top" badge="Best Seller" />
+      <PlanShowcase title="Best value plans" subtitle="Quality designs at accessible prices." plans={budgetPlans} cta="Browse best value" ctaLink="/plans?quick=budget" />
+      <PlanShowcase title="Trending categories" subtitle="Explore the plan types customers are choosing right now." plans={popularCategoryPlans} cta="Browse all categories" ctaLink="/plans" />
+
+      {/* Replace 'Browse by Size' with intent-based quick picks */}
+      <section className="py-16 bg-gradient-to-b from-slate-900/20 to-transparent">
+        <div className="max-w-7xl mx-auto px-4">
+          <h3 className="text-3xl font-bold text-white mb-8">Quick picks</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { label: 'Starter homes', filter: 'area<120', gradient: 'from-blue-500 to-cyan-500' },
+              { label: '3+ bedrooms', filter: 'bedrooms>=3', gradient: 'from-teal-500 to-emerald-500' },
+              { label: 'Modern villas', filter: 'category=villa', gradient: 'from-purple-500 to-pink-500' },
+              { label: 'Duplex & Townhouses', filter: 'project_type=duplex', gradient: 'from-amber-500 to-orange-500' },
+            ].map((q) => (
+              <Link
+                key={q.label}
+                to={`/plans?quick=${encodeURIComponent(q.filter)}`}
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
+              >
+                <div className={`h-1 bg-gradient-to-r ${q.gradient}`}></div>
+                <div className="p-6 flex items-center justify-between">
+                  <span className="text-white font-semibold">{q.label}</span>
+                  <ArrowRight className="w-5 h-5 text-white/70 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose - moved below showcases */}
       <div className="relative py-24 bg-gradient-to-b from-transparent to-slate-900/50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
@@ -472,13 +486,6 @@ export default function Landing() {
           </div>
         </div>
       </div>
-
-      {/* Plan Collections */}
-      <PlanShowcase title="Plans for every budget" subtitle="Smart cost-saving designs without sacrificing aesthetics." plans={budgetPlans} cta="View all" />
-      <PlanShowcase title="Best selling plans" subtitle="Functional, beautiful homes our buyers love." plans={bestSellingPlans} cta="View all" badge="Best Seller" />
-      <PlanShowcase title="New plans every week" subtitle="Fresh drops curated weekly by top architects." plans={newPlans} cta="View all" />
-      <PlanShowcase title="Plans for every family size" subtitle="Layouts tuned for how your household really lives." plans={familyPlans} cta="View all" />
-      <SizeShowcase plans={featuredPlans} />
 
       {/* CTA Section */}
       <div className="relative py-24">

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPlanDetails, purchasePlan, generateDownloadLink, downloadPlanFile, adminDownloadPlan, verifyPurchase } from '../api';
+import { getPlanDetails, purchasePlan, generateDownloadLink, downloadPlanFile, adminDownloadPlan, verifyPurchase, addCartItem, addFavorite, removeFavorite } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { useCustomerData } from '../contexts/CustomerDataContext';
 import {
   Building2,
   ArrowLeft,
@@ -18,6 +19,9 @@ import {
   AlertCircle,
   Loader2,
   CreditCard,
+  Heart,
+  Plus,
+  Minus,
 } from 'lucide-react';
 
 interface PlanFile {
@@ -69,6 +73,7 @@ export default function PlanDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin } = useAuth();
+  const { favorites, addFavoriteHandler, removeFavoriteHandler, cartItems, addCartItemHandler, removeCartItemHandler } = useCustomerData();
   const [plan, setPlan] = useState<PlanDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +86,65 @@ export default function PlanDetailsPage() {
   const [purchaseStatus, setPurchaseStatus] = useState<'none' | 'purchased' | 'processing'>('none');
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  
+  // Cart and favorites states
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isAddingToFavorites, setIsAddingToFavorites] = useState(false);
+  const [cartSuccess, setCartSuccess] = useState(false);
+  const [favoriteSuccess, setFavoriteSuccess] = useState(false);
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+
+  // Helper functions to check cart and favorites status
+  const isInCart = cartItems.some(item => item.plan_id === id);
+  const isInFavorites = favorites.some(item => item.plan_id === id);
+
+  // Cart and favorites handlers
+  const handleAddToCart = async () => {
+    if (!id || !isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setIsAddingToCart(true);
+    setCartSuccess(false);
+    setDownloadError(null);
+
+    try {
+      await addCartItemHandler(id);
+      setCartSuccess(true);
+      setTimeout(() => setCartSuccess(false), 3000);
+    } catch (err: any) {
+      setDownloadError('Failed to add to cart. Please try again.');
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!id || !isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setIsAddingToFavorites(true);
+    setFavoriteSuccess(false);
+    setDownloadError(null);
+
+    try {
+      if (isInFavorites) {
+        await removeFavoriteHandler(id);
+      } else {
+        await addFavoriteHandler(id);
+      }
+      setFavoriteSuccess(true);
+      setTimeout(() => setFavoriteSuccess(false), 3000);
+    } catch (err: any) {
+      setDownloadError('Failed to update favorites. Please try again.');
+    } finally {
+      setIsAddingToFavorites(false);
+    }
+  };
 
   useEffect(() => {
     const loadPlan = async () => {
@@ -201,14 +263,13 @@ export default function PlanDetailsPage() {
         }
       } else {
         // Customer download - generate one-time link and download files
-        // For now, simulate the one-time link generation but download actual files
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate link generation
+        const linkResponse = await generateDownloadLink(id);
+        const { download_token } = linkResponse.data;
         
         if (plan.files && plan.files.length > 0) {
           for (const file of plan.files) {
-            const fileUrl = `${apiBaseUrl}${file.file_path}`;
-            const response = await fetch(fileUrl);
-            const blob = await response.blob();
+            const response = await downloadPlanFile(download_token);
+            const blob = new Blob([response.data], { type: 'application/octet-stream' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -382,6 +443,71 @@ export default function PlanDetailsPage() {
               </div>
             </div>
 
+            {/* Quick Actions */}
+            {isAuthenticated && !isAdmin && (
+              <div className="mb-6">
+                <div className="text-sm text-gray-600 mb-3">Quick Actions</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={isAddingToCart || isInCart}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isAddingToCart ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : isInCart ? (
+                      <>
+                        <ShoppingCart className="w-4 h-4" />
+                        In Cart
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        Add to Cart
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleToggleFavorite}
+                    disabled={isAddingToFavorites}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isAddingToFavorites ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Heart className={`w-4 h-4 ${isInFavorites ? 'fill-current' : ''}`} />
+                        {isInFavorites ? 'Favorited' : 'Favorite'}
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                {cartSuccess && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-sm text-green-800">Added to cart successfully!</span>
+                  </div>
+                )}
+
+                {favoriteSuccess && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-sm text-green-800">
+                      {isInFavorites ? 'Removed from favorites' : 'Added to favorites'}!
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <p className="text-gray-700 leading-relaxed">{plan.description}</p>
 
             {/* Key metrics */}
@@ -519,6 +645,68 @@ export default function PlanDetailsPage() {
                   <p className="text-xs text-gray-500 italic">
                     Purchase plan to get full access to all technical drawings and detailed specifications.
                   </p>
+                </div>
+
+                {/* Cart and Favorites section */}
+                <div className="border-t pt-4">
+                  {cartSuccess && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-green-800">Added to cart successfully!</span>
+                    </div>
+                  )}
+
+                  {favoriteSuccess && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-green-800">
+                        {isInFavorites ? 'Removed from favorites' : 'Added to favorites'}!
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={isAddingToCart || isAdmin || isInCart}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isAddingToCart ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Adding...
+                        </>
+                      ) : isInCart ? (
+                        <>
+                          <ShoppingCart className="w-4 h-4" />
+                          In Cart
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          Add to Cart
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleToggleFavorite}
+                      disabled={isAddingToFavorites || isAdmin}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isAddingToFavorites ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <Heart className={`w-4 h-4 ${isInFavorites ? 'fill-current' : ''}`} />
+                          {isInFavorites ? 'Favorited' : 'Favorite'}
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Purchase/Download section */}

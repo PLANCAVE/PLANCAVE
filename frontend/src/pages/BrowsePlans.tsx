@@ -38,10 +38,6 @@ export default function BrowsePlans() {
   const [selectedBudget, setSelectedBudget] = useState('');
   const [selectedBedrooms, setSelectedBedrooms] = useState('');
   const [selectedFloors, setSelectedFloors] = useState('');
-  const [hasPool, setHasPool] = useState(false);
-  const [hasParking, setHasParking] = useState(false);
-  const [hasSecurity, setHasSecurity] = useState(false);
-  const [hasBOQ, setHasBOQ] = useState(false);
   const [activePreset, setActivePreset] = useState<'shop' | 'best-sellers'>('shop');
   const [openDropdown, setOpenDropdown] = useState<null | 'size' | 'style' | 'budget' | 'bedrooms' | 'floors'>(null);
   const [showSearch, setShowSearch] = useState(false);
@@ -171,25 +167,12 @@ export default function BrowsePlans() {
       });
     }
 
-    if (hasPool) {
-      filtered = filtered.filter((plan) => plan.features?.includes('pool'));
-    }
-    if (hasParking) {
-      filtered = filtered.filter((plan) => plan.features?.includes('parking'));
-    }
-    if (hasSecurity) {
-      filtered = filtered.filter((plan) => plan.features?.includes('security'));
-    }
-    if (hasBOQ) {
-      filtered = filtered.filter((plan) => plan.includes_boq);
-    }
-
     if (activePreset === 'best-sellers') {
       filtered = [...filtered].sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
     }
 
     setPlans(filtered);
-  }, [allPlans, search, selectedStyle, selectedSize, selectedBudget, selectedBedrooms, selectedFloors, hasPool, hasParking, hasSecurity, hasBOQ, activePreset]);
+  }, [allPlans, search, selectedStyle, selectedSize, selectedBudget, selectedBedrooms, selectedFloors, activePreset]);
 
   const clearFilters = () => {
     setSearch('');
@@ -244,10 +227,6 @@ export default function BrowsePlans() {
       label: floorOptions.find((option) => option.id === selectedFloors)?.label || 'Floors',
       onRemove: () => setSelectedFloors(''),
     },
-    hasPool && { label: 'Pool', onRemove: () => setHasPool(false) },
-    hasParking && { label: 'Parking', onRemove: () => setHasParking(false) },
-    hasSecurity && { label: 'Security', onRemove: () => setHasSecurity(false) },
-    hasBOQ && { label: 'BOQ', onRemove: () => setHasBOQ(false) },
     activePreset === 'best-sellers' && {
       label: 'Best sellers',
       onRemove: () => setActivePreset('shop'),
@@ -316,7 +295,14 @@ export default function BrowsePlans() {
                 clearFilters();
                 setActivePreset('shop');
               }}
-              className={presetButtonClass(activePreset === 'shop' && !selectedStyle && !selectedSize && !selectedBudget && !selectedBedrooms && !selectedFloors)}
+              className={presetButtonClass(
+                activePreset === 'shop' && 
+                !selectedStyle && 
+                !selectedSize && 
+                !selectedBudget && 
+                !selectedBedrooms && 
+                !selectedFloors
+              )}
             >
               Show All
             </button>
@@ -470,73 +456,6 @@ export default function BrowsePlans() {
                   ))}
                 </div>
               )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setHasPool((prev) => !prev)}
-                className={`p-2 rounded-full border ${
-                  hasPool ? 'bg-teal-50 border-teal-200 text-teal-600' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
-                }`}
-                title="Only plans with a pool"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 21l18 0M5 17l14 0M8 13l8 0M12 9l0 8M9 5l6 0"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={() => setHasParking((prev) => !prev)}
-                className={`p-2 rounded-full border ${
-                  hasParking ? 'bg-teal-50 border-teal-200 text-teal-600' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
-                }`}
-                title="Only plans with parking"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={() => setHasSecurity((prev) => !prev)}
-                className={`p-2 rounded-full border ${
-                  hasSecurity ? 'bg-teal-50 border-teal-200 text-teal-600' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
-                }`}
-                title="Only plans with security features"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 2l7 4 0 6c0 7-7 10-7 10s-7-3-7-10V6l7-4z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={() => setHasBOQ((prev) => !prev)}
-                className={`p-2 rounded-full border ${
-                  hasBOQ ? 'bg-teal-50 border-teal-200 text-teal-600' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
-                }`}
-                title="Only plans that include a BOQ"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V9a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2h-5l-5 1a2 2 0 01-2-2z"
-                  />
-                </svg>
-              </button>
             </div>
           </div>
         </div>

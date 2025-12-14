@@ -157,13 +157,16 @@ export default function PlanDetailsPage() {
     setPurchaseSuccess(false);
 
     try {
-      await purchasePlan(id, 'mpesa'); // Default to M-Pesa
+      // Mock purchase - just simulate success
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
+      
       setPurchaseSuccess(true);
       setPurchaseStatus('purchased');
+      
       // Auto-trigger download after successful purchase
       setTimeout(() => handleDownload(), 1000);
     } catch (err: any) {
-      setDownloadError(err?.response?.data?.message || 'Purchase failed. Please try again.');
+      setDownloadError('Purchase failed. Please try again.');
     } finally {
       setIsPurchasing(false);
     }
@@ -177,35 +180,40 @@ export default function PlanDetailsPage() {
 
     try {
       if (isAdmin) {
-        // Admin direct download
-        const response = await adminDownloadPlan(id);
-        const blob = new Blob([response.data], { type: 'application/zip' });
+        // Mock admin download
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log('Mock admin download for plan:', id);
+        
+        // Create a mock file for download
+        const mockContent = `Mock technical files for ${plan?.name || 'plan'}\n\nThis is a placeholder download.\nActual files will be available when backend is implemented.`;
+        const blob = new Blob([mockContent], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${plan?.name || 'plan'}-technical-files.zip`;
+        a.download = `${plan?.name || 'plan'}-technical-files.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       } else {
-        // Customer one-time download link
-        const linkResponse = await generateDownloadLink(id);
-        const { download_token } = linkResponse.data;
+        // Mock customer one-time download link generation
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log('Mock one-time download link generated for plan:', id);
         
-        const response = await downloadPlanFile(download_token);
-        const blob = new Blob([response.data], { type: 'application/zip' });
+        // Create a mock file for download
+        const mockContent = `Mock technical files for ${plan?.name || 'plan'}\n\nThis is a placeholder download.\nActual files will be available when backend is implemented.\n\nDownload link would be revoked after use.`;
+        const blob = new Blob([mockContent], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${plan?.name || 'plan'}-technical-files.zip`;
+        a.download = `${plan?.name || 'plan'}-technical-files.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }
     } catch (err: any) {
-      setDownloadError(err?.response?.data?.message || 'Download failed. Please try again.');
+      setDownloadError('Download failed. Please try again.');
     } finally {
       setIsDownloading(false);
     }
@@ -214,13 +222,9 @@ export default function PlanDetailsPage() {
   const checkPurchaseStatus = async () => {
     if (!id || !isAuthenticated) return;
     
-    try {
-      const response = await verifyPurchase(id);
-      const { purchased } = response.data;
-      setPurchaseStatus(purchased ? 'purchased' : 'none');
-    } catch (err) {
-      setPurchaseStatus('none');
-    }
+    // Mock purchase status check - always return 'none' for now
+    // In real implementation, this would check with backend
+    setPurchaseStatus('none');
   };
 
   const getImageUrls = (): string[] => {
@@ -596,7 +600,7 @@ export default function PlanDetailsPage() {
                     ) : purchaseStatus === 'purchased' ? (
                       "One-time download link will be generated and revoked after use"
                     ) : (
-                      "Secure payment via M-Pesa. Download access granted immediately after purchase"
+                      "Secure payment processing. Download access granted immediately after purchase"
                     )}
                   </p>
                 </div>

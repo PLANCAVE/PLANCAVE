@@ -442,7 +442,7 @@ export default function Landing() {
               Why Choose The Plancave?
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Africa's premier architectural marketplace connecting visionary designers with dream home builders
+              The premier architectural marketplace connecting visionary designers with dream home builders
             </p>
           </div>
 
@@ -454,9 +454,9 @@ export default function Landing() {
                 <div className="w-16 h-16 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-2xl">
                   <Building2 className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Expert African Designers</h3>
+                <h3 className="text-2xl font-bold text-white mb-3">Expert Designers</h3>
                 <p className="text-gray-200">
-                  Connect with vetted architects and designers who understand African climate, culture, and construction standards
+                  Connect with vetted architects and designers who understand local climate, culture, and construction standards
                 </p>
               </div>
             </div>

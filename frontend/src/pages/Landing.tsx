@@ -28,7 +28,6 @@ export default function Landing() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [featuredPlans, setFeaturedPlans] = useState<Plan[]>([]);
-  const [loadingPlans, setLoadingPlans] = useState(true);
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
   const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
   const [isManualPause, setIsManualPause] = useState(false);
@@ -46,7 +45,7 @@ export default function Landing() {
       } catch (error) {
         console.error('Failed to load featured plans:', error);
       } finally {
-        setLoadingPlans(false);
+        // setLoadingPlans(false);
       }
     };
 

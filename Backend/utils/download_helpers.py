@@ -11,6 +11,7 @@ from psycopg.rows import dict_row
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
 
 
 def resolve_plan_file_path(file_path: str) -> str | None:
@@ -173,6 +174,7 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
     c = canvas.Canvas(buffer, pagesize=LETTER)
     width, height = LETTER
     margin = 72  # 1 inch
+    header_height = 110
 
     def new_text_object():
         text_obj = c.beginText()
@@ -189,12 +191,6 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
             c.showPage()
             text = new_text_object()
 
-    def write_heading(title: str):
-        ensure_space(2)
-        text.setFont("Helvetica-Bold", 16)
-        text.textLine(title)
-        text.setFont("Helvetica", 11)
-
     def write_section(title: str, items: list[str], accent: str = '#0f766e'):
         ensure_space(len(items) + 3)
         text.setFillColor(colors.HexColor(accent))
@@ -209,21 +205,65 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
                 text.textLine(f"• {wrapped_line}")
         text.textLine("")
 
+    def draw_logo_banner():
+        start_color = colors.HexColor('#0f2a2a')
+        end_color = colors.HexColor('#1d5c5a')
+        steps = 80
+        for i in range(steps):
+            ratio = i / (steps - 1)
+            blended = colors.Color(
+                start_color.red + (end_color.red - start_color.red) * ratio,
+                start_color.green + (end_color.green - start_color.green) * ratio,
+                start_color.blue + (end_color.blue - start_color.blue) * ratio,
+            )
+            y = (height - header_height) + (i * (header_height / steps))
+            c.setFillColor(blended)
+            c.rect(0, y, width, (header_height / steps) + 1, stroke=0, fill=1)
+
+        c.setFillColor(colors.HexColor('#0a1e1e'))
+        c.rect(0, height - header_height, width, 2, stroke=0, fill=1)
+        c.setFillColor(colors.HexColor('#27b3a5'))
+        c.rect(0, height - 2, width, 2, stroke=0, fill=1)
+
+        logo_color = colors.HexColor('#c0f5e7')
+        accent_y = height - header_height / 2 + 12
+        c.setStrokeColor(logo_color)
+        c.setLineWidth(1.2)
+        line_length = 60
+        gap = 12
+        c.line(width / 2 - line_length - gap, accent_y, width / 2 - gap, accent_y)
+        c.line(width / 2 + gap, accent_y, width / 2 + line_length + gap, accent_y)
+
+        c.setFillColor(logo_color)
+        c.setFont('Helvetica', 10)
+        c.drawCentredString(width / 2, accent_y + 6, 'THE')
+
+        tracking = 6
+        title_font = 'Times-Bold'
+        title_size = 32
+        base_width = pdfmetrics.stringWidth('PLANCAVE', title_font, title_size)
+        total_width = base_width + tracking * (len('PLANCAVE') - 1)
+        start_x = (width - total_width) / 2
+        text_obj = c.beginText()
+        text_obj.setTextOrigin(start_x, height - header_height + 28)
+        text_obj.setFont(title_font, title_size)
+        text_obj.setCharSpace(tracking)
+        text_obj.setFillColor(logo_color)
+        text_obj.textLine('PLANCAVE')
+        c.drawText(text_obj)
+
+        underline_y = height - header_height + 20
+        c.setLineWidth(1)
+        c.line(start_x, underline_y, start_x + 50, underline_y)
+        c.line(start_x + total_width - 50, underline_y, start_x + total_width, underline_y)
+
     plan = bundle['plan']
     designer = bundle['designer']
     customer_info = customer or bundle.get('customer') or {}
     plan_name = plan.get('name') or 'Plan Manifest'
 
-    # Header branding block
-    c.setFillColor(colors.HexColor('#0f2a2a'))
-    c.rect(0, height - 80, width, 80, fill=1, stroke=0)
-    c.setFillColor(colors.HexColor('#9fe1d5'))
-    c.setFont('Helvetica', 10)
-    c.drawCentredString(width / 2, height - 35, 'THE')
-    c.setFont('Helvetica-Bold', 28)
-    c.drawCentredString(width / 2, height - 55, 'PLANCAVE')
-    c.setFont('Helvetica-Bold', 16)
-    c.setFillColor(colors.black)
+    draw_logo_banner()
+    text.setTextOrigin(margin, height - margin - header_height + 30)
     text.setFont('Helvetica-Bold', 16)
     text.textLine(plan_name)
     text.setFont('Helvetica', 11)

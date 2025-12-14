@@ -318,7 +318,7 @@ def update_user(user_id):
         updates = []
         values = []
         
-        allowed_fields = ['username', 'email', 'role', 'is_active', 'phone']
+        allowed_fields = ['username', 'email', 'role', 'is_active', 'phone', 'first_name', 'middle_name', 'last_name']
         
         for field in allowed_fields:
             if field in data:

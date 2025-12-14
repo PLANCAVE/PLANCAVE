@@ -216,10 +216,10 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
     def write_section(title: str, items: list[str], accent: str = '#0f766e'):
         ensure_space(len(items) + 3)
         text.setFillColor(colors.HexColor(accent))
-        text.setFont("Helvetica-Bold", 13)
+        text.setFont("Times-Bold", 13)
         text.textLine(title.upper())
         text.setFillColor(colors.black)
-        text.setFont("Helvetica", 11)
+        text.setFont("Times-Roman", 11)
         wrapper = textwrap.TextWrapper(width=90)
         for item in items:
             for wrapped_line in wrapper.wrap(item):
@@ -230,15 +230,34 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
     def write_paragraph(title: str, body: str, accent: str = '#0f766e'):
         ensure_space(4)
         text.setFillColor(colors.HexColor(accent))
-        text.setFont("Helvetica-Bold", 13)
+        text.setFont("Times-Bold", 13)
         text.textLine(title.upper())
         text.setFillColor(colors.black)
-        text.setFont("Helvetica", 11)
+        text.setFont("Times-Roman", 11)
         wrapper = textwrap.TextWrapper(width=95)
         for wrapped_line in wrapper.wrap(body or 'N/A'):
             ensure_space()
             text.textLine(wrapped_line)
         text.textLine("")
+
+    def ensure_list(value) -> list[str]:
+        if value in (None, '', [], ()):  # noqa: E711
+            return []
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return parsed
+                if isinstance(parsed, dict):
+                    return [f"{k}: {format_value(v)}" for k, v in parsed.items()]
+                return [str(parsed)]
+            except Exception:
+                return [value]
+        if isinstance(value, dict):
+            return [f"{k}: {format_value(v)}" for k, v in value.items()]
+        if isinstance(value, (list, tuple, set)):
+            return [format_value(v) for v in value]
+        return [str(value)]
 
     def draw_logo_banner():
         start_color = colors.HexColor('#0f2a2a')
@@ -299,9 +318,9 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
 
     draw_logo_banner()
     text.setTextOrigin(margin, height - margin - header_height + 36)
-    text.setFont('Helvetica-Bold', 18)
+    text.setFont('Times-Bold', 18)
     text.textLine(plan_name)
-    text.setFont('Helvetica', 12)
+    text.setFont('Times-Roman', 12)
     generated_line = f"Plan ID: {plan.get('id', 'N/A')}  |  Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
     text.textLine(generated_line)
     text.textLine("")
@@ -311,14 +330,21 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
         honorific = 'Mr/Mrs '
         write_section('Delivered to', [f"{honorific}{full_name}", f"Email: {customer_info.get('email', 'N/A')}"])
 
+    tags_list = ensure_list(plan.get('tags'))
     overview_pairs = [
         ("Status", plan.get('status')),
         ("Category", plan.get('category')),
         ("Project type", plan.get('project_type')),
+        ("Target audience", plan.get('target_audience')),
         ("Package level", plan.get('package_level')),
+        ("Includes BOQ", plan.get('includes_boq')),
+        ("License type", plan.get('license_type')),
+        ("Customization available", plan.get('customization_available')),
+        ("Support duration (months)", plan.get('support_duration')),
         ("Design code", plan.get('design_code')),
+        ("Building code", plan.get('building_code')),
         ("Primary image", plan.get('image_url')),
-        ("Tags", plan.get('tags')),
+        ("Tags", ', '.join(tags_list) if tags_list else 'N/A'),
         ("Created", plan.get('created_at')),
         ("Updated", plan.get('updated_at')),
     ]
@@ -327,33 +353,44 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
 
     layout_lines = [
         f"Price: {format_currency(plan.get('price'))}",
+        f"Estimated Cost Range: {format_currency(plan.get('estimated_cost_min'))} - {format_currency(plan.get('estimated_cost_max'))}",
         f"Area: {format_value(plan.get('area'))} m²" if plan.get('area') else "Area: N/A",
+        f"Plot Size: {format_value(plan.get('plot_size'))}",
         f"Bedrooms: {format_value(plan.get('bedrooms'))}",
         f"Bathrooms: {format_value(plan.get('bathrooms'))}",
         f"Floors: {format_value(plan.get('floors'))}",
-        f"Plot Size: {format_value(plan.get('plot_size'))}",
+        f"Building Height: {format_value(plan.get('building_height'))}",
+        f"Parking Spaces: {format_value(plan.get('parking_spaces'))}",
     ]
     write_section("Dimensions & Layout", layout_lines)
 
-    license_lines = [
-        f"License: {format_value(plan.get('license_type'))}",
-        f"Customization Available: {format_value(plan.get('customization_available'))}",
-        f"Estimated Cost Range: {format_currency(plan.get('estimated_cost_min'))} - {format_currency(plan.get('estimated_cost_max'))}",
-        f"Construction Timeline: {format_value(plan.get('construction_timeline'))}",
-    ]
-    write_section("Costing & Permissions", license_lines)
+    special_features = ensure_list(plan.get('special_features'))
+    write_section(
+        "Special Features & Amenities",
+        special_features if special_features else ["N/A"]
+    )
 
-    if plan.get('description'):
-        write_paragraph("Plan Description", plan.get('description'))
+    certifications = ensure_list(plan.get('certifications'))
+    compliance_lines = [
+        f"Building code: {format_value(plan.get('building_code'))}",
+    ]
+    if certifications:
+        compliance_lines.extend([f"Certification: {item}" for item in certifications])
     else:
-        write_paragraph("Plan Description", "N/A")
+        compliance_lines.append("Certification: N/A")
+    write_section("Compliance & Certifications", compliance_lines)
+
+    write_paragraph("Plan Description", plan.get('description') or 'N/A')
+    write_paragraph("Project Timeline", plan.get('project_timeline_ref') or 'N/A')
+    write_paragraph("Material Specifications", plan.get('material_specifications') or 'N/A')
+    write_paragraph("Construction Notes", plan.get('construction_notes') or 'N/A')
 
     designer_name = ' '.join(filter(None, [designer.get('first_name'), designer.get('last_name')])).strip()
     designer_email = designer.get('email') or designer.get('username') or 'Not provided'
     designer_lines = [
-        f"Designer: {designer_name or 'Not provided'}",
-        f"Email: {designer_email}",
-        f"Phone: {designer.get('phone') or 'Not provided'}",
+        f"Designer: {designer_name or 'N/A'}",
+        f"Email: {designer_email if designer_email else 'N/A'}",
+        f"Phone: {format_value(designer.get('phone'))}",
     ]
     write_section("Designer", designer_lines)
 
@@ -421,6 +458,25 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
     else:
         write_section("Disciplines Included", ["N/A"])
 
+    file_paths = plan.get('file_paths')
+    if isinstance(file_paths, str):
+        try:
+            file_paths = json.loads(file_paths)
+        except Exception:
+            file_paths = {}
+    if not isinstance(file_paths, dict):
+        file_paths = {}
+
+    media_lines = []
+    for key, value in file_paths.items():
+        if isinstance(value, list):
+            media_lines.append(f"{key.replace('_', ' ').title()}: {len(value)} asset(s)")
+        else:
+            media_lines.append(f"{key.replace('_', ' ').title()}: {format_value(value)}")
+    if plan.get('image_url'):
+        media_lines.insert(0, f"Primary image path: {plan.get('image_url')}")
+    write_section("Media & Asset Inventory", media_lines or ["N/A"])
+
     file_lines = []
     for f in organized_files:
         descriptor = f.get('file_type') or 'FILE'
@@ -433,7 +489,7 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
         write_section("Files & Deliverables", file_lines)
 
     c.drawText(text)
-    c.setFont('Helvetica-Oblique', 10)
+    c.setFont('Times-Italic', 10)
     c.setFillColor(colors.HexColor('#4b5563'))
     c.drawCentredString(width / 2, 40, 'PlanCave · Confidential technical package · Auto-generated manifest')
     c.save()

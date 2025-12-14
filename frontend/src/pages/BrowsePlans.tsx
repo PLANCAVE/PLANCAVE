@@ -52,9 +52,16 @@ export default function BrowsePlans() {
   const planCategories = [
     'Residential',
     'Commercial',
-    'Mansions',
-    'Bungalows',
+    'Industrial',
+    'Institutional',
+    'Mixed-Use',
+    'Mansion',
+    'Bungalow',
+    'Townhouse',
+    'Duplex',
     'Apartment',
+    'Villa',
+    'Commercial Complex',
     'Modern',
     'Minimalist',
     'Contemporary'
@@ -119,7 +126,10 @@ export default function BrowsePlans() {
 
     if (selectedStyle) {
       const normalizedStyle = selectedStyle.toLowerCase();
-      filtered = filtered.filter((plan) => (plan.project_type || '').toLowerCase() === normalizedStyle);
+      filtered = filtered.filter((plan) => 
+        (plan.project_type || '').toLowerCase() === normalizedStyle ||
+        (plan.category || '').toLowerCase() === normalizedStyle
+      );
     }
 
     if (selectedSize) {

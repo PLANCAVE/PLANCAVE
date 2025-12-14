@@ -51,12 +51,13 @@ export default function BrowsePlans() {
 
   const planCategories = [
     'Residential',
-    'Commercial', 
-    'Office',
+    'Commercial',
+    'Mansions',
+    'Bungalows',
     'Apartment',
     'Modern',
-    'Traditional',
-    'Minimalist'
+    'Minimalist',
+    'Contemporary'
   ];
 
   const sizeOptions = [

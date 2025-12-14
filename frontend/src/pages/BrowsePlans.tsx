@@ -38,9 +38,12 @@ export default function BrowsePlans() {
   const [selectedBudget, setSelectedBudget] = useState('');
   const [selectedBedrooms, setSelectedBedrooms] = useState('');
   const [selectedFloors, setSelectedFloors] = useState('');
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [hasPool, setHasPool] = useState(false);
+  const [hasParking, setHasParking] = useState(false);
+  const [hasSecurity, setHasSecurity] = useState(false);
+  const [hasBOQ, setHasBOQ] = useState(false);
   const [activePreset, setActivePreset] = useState<'shop' | 'best-sellers'>('shop');
-  const [openDropdown, setOpenDropdown] = useState<null | 'size' | 'style' | 'budget' | 'bedrooms' | 'floors' | 'features'>(null);
+  const [openDropdown, setOpenDropdown] = useState<null | 'size' | 'style' | 'budget' | 'bedrooms' | 'floors'>(null);
   const [showSearch, setShowSearch] = useState(false);
   const filterBarRef = useRef<HTMLDivElement>(null);
 
@@ -86,12 +89,6 @@ export default function BrowsePlans() {
     { id: 'multi', label: 'Multi-Story (3+ Floors)' }
   ];
 
-  const featureOptions = [
-    { id: 'boq', label: 'Includes BOQ' },
-    { id: 'pool', label: 'Swimming Pool' },
-    { id: 'parking', label: 'Parking' },
-    { id: 'security', label: 'Security Features' }
-  ];
 
   // Initial load: fetch all available plans from backend
   useEffect(() => {
@@ -174,18 +171,17 @@ export default function BrowsePlans() {
       });
     }
 
-    if (selectedFeatures.length > 0) {
-      filtered = filtered.filter(plan => {
-        return selectedFeatures.every(feature => {
-          switch(feature) {
-            case 'boq': return plan.includes_boq;
-            case 'pool': return plan.features?.includes('pool');
-            case 'parking': return plan.features?.includes('parking');
-            case 'security': return plan.features?.includes('security');
-            default: return false;
-          }
-        });
-      });
+    if (hasPool) {
+      filtered = filtered.filter((plan) => plan.features?.includes('pool'));
+    }
+    if (hasParking) {
+      filtered = filtered.filter((plan) => plan.features?.includes('parking'));
+    }
+    if (hasSecurity) {
+      filtered = filtered.filter((plan) => plan.features?.includes('security'));
+    }
+    if (hasBOQ) {
+      filtered = filtered.filter((plan) => plan.includes_boq);
     }
 
     if (activePreset === 'best-sellers') {
@@ -193,7 +189,7 @@ export default function BrowsePlans() {
     }
 
     setPlans(filtered);
-  }, [allPlans, search, selectedStyle, selectedSize, selectedBudget, selectedBedrooms, selectedFloors, selectedFeatures, activePreset]);
+  }, [allPlans, search, selectedStyle, selectedSize, selectedBudget, selectedBedrooms, selectedFloors, hasPool, hasParking, hasSecurity, hasBOQ, activePreset]);
 
   const clearFilters = () => {
     setSearch('');
@@ -202,7 +198,6 @@ export default function BrowsePlans() {
     setSelectedBudget('');
     setSelectedBedrooms('');
     setSelectedFloors('');
-    setSelectedFeatures([]);
     setActivePreset('shop');
   };
 
@@ -216,7 +211,7 @@ export default function BrowsePlans() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleDropdown = (name: 'size' | 'style' | 'budget' | 'bedrooms' | 'floors' | 'features') => {
+  const toggleDropdown = (name: 'size' | 'style' | 'budget' | 'bedrooms' | 'floors') => {
     setOpenDropdown(openDropdown === name ? null : name);
   };
 
@@ -249,10 +244,10 @@ export default function BrowsePlans() {
       label: floorOptions.find((option) => option.id === selectedFloors)?.label || 'Floors',
       onRemove: () => setSelectedFloors(''),
     },
-    selectedFeatures.length > 0 && {
-      label: 'Features',
-      onRemove: () => setSelectedFeatures([]),
-    },
+    hasPool && { label: 'Pool', onRemove: () => setHasPool(false) },
+    hasParking && { label: 'Parking', onRemove: () => setHasParking(false) },
+    hasSecurity && { label: 'Security', onRemove: () => setHasSecurity(false) },
+    hasBOQ && { label: 'BOQ', onRemove: () => setHasBOQ(false) },
     activePreset === 'best-sellers' && {
       label: 'Best sellers',
       onRemove: () => setActivePreset('shop'),
@@ -477,37 +472,71 @@ export default function BrowsePlans() {
               )}
             </div>
 
-            <div className="relative">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => toggleDropdown('features')}
-                className={dropdownButtonClass(!!selectedFeatures.length || openDropdown === 'features')}
+                onClick={() => setHasPool((prev) => !prev)}
+                className={`p-2 rounded-full border ${
+                  hasPool ? 'bg-teal-50 border-teal-200 text-teal-600' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
+                }`}
+                title="Only plans with a pool"
               >
-                By Features <ChevronDown className="w-4 h-4" />
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 21l18 0M5 17l14 0M8 13l8 0M12 9l0 8M9 5l6 0"
+                  />
+                </svg>
               </button>
-              {openDropdown === 'features' && (
-                <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-[60]">
-                  {featureOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (selectedFeatures.includes(option.id)) {
-                          setSelectedFeatures(selectedFeatures.filter((feature) => feature !== option.id));
-                        } else {
-                          setSelectedFeatures([...selectedFeatures, option.id]);
-                        }
-                        setOpenDropdown(null);
-                        setActivePreset('shop');
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
-                        selectedFeatures.includes(option.id) ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <button
+                onClick={() => setHasParking((prev) => !prev)}
+                className={`p-2 rounded-full border ${
+                  hasParking ? 'bg-teal-50 border-teal-200 text-teal-600' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
+                }`}
+                title="Only plans with parking"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={() => setHasSecurity((prev) => !prev)}
+                className={`p-2 rounded-full border ${
+                  hasSecurity ? 'bg-teal-50 border-teal-200 text-teal-600' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
+                }`}
+                title="Only plans with security features"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 2l7 4 0 6c0 7-7 10-7 10s-7-3-7-10V6l7-4z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={() => setHasBOQ((prev) => !prev)}
+                className={`p-2 rounded-full border ${
+                  hasBOQ ? 'bg-teal-50 border-teal-200 text-teal-600' : 'border-gray-200 hover:bg-gray-50 text-gray-500'
+                }`}
+                title="Only plans that include a BOQ"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v8a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
         </div>

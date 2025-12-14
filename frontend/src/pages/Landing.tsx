@@ -130,6 +130,7 @@ export default function Landing() {
             onTouchEnd={() => setIsHoveringCarousel(false)}
             onTouchCancel={() => setIsHoveringCarousel(false)}
           >
+            {/* PLANCAVE title overlay */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center text-white/80 space-y-3 pointer-events-none z-20">
               <div className="flex items-center gap-3 justify-center text-[0.6rem] tracking-[0.8em] text-white/70">
                 <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/30 to-white/70"></div>
@@ -139,134 +140,115 @@ export default function Landing() {
               <h1 className="text-3xl md:text-4xl font-serif tracking-[0.55em] text-white drop-shadow-2xl">
                 PLANCAVE
               </h1>
-              <div className="flex items-center justify-center gap-6 text-[0.5rem] tracking-[0.45em] text-white/60">
-                <div className="h-px w-12 bg-white/60"></div>
-                <div className="h-px w-12 bg-white/60"></div>
+            </div>
+
+            {/* Hero image */}
+            <div className="absolute inset-0">
+              <img
+                src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
+                className="absolute inset-0 w-full h-full object-cover object-center"
+                alt="Featured plan"
+              />
+              <div className="absolute inset-0 bg-black/25" />
+            </div>
+
+            {/* Card details overlay */}
+            <div className="absolute inset-x-0 bottom-0 px-4 pb-6 text-white z-10">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between max-w-6xl mx-auto">
+                <div className="flex flex-col gap-2 bg-black/5 backdrop-blur-[1px] rounded-2xl border border-white/5 px-3 py-2 max-w-2xl">
+                  <div className="flex items-center gap-2 text-[0.55rem] uppercase tracking-[0.4em] text-white/70">
+                    <span>{currentPlan?.project_type}</span>
+                    {currentPlan?.category && <span className="text-white/60">• {currentPlan.category}</span>}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-xl md:text-2xl font-semibold tracking-[0.25em] text-white drop-shadow-lg">
+                      {currentPlan?.name}
+                    </h3>
+                    <p className="text-sm md:text-base text-white/90 line-clamp-2 drop-shadow">
+                      {currentPlan?.description}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[0.5rem] uppercase tracking-[0.35em] text-white/90">
+                    <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
+                      KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
+                    </span>
+                    <span className={`px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
+                      {currentPlan?.package_level?.toUpperCase()}
+                    </span>
+                    {currentPlan?.area && (
+                      <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
+                        {currentPlan.area} m²
+                      </span>
+                    )}
+                    {typeof currentPlan?.bedrooms === 'number' && (
+                      <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
+                        {currentPlan.bedrooms} Beds
+                      </span>
+                    )}
+                    {typeof currentPlan?.floors === 'number' && (
+                      <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
+                        {currentPlan.floors} Floors
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-4 bg-black/5 backdrop-blur-[1px] rounded-full border border-white/5 px-4 py-2 text-[0.6rem] uppercase tracking-[0.35em] text-white/90">
+                    <span className="text-white text-lg font-light drop-shadow">{currentPlan?.area ?? '—'} m²</span>
+                    <span className="text-white text-lg font-light drop-shadow">{currentPlan?.bedrooms ?? '—'} beds</span>
+                    <span className="text-white text-lg font-light drop-shadow">{currentPlan?.floors ?? '—'} floors</span>
+                  </div>
+                  <button
+                    className="inline-flex items-center justify-center gap-3 px-5 py-3 rounded-full border border-white/30 bg-white/20 backdrop-blur-md text-[0.6rem] uppercase tracking-[0.4em] text-white hover:bg-white/30 shadow-xl transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePlanOpen();
+                    }}
+                  >
+                    View Details
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="absolute -inset-10 opacity-40 bg-gradient-to-br from-teal-300/20 via-white/10 to-transparent blur-3xl pointer-events-none"></div>
-            {loadingPlans ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
-              </div>
-            ) : featuredPlans.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-white/80">
-                <Building2 className="w-12 h-12 mb-4" />
-                <p>No featured plans yet</p>
-              </div>
-            ) : (
-              <>
-                <div className="absolute inset-0 bg-black">
-                  <div className="relative w-full h-full">
-                    <div className="absolute inset-0 bg-black flex items-center justify-center">
-                      <img
-                        src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
-                        className="max-w-full max-h-full object-contain"
-                        alt="Featured plan"
-                      />
-                      <div className="absolute inset-0 bg-black/25" />
-                    </div>
-                  </div>
-                </div>
 
-                <div className="absolute inset-x-0 bottom-0 px-4 pb-6 text-white z-10">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between max-w-6xl mx-auto">
-                    <div className="flex flex-col gap-2 bg-black/5 backdrop-blur-[1px] rounded-2xl border border-white/5 px-3 py-2 max-w-2xl">
-                      <div className="flex items-center gap-2 text-[0.55rem] uppercase tracking-[0.4em] text-white/70">
-                        <span>{currentPlan?.project_type}</span>
-                        {currentPlan?.category && <span className="text-white/60">• {currentPlan.category}</span>}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <h3 className="text-xl md:text-2xl font-semibold tracking-[0.25em] text-white drop-shadow-lg">
-                          {currentPlan?.name}
-                        </h3>
-                        <p className="text-sm md:text-base text-white/90 line-clamp-2 drop-shadow">
-                          {currentPlan?.description}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-[0.5rem] uppercase tracking-[0.35em] text-white/90">
-                        <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
-                          KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
-                        </span>
-                        <span className={`px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
-                          {currentPlan?.package_level?.toUpperCase()}
-                        </span>
-                        {currentPlan?.area && (
-                          <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
-                            {currentPlan.area} m²
-                          </span>
-                        )}
-                        {typeof currentPlan?.bedrooms === 'number' && (
-                          <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
-                            {currentPlan.bedrooms} Beds
-                          </span>
-                        )}
-                        {typeof currentPlan?.floors === 'number' && (
-                          <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
-                            {currentPlan.floors} Floors
-                          </span>
-                        )}
-                      </div>
-                    </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrevPlan();
+              }}
+              className="absolute left-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition z-10"
+              aria-label="Previous plan"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextPlan();
+              }}
+              className="absolute right-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition z-10"
+              aria-label="Next plan"
+            >
+              <ArrowRight className="w-6 h-6" />
+            </button>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-4 bg-black/5 backdrop-blur-[1px] rounded-full border border-white/5 px-4 py-2 text-[0.6rem] uppercase tracking-[0.35em] text-white/90">
-                        <span className="text-white text-lg font-light drop-shadow">{currentPlan?.area ?? '—'} m²</span>
-                        <span className="text-white text-lg font-light drop-shadow">{currentPlan?.bedrooms ?? '—'} beds</span>
-                        <span className="text-white text-lg font-light drop-shadow">{currentPlan?.floors ?? '—'} floors</span>
-                      </div>
-                      <button
-                        className="inline-flex items-center justify-center gap-3 px-5 py-3 rounded-full border border-white/30 bg-white/20 backdrop-blur-md text-[0.6rem] uppercase tracking-[0.4em] text-white hover:bg-white/30 shadow-xl transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePlanOpen();
-                        }}
-                      >
-                        View Details
-                        <ArrowRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
+            <div className="absolute bottom-5 inset-x-0 flex justify-center gap-2 z-10">
+              {featuredPlans.map((plan, idx) => (
                 <button
+                  key={plan.id}
+                  type="button"
+                  aria-label={`Go to plan ${plan.name}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handlePrevPlan();
+                    triggerManualPause();
+                    setCurrentPlanIndex(idx);
                   }}
-                  className="absolute left-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition z-10"
-                  aria-label="Previous plan"
-                >
-                  <ArrowLeft className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNextPlan();
-                  }}
-                  className="absolute right-6 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition z-10"
-                  aria-label="Next plan"
-                >
-                  <ArrowRight className="w-6 h-6" />
-                </button>
-
-                <div className="absolute bottom-5 inset-x-0 flex justify-center gap-2 z-10">
-                  {featuredPlans.map((plan, idx) => (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      aria-label={`Go to plan ${plan.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        triggerManualPause();
-                        setCurrentPlanIndex(idx);
-                      }}
-                      className={`h-1 w-10 rounded-full transition-all ${idx === currentPlanIndex ? 'bg-white' : 'bg-white/30'}`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+                  className={`h-1 w-10 rounded-full transition-all ${idx === currentPlanIndex ? 'bg-white' : 'bg-white/30'}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>

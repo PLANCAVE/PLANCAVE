@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { browsePlans } from '../api';
-import { Search, Filter, Heart, ShoppingCart, Building2, Award, FileText } from 'lucide-react';
+import { Search, Heart, ShoppingCart, Building2, Award, FileText, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
@@ -29,17 +29,14 @@ export default function BrowsePlans() {
   const [allPlans, setAllPlans] = useState<Plan[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
   
   // Filter states
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [projectType, setProjectType] = useState('');
-  const [packageLevel, setPackageLevel] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [includesBoq, setIncludesBoq] = useState('');
-  const [bedrooms, setBedrooms] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState('');
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedBudget, setSelectedBudget] = useState('');
+  const [activePreset, setActivePreset] = useState<'shop' | 'best-sellers'>('shop');
+  const [openDropdown, setOpenDropdown] = useState<null | 'size' | 'style' | 'budget'>(null);
   const [showSearch, setShowSearch] = useState(false);
 
   const { isAuthenticated } = useAuth();
@@ -56,6 +53,18 @@ export default function BrowsePlans() {
     'Apartment',
     'Villa',
     'Commercial Complex'
+  ];
+
+  const sizeOptions = [
+    { id: 'compact', label: 'Compact • Under 150 m²', max: 150 },
+    { id: 'family', label: 'Family • 150 - 250 m²', min: 150, max: 250 },
+    { id: 'estate', label: 'Estate • 250 m² +', min: 250 },
+  ];
+
+  const budgetOptions = [
+    { id: 'starter', label: 'Under KSH 250K', max: 250000 },
+    { id: 'midrange', label: 'KSH 250K - 750K', min: 250000, max: 750000 },
+    { id: 'premium', label: 'KSH 750K+', min: 750000 },
   ];
 
   // Initial load: fetch all available plans from backend
@@ -83,68 +92,91 @@ export default function BrowsePlans() {
 
     if (search) {
       const lower = search.toLowerCase();
-      filtered = filtered.filter(plan =>
-        plan.name.toLowerCase().includes(lower) ||
-        plan.description.toLowerCase().includes(lower)
+      filtered = filtered.filter((plan) =>
+        plan.name.toLowerCase().includes(lower) || plan.description.toLowerCase().includes(lower)
       );
     }
 
-    if (category) {
-      filtered = filtered.filter(plan => plan.category === category);
+    if (selectedStyle) {
+      filtered = filtered.filter((plan) => plan.category === selectedStyle);
     }
 
-    if (projectType) {
-      filtered = filtered.filter(plan => plan.project_type === projectType);
-    }
-
-    if (packageLevel) {
-      filtered = filtered.filter(plan => plan.package_level === packageLevel);
-    }
-
-    if (minPrice) {
-      const min = Number(minPrice);
-      if (!Number.isNaN(min)) {
-        filtered = filtered.filter(plan => plan.price >= min);
+    if (selectedSize) {
+      const config = sizeOptions.find((option) => option.id === selectedSize);
+      if (config) {
+        filtered = filtered.filter((plan) => {
+          const area = Number(plan.area) || 0;
+          if (config.min && area < config.min) return false;
+          if (config.max && area >= config.max) return false;
+          return true;
+        });
       }
     }
 
-    if (maxPrice) {
-      const max = Number(maxPrice);
-      if (!Number.isNaN(max)) {
-        filtered = filtered.filter(plan => plan.price <= max);
+    if (selectedBudget) {
+      const config = budgetOptions.find((option) => option.id === selectedBudget);
+      if (config) {
+        filtered = filtered.filter((plan) => {
+          const price = Number(plan.price) || 0;
+          if (config.min && price < config.min) return false;
+          if (config.max && price > config.max) return false;
+          return true;
+        });
       }
     }
 
-    if (includesBoq) {
-      const val = includesBoq === 'true';
-      filtered = filtered.filter(plan => plan.includes_boq === val);
-    }
-
-    if (bedrooms) {
-      const beds = Number(bedrooms);
-      if (!Number.isNaN(beds)) {
-        if (beds === 5) {
-          // 5+ option
-          filtered = filtered.filter(plan => (plan.bedrooms || 0) >= 5);
-        } else {
-          filtered = filtered.filter(plan => plan.bedrooms === beds);
-        }
-      }
+    if (activePreset === 'best-sellers') {
+      filtered = [...filtered].sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
     }
 
     setPlans(filtered);
-  }, [allPlans, search, category, projectType, packageLevel, minPrice, maxPrice, includesBoq, bedrooms]);
+  }, [allPlans, search, selectedStyle, selectedSize, selectedBudget, activePreset]);
 
   const clearFilters = () => {
     setSearch('');
-    setCategory('');
-    setProjectType('');
-    setPackageLevel('');
-    setMinPrice('');
-    setMaxPrice('');
-    setIncludesBoq('');
-    setBedrooms('');
+    setSelectedStyle('');
+    setSelectedSize('');
+    setSelectedBudget('');
+    setActivePreset('shop');
   };
+
+  useEffect(() => {
+    const handleDocumentClick = () => setOpenDropdown(null);
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, []);
+
+  const toggleDropdown = (menu: 'size' | 'style' | 'budget') => {
+    setOpenDropdown((prev) => (prev === menu ? null : menu));
+  };
+
+  const presetButtonClass = (isActive: boolean) =>
+    `text-sm font-semibold tracking-wide ${
+      isActive
+        ? 'text-teal-600 after:block after:h-0.5 after:bg-teal-500 after:rounded-full'
+        : 'text-gray-600 hover:text-teal-600'
+    }`;
+
+  const dropdownButtonClass = (isActive: boolean) =>
+    `flex items-center gap-1 text-sm font-semibold tracking-wide ${
+      isActive ? 'text-teal-600' : 'text-gray-700 hover:text-teal-600'
+    }`;
+
+  const activeChips = [
+    selectedStyle && { label: selectedStyle, onRemove: () => setSelectedStyle('') },
+    selectedSize && {
+      label: sizeOptions.find((option) => option.id === selectedSize)?.label || 'Size',
+      onRemove: () => setSelectedSize(''),
+    },
+    selectedBudget && {
+      label: budgetOptions.find((option) => option.id === selectedBudget)?.label || 'Budget',
+      onRemove: () => setSelectedBudget(''),
+    },
+    activePreset === 'best-sellers' && {
+      label: 'Best sellers',
+      onRemove: () => setActivePreset('shop'),
+    },
+  ].filter(Boolean) as { label: string; onRemove: () => void }[];
 
   const ensureAuthenticated = () => {
     if (!isAuthenticated) {
@@ -189,172 +221,185 @@ export default function BrowsePlans() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
       {/* Header with browse label and controls */}
-      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] h-16 md:h-20 overflow-hidden">
+      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] py-4">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="absolute top-0 right-10 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-10 w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl"></div>
 
-        <div className="relative z-10 h-full">
-          <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
-            <span className="text-xs font-medium tracking-wide text-teal-100 uppercase">
-              Browse plans
-            </span>
-            <div className="flex flex-wrap justify-end gap-2 items-center">
+        <div className="relative z-10">
+          <div className="max-w-6xl mx-auto px-4 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium tracking-wide text-teal-100 uppercase">Browse plans</span>
+              <span className="text-xs text-white/70">Curated categories for faster discovery</span>
+            </div>
+
+            <div
+              className="flex items-center gap-6 overflow-x-auto text-white/90"
+              onClick={(event) => event.stopPropagation()}
+            >
               <button
-                onClick={() => setShowSearch(!showSearch)}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-white/95 text-gray-800 hover:bg-white shadow-sm"
+                onClick={() => setShowSearch((prev) => !prev)}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white hover:bg-white/20 transition"
               >
-                <Search className="w-4 h-4 text-gray-500" />
+                <Search className="w-4 h-4" />
                 <span>Search plans</span>
               </button>
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium border transition-all shadow-sm ${
-                  showFilters 
-                    ? 'bg-teal-600 text-white border-teal-500' 
-                    : 'bg-white/90 text-gray-800 border-white/70 hover:bg-white'
-                }`}
+                onClick={() => {
+                  clearFilters();
+                  setActivePreset('shop');
+                }}
+                className={presetButtonClass(activePreset === 'shop' && !selectedStyle && !selectedSize && !selectedBudget)}
               >
-                <Filter className="w-4 h-4" />
-                <span>Filter plans</span>
+                Show All
               </button>
+              <button
+                onClick={() => {
+                  setActivePreset(activePreset === 'best-sellers' ? 'shop' : 'best-sellers');
+                }}
+                className={presetButtonClass(activePreset === 'best-sellers')}
+              >
+                Best Sellers
+              </button>
+
+              <div className="relative" onClick={(event) => event.stopPropagation()}>
+                <button
+                  onClick={() => toggleDropdown('size')}
+                  className={dropdownButtonClass(!!selectedSize || openDropdown === 'size')}
+                >
+                  By Size <ChevronDown className="w-4 h-4" />
+                </button>
+                {openDropdown === 'size' && (
+                  <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-2xl p-3 border border-gray-100 z-20">
+                    {sizeOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedSize(option.id === selectedSize ? '' : option.id);
+                          setOpenDropdown(null);
+                          setActivePreset('shop');
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${
+                          selectedSize === option.id ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative" onClick={(event) => event.stopPropagation()}>
+                <button
+                  onClick={() => toggleDropdown('style')}
+                  className={dropdownButtonClass(!!selectedStyle || openDropdown === 'style')}
+                >
+                  By Style <ChevronDown className="w-4 h-4" />
+                </button>
+                {openDropdown === 'style' && (
+                  <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-2xl p-3 border border-gray-100 z-20">
+                    {planCategories.map((entry) => (
+                      <button
+                        key={entry}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedStyle(selectedStyle === entry ? '' : entry);
+                          setOpenDropdown(null);
+                          setActivePreset('shop');
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${
+                          selectedStyle === entry ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        {entry}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative" onClick={(event) => event.stopPropagation()}>
+                <button
+                  onClick={() => toggleDropdown('budget')}
+                  className={dropdownButtonClass(!!selectedBudget || openDropdown === 'budget')}
+                >
+                  By Budget <ChevronDown className="w-4 h-4" />
+                </button>
+                {openDropdown === 'budget' && (
+                  <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-2xl p-3 border border-gray-100 z-20">
+                    {budgetOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedBudget(selectedBudget === option.id ? '' : option.id);
+                          setOpenDropdown(null);
+                          setActivePreset('shop');
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${
+                          selectedBudget === option.id ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search and Filters content */}
-      <div className="max-w-5xl mx-auto px-4 mt-2 md:mt-4 relative z-10 space-y-3">
-        {/* Search Bar - only shows when user wants to search */}
-        {showSearch && (
-          <div className="flex justify-center">
-            <div className="relative flex-1 max-w-xl w-full">
-              <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search by name or description..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="input-field pl-9 py-2 text-sm rounded-full shadow-sm"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Advanced Filters */}
-        {showFilters && (
-          <div className="card shadow-md border border-teal-100/60 mt-2">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Type</label>
-                  <select
-                    value={projectType}
-                    onChange={(e) => setProjectType(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">All Types</option>
-                    <option value="Residential">Residential</option>
-                    <option value="Commercial">Commercial</option>
-                    <option value="Industrial">Industrial</option>
-                    <option value="Institutional">Institutional</option>
-                    <option value="Mixed-Use">Mixed-Use</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">All Categories</option>
-                    {planCategories.map((entry) => (
-                      <option key={entry} value={entry}>
-                        {entry}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Package Level</label>
-                  <select
-                    value={packageLevel}
-                    onChange={(e) => setPackageLevel(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">All Packages</option>
-                    <option value="basic">Basic (Arch)</option>
-                    <option value="standard">Standard (Arch+Struct)</option>
-                    <option value="premium">Premium (Arch+Struct+MEP+BOQ)</option>
-                    <option value="complete">Complete (Everything)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Includes BOQ</label>
-                  <select
-                    value={includesBoq}
-                    onChange={(e) => setIncludesBoq(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">Any</option>
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bedrooms</label>
-                  <select
-                    value={bedrooms}
-                    onChange={(e) => setBedrooms(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">Any</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5+</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Price (KSH)</label>
-                  <input
-                    type="number"
-                    value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
-                    placeholder="0"
-                    className="input-field"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Price (KSH)</label>
-                  <input
-                    type="number"
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                    placeholder="100000"
-                    className="input-field"
-                  />
-                </div>
-
-                <div className="col-span-2 flex justify-end">
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm text-gray-600 hover:text-gray-900 underline"
-                  >
-                    Clear all filters
-                  </button>
-                </div>
+      {/* Search + active filters */}
+      {(showSearch || activeChips.length > 0 || search) && (
+        <div className="bg-white/90 border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-4 py-4 space-y-3">
+            {showSearch && (
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search plan names, descriptions, or keywords"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-full py-3 pl-11 pr-4 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
               </div>
-            </div>
-          )}
-      </div>
+            )}
+
+            {(activeChips.length > 0 || search) && (
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                {activeChips.map((chip) => (
+                  <span
+                    key={chip.label}
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-100"
+                  >
+                    {chip.label}
+                    <button onClick={chip.onRemove} className="text-xs text-teal-600 hover:text-teal-900">
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {search && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                    “{search}”
+                    <button onClick={() => setSearch('')} className="text-xs text-gray-500 hover:text-gray-800">
+                      ×
+                    </button>
+                  </span>
+                )}
+                <button onClick={clearFilters} className="text-xs uppercase tracking-wide text-gray-500 hover:text-gray-800">
+                  Clear all
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Plans Grid */}
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">

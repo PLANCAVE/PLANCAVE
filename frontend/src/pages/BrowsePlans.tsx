@@ -366,7 +366,7 @@ export default function BrowsePlans() {
               </button>
               {openDropdown === 'style' && (
                 <div className="absolute left-0 md:left-auto right-0 mt-2 w-64 bg-white text-gray-800 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
-                  <div className="grid grid-cols-1 gap-1 p-1">
+                  <div className="grid grid-cols-2 gap-1 p-1">
                     {planCategories.map((entry) => (
                       <button
                         key={entry}

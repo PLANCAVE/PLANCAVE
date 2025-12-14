@@ -99,7 +99,8 @@ export default function BrowsePlans() {
     }
 
     if (selectedStyle) {
-      filtered = filtered.filter((plan) => plan.category === selectedStyle);
+      const normalizedStyle = selectedStyle.toLowerCase();
+      filtered = filtered.filter((plan) => (plan.category || '').toLowerCase() === normalizedStyle);
     }
 
     if (selectedSize) {
@@ -158,13 +159,13 @@ export default function BrowsePlans() {
   const presetButtonClass = (isActive: boolean) =>
     `text-sm font-semibold tracking-wide ${
       isActive
-        ? 'text-teal-600 after:block after:h-0.5 after:bg-teal-500 after:rounded-full'
-        : 'text-gray-600 hover:text-teal-600'
+        ? 'text-[#0f4c45] after:block after:h-0.5 after:bg-[#0f4c45] after:rounded-full'
+        : 'text-gray-600 hover:text-[#0f4c45]'
     }`;
 
   const dropdownButtonClass = (isActive: boolean) =>
     `flex items-center gap-1 text-sm font-semibold tracking-wide ${
-      isActive ? 'text-teal-600' : 'text-gray-700 hover:text-teal-600'
+      isActive ? 'text-[#0f4c45]' : 'text-gray-700 hover:text-[#0f4c45]'
     }`;
 
   const activeChips = [
@@ -226,18 +227,15 @@ export default function BrowsePlans() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
       {/* Header with browse label and controls */}
-      <div className="relative bg-gradient-to-r from-[#1c4c4c] via-[#123636] to-[#082020] py-4 shadow-inner">
-        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="absolute top-0 right-10 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-10 w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl"></div>
-
-        <div className="relative z-10">
-          <div className="max-w-6xl mx-auto px-4" ref={filterBarRef}>
-            <div className="flex flex-wrap items-center gap-4 overflow-x-auto text-white">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4" ref={filterBarRef}>
+          <div className="flex flex-wrap items-center gap-4 overflow-x-auto py-4">
               <button
                 onClick={() => setShowSearch((prev) => !prev)}
-                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition border ${
-                  showSearch ? 'bg-white text-teal-700 border-white' : 'bg-white/10 border-white/30 hover:bg-white/20'
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold tracking-wide transition border ${
+                  showSearch
+                    ? 'bg-[#0f4c45] text-white border-[#0f4c45]'
+                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
                 }`}
               >
                 <Search className="w-4 h-4" />
@@ -269,7 +267,7 @@ export default function BrowsePlans() {
                   By Size <ChevronDown className="w-4 h-4" />
                 </button>
                 {openDropdown === 'size' && (
-                  <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-2xl p-3 border border-gray-100 z-20">
+                  <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
                     {sizeOptions.map((option) => (
                       <button
                         key={option.id}
@@ -279,8 +277,8 @@ export default function BrowsePlans() {
                           setOpenDropdown(null);
                           setActivePreset('shop');
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${
-                          selectedSize === option.id ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-100'
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                          selectedSize === option.id ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
                         }`}
                       >
                         {option.label}
@@ -298,7 +296,7 @@ export default function BrowsePlans() {
                   By Style <ChevronDown className="w-4 h-4" />
                 </button>
                 {openDropdown === 'style' && (
-                  <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-2xl p-3 border border-gray-100 z-20">
+                  <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
                     {planCategories.map((entry) => (
                       <button
                         key={entry}
@@ -308,8 +306,8 @@ export default function BrowsePlans() {
                           setOpenDropdown(null);
                           setActivePreset('shop');
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${
-                          selectedStyle === entry ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-100'
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                          selectedStyle === entry ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
                         }`}
                       >
                         {entry}
@@ -327,7 +325,7 @@ export default function BrowsePlans() {
                   By Budget <ChevronDown className="w-4 h-4" />
                 </button>
                 {openDropdown === 'budget' && (
-                  <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-2xl p-3 border border-gray-100 z-20">
+                  <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
                     {budgetOptions.map((option) => (
                       <button
                         key={option.id}
@@ -337,8 +335,8 @@ export default function BrowsePlans() {
                           setOpenDropdown(null);
                           setActivePreset('shop');
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${
-                          selectedBudget === option.id ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-100'
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                          selectedBudget === option.id ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
                         }`}
                       >
                         {option.label}

@@ -226,8 +226,8 @@ export default function BrowsePlans() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
       {/* Header with browse label and controls */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4" ref={filterBarRef}>
+      <div className="bg-white border-b border-gray-200 relative z-40">
+        <div className="max-w-6xl mx-auto px-4 overflow-visible" ref={filterBarRef}>
           <div className="flex flex-wrap items-center gap-4 overflow-x-auto py-4">
             <button
               onClick={() => setShowSearch((prev) => !prev)}
@@ -260,13 +260,13 @@ export default function BrowsePlans() {
 
             <div className="relative">
               <button
-                onClick={() => toggleDropdown('size' as 'size' | 'style' | 'budget')}
+                onClick={() => toggleDropdown('size')}
                 className={dropdownButtonClass(!!selectedSize || openDropdown === 'size')}
               >
                 By Size <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'size' && (
-                <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
+                <div className="absolute mt-3 w-64 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-50">
                   {sizeOptions.map((option) => (
                     <button
                       key={option.id}
@@ -289,13 +289,13 @@ export default function BrowsePlans() {
 
             <div className="relative">
               <button
-                onClick={() => toggleDropdown('style' as 'size' | 'style' | 'budget')}
+                onClick={() => toggleDropdown('style')}
                 className={dropdownButtonClass(!!selectedStyle || openDropdown === 'style')}
               >
                 By Style <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'style' && (
-                <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
+                <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-50">
                   {planCategories.map((entry) => (
                     <button
                       key={entry}
@@ -318,13 +318,13 @@ export default function BrowsePlans() {
 
             <div className="relative">
               <button
-                onClick={() => toggleDropdown('budget' as 'size' | 'style' | 'budget')}
+                onClick={() => toggleDropdown('budget')}
                 className={dropdownButtonClass(!!selectedBudget || openDropdown === 'budget')}
               >
                 By Budget <ChevronDown className="w-4 h-4" />
               </button>
               {openDropdown === 'budget' && (
-                <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-20">
+                <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-50">
                   {budgetOptions.map((option) => (
                     <button
                       key={option.id}

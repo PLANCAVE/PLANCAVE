@@ -173,7 +173,7 @@ export default function PlanDetailsPage() {
   };
 
   const handleDownload = async () => {
-    if (!id) return;
+    if (!id || !plan) return;
 
     setIsDownloading(true);
     setDownloadError(null);
@@ -189,7 +189,7 @@ export default function PlanDetailsPage() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${plan.name}-${file.file_path.split('/').pop()}`;
+            a.download = `${plan.name || 'plan'}-${file.file_path.split('/').pop()}`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -212,7 +212,7 @@ export default function PlanDetailsPage() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${plan.name}-${file.file_path.split('/').pop()}`;
+            a.download = `${plan.name || 'plan'}-${file.file_path.split('/').pop()}`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);

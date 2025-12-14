@@ -13,6 +13,11 @@ import json
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.auth_utils import get_current_user, log_user_activity, check_user_quota, increment_user_quota
+from utils.download_helpers import (
+    fetch_plan_bundle,
+    build_plan_zip,
+    fetch_user_contact,
+)
 
 customer_bp = Blueprint('customer', __name__, url_prefix='/customer')
 
@@ -52,96 +57,6 @@ def json_default(value):
     if isinstance(value, uuid.UUID):
         return str(value)
     return value
-
-
-def fetch_plan_bundle(plan_id: str, conn):
-    cur = conn.cursor(row_factory=dict_row)
-    try:
-        cur.execute(
-            """
-            SELECT p.*, 
-                   u.first_name AS designer_first_name,
-                   u.last_name AS designer_last_name,
-                   u.email AS designer_email,
-                   u.phone AS designer_phone
-            FROM plans p
-            LEFT JOIN users u ON p.designer_id = u.id
-            WHERE p.id = %s
-            """,
-            (plan_id,)
-        )
-        plan_row = cur.fetchone()
-        if not plan_row:
-            return None
-
-        plan_dict = dict(plan_row)
-        designer = {
-            "id": plan_dict.get('designer_id'),
-            "first_name": plan_dict.pop('designer_first_name', None),
-            "last_name": plan_dict.pop('designer_last_name', None),
-            "email": plan_dict.pop('designer_email', None),
-            "phone": plan_dict.pop('designer_phone', None),
-        }
-
-        cur.execute("SELECT * FROM boqs WHERE plan_id = %s ORDER BY created_at ASC", (plan_id,))
-        boqs = [dict(row) for row in cur.fetchall()]
-
-        cur.execute("SELECT * FROM structural_specs WHERE plan_id = %s ORDER BY created_at ASC", (plan_id,))
-        structural_specs = [dict(row) for row in cur.fetchall()]
-
-        cur.execute("SELECT * FROM compliance_notes WHERE plan_id = %s ORDER BY created_at ASC", (plan_id,))
-        compliance_notes = [dict(row) for row in cur.fetchall()]
-
-        cur.execute(
-            """
-            SELECT file_name, file_type, file_path, file_size, uploaded_at
-            FROM plan_files
-            WHERE plan_id = %s
-            ORDER BY uploaded_at ASC
-            """,
-            (plan_id,)
-        )
-        files = [dict(row) for row in cur.fetchall()]
-
-        return {
-            "plan": plan_dict,
-            "designer": designer,
-            "boqs": boqs,
-            "structural_specs": structural_specs,
-            "compliance_notes": compliance_notes,
-            "files": files,
-        }
-    finally:
-        cur.close()
-
-
-def build_plan_zip(bundle):
-    zip_buffer = io.BytesIO()
-    files_added = 0
-
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        for plan_file in bundle['files']:
-            resolved_path = resolve_plan_file_path(plan_file.get('file_path'))
-            if not resolved_path or not os.path.exists(resolved_path):
-                continue
-
-            arcname = plan_file.get('file_name') or os.path.basename(resolved_path)
-            zip_file.write(resolved_path, arcname)
-            files_added += 1
-
-        manifest = {
-            "plan": bundle['plan'],
-            "designer": bundle['designer'],
-            "boqs": bundle['boqs'],
-            "structural_specs": bundle['structural_specs'],
-            "compliance_notes": bundle['compliance_notes'],
-            "files": bundle['files'],
-        }
-        zip_file.writestr('plan_manifest.json', json.dumps(manifest, default=json_default, indent=2))
-
-    zip_buffer.seek(0)
-    download_name = f"{bundle['plan'].get('name') or 'plan'}-technical-files.zip"
-    return zip_buffer, download_name, files_added
 
 
 @customer_bp.route('/plans/purchase', methods=['POST'])
@@ -366,38 +281,23 @@ def download_plan_files(download_token: str):
 
         plan_id = token_row['plan_id']
 
-        cur.execute(
-            """
-            SELECT file_name, file_path
-            FROM plan_files
-            WHERE plan_id = %s
-            ORDER BY uploaded_at ASC
-            """,
-            (plan_id,)
-        )
-        files = cur.fetchall()
+        bundle = fetch_plan_bundle(plan_id, conn)
+        if not bundle:
+            return jsonify(message="Plan not found"), 404
 
-        if not files:
+        if not bundle['files']:
             return jsonify(message="No technical files available for this plan"), 404
 
-        zip_buffer = io.BytesIO()
-        files_added = 0
+        customer_info = fetch_user_contact(token_row['user_id'], conn)
+        bundle['customer'] = customer_info or {}
 
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for plan_file in files:
-                resolved_path = resolve_plan_file_path(plan_file['file_path'])
-                if not resolved_path or not os.path.exists(resolved_path):
-                    continue
-
-                arcname = plan_file['file_name'] or os.path.basename(resolved_path)
-                zip_file.write(resolved_path, arcname)
-                files_added += 1
+        zip_buffer, download_name, files_added = build_plan_zip(bundle, customer=customer_info)
 
         if files_added == 0:
             return jsonify(message="Plan files could not be located on the server"), 404
 
         zip_buffer.seek(0)
-        download_name = f"{token_row['plan_name'] or 'plan'}-technical-files.zip"
+        download_name = download_name or f"{token_row['plan_name'] or 'plan'}-technical-files.zip"
 
         new_count = token_row['download_count'] + 1
         token_used = new_count >= token_row.get('max_downloads', 1)

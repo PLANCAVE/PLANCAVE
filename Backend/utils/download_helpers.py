@@ -42,6 +42,32 @@ def json_default(value):
     return value
 
 
+def fetch_user_contact(user_id: int | None, conn):
+    if not user_id:
+        return None
+
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            """
+            SELECT first_name, last_name, username AS email
+            FROM users
+            WHERE id = %s
+            """,
+            (user_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "first_name": row.get('first_name'),
+            "last_name": row.get('last_name'),
+            "email": row.get('email'),
+        }
+    finally:
+        cur.close()
+
+
 def fetch_plan_bundle(plan_id: str, conn):
     cur = conn.cursor(row_factory=dict_row)
     try:
@@ -51,6 +77,7 @@ def fetch_plan_bundle(plan_id: str, conn):
                    u.first_name AS designer_first_name,
                    u.last_name AS designer_last_name,
                    u.email AS designer_email,
+                   u.username AS designer_username,
                    u.phone AS designer_phone
             FROM plans p
             LEFT JOIN users u ON p.designer_id = u.id
@@ -68,6 +95,7 @@ def fetch_plan_bundle(plan_id: str, conn):
             "first_name": plan_dict.pop('designer_first_name', None),
             "last_name": plan_dict.pop('designer_last_name', None),
             "email": plan_dict.pop('designer_email', None),
+            "username": plan_dict.pop('designer_username', None),
             "phone": plan_dict.pop('designer_phone', None),
         }
 
@@ -140,7 +168,7 @@ def resolve_archive_path(plan_file: dict, default_folder: str = 'files') -> str:
     return f"{base_folder}/{filename}"
 
 
-def build_manifest_pdf(bundle, organized_files):
+def build_manifest_pdf(bundle, organized_files, customer=None):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=LETTER)
     width, height = LETTER
@@ -167,12 +195,14 @@ def build_manifest_pdf(bundle, organized_files):
         text.textLine(title)
         text.setFont("Helvetica", 11)
 
-    def write_section(title: str, items: list[str]):
-        ensure_space(len(items) + 2)
+    def write_section(title: str, items: list[str], accent: str = '#0f766e'):
+        ensure_space(len(items) + 3)
+        text.setFillColor(colors.HexColor(accent))
         text.setFont("Helvetica-Bold", 12)
-        text.textLine(title)
+        text.textLine(title.upper())
+        text.setFillColor(colors.black)
         text.setFont("Helvetica", 10)
-        wrapper = textwrap.TextWrapper(width=80)
+        wrapper = textwrap.TextWrapper(width=82)
         for item in items:
             for wrapped_line in wrapper.wrap(item):
                 ensure_space()
@@ -181,7 +211,7 @@ def build_manifest_pdf(bundle, organized_files):
 
     plan = bundle['plan']
     designer = bundle['designer']
-    customer = bundle.get('customer') or {}
+    customer_info = customer or bundle.get('customer') or {}
     plan_name = plan.get('name') or 'Plan Manifest'
 
     # Header branding block
@@ -200,10 +230,10 @@ def build_manifest_pdf(bundle, organized_files):
     text.textLine(f"Plan ID: {plan.get('id', 'N/A')}  |  Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
     text.textLine("")
 
-    if customer:
-        full_name = ' '.join(filter(None, [customer.get('first_name'), customer.get('last_name')])).strip() or customer.get('email') or 'Esteemed Customer'
+    if customer_info:
+        full_name = ' '.join(filter(None, [customer_info.get('first_name'), customer_info.get('last_name')])).strip() or customer_info.get('email') or 'Esteemed Customer'
         honorific = 'Mr/Mrs '
-        write_section('Delivered to', [f"{honorific}{full_name}", f"Email: {customer.get('email', 'N/A')}"])
+        write_section('Delivered to', [f"{honorific}{full_name}", f"Email: {customer_info.get('email', 'N/A')}"])
 
     overview_lines = [
         f"Category: {plan.get('category') or 'N/A'}",
@@ -220,10 +250,12 @@ def build_manifest_pdf(bundle, organized_files):
         )
     write_section("Plan Overview", overview_lines)
 
+    designer_name = ' '.join(filter(None, [designer.get('first_name'), designer.get('last_name')])).strip()
+    designer_email = designer.get('email') or designer.get('username') or 'Not provided'
     designer_lines = [
-        f"Designer: {designer.get('first_name') or ''} {designer.get('last_name') or ''}".strip() or "Designer: N/A",
-        f"Email: {designer.get('email') or 'N/A'}",
-        f"Phone: {designer.get('phone') or 'N/A'}",
+        f"Designer: {designer_name or 'Not provided'}",
+        f"Email: {designer_email}",
+        f"Phone: {designer.get('phone') or 'Not provided'}",
     ]
     write_section("Designer", designer_lines)
 
@@ -281,7 +313,7 @@ def build_manifest_pdf(bundle, organized_files):
     return buffer
 
 
-def build_plan_zip(bundle):
+def build_plan_zip(bundle, customer=None):
     zip_buffer = io.BytesIO()
     files_added = 0
 
@@ -299,9 +331,9 @@ def build_plan_zip(bundle):
             organized_files.append(organized_entry)
             files_added += 1
 
-        manifest_pdf = build_manifest_pdf(bundle, organized_files)
+        manifest_pdf = build_manifest_pdf(bundle, organized_files, customer=customer)
         safe_plan_name = re.sub(r"[^A-Za-z0-9]+", "-", (bundle['plan'].get('name') or 'plan')).strip('-') or 'plan'
-        zip_file.writestr(f"manifest/{safe_plan_name}-manifest.pdf", manifest_pdf.getvalue())
+        zip_file.writestr(f"plan-details/{safe_plan_name}-manifest.pdf", manifest_pdf.getvalue())
 
     zip_buffer.seek(0)
     download_name = f"{bundle['plan'].get('name') or 'plan'}-technical-files.zip"

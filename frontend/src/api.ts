@@ -60,6 +60,19 @@ export const purchasePlan = (plan_id: string, payment_method?: string) =>
 export const getMyPurchases = () =>
   api.get('/customer/purchases');
 
+// Download functionality
+export const generateDownloadLink = (plan_id: string) =>
+  api.post('/customer/plans/download-link', { plan_id });
+
+export const downloadPlanFile = (download_token: string) =>
+  api.get(`/customer/plans/download/${download_token}`, { responseType: 'blob' });
+
+export const adminDownloadPlan = (plan_id: string) =>
+  api.get(`/admin/plans/${plan_id}/download`, { responseType: 'blob' });
+
+export const verifyPurchase = (plan_id: string) =>
+  api.get(`/customer/plans/${plan_id}/purchase-status`);
+
 export const getFavorites = () =>
   api.get('/customer/favorites');
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPlanDetails } from '../api';
+import { getPlanDetails, purchasePlan, generateDownloadLink, downloadPlanFile, adminDownloadPlan, verifyPurchase } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Building2,
   ArrowLeft,
@@ -11,6 +12,12 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Download,
+  ShoppingCart,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  CreditCard,
 } from 'lucide-react';
 
 interface PlanFile {
@@ -61,11 +68,19 @@ interface PlanDetailsData {
 export default function PlanDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated, isAdmin } = useAuth();
   const [plan, setPlan] = useState<PlanDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Purchase and download states
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [purchaseStatus, setPurchaseStatus] = useState<'none' | 'purchased' | 'processing'>('none');
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 
@@ -87,6 +102,13 @@ export default function PlanDetailsPage() {
 
     loadPlan();
   }, [id]);
+
+  // Check purchase status when plan loads and user is authenticated
+  useEffect(() => {
+    if (plan && isAuthenticated) {
+      checkPurchaseStatus();
+    }
+  }, [plan, isAuthenticated]);
 
   // Handle keyboard navigation in fullscreen
   useEffect(() => {
@@ -121,6 +143,84 @@ export default function PlanDetailsPage() {
   const handleThumbnailClick = (idx: number) => {
     setCurrentImageIndex(idx);
     setIsFullscreen(true);
+  };
+
+  // Purchase and download handlers
+  const handlePurchase = async () => {
+    if (!id || !isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setIsPurchasing(true);
+    setDownloadError(null);
+    setPurchaseSuccess(false);
+
+    try {
+      await purchasePlan(id, 'mpesa'); // Default to M-Pesa
+      setPurchaseSuccess(true);
+      setPurchaseStatus('purchased');
+      // Auto-trigger download after successful purchase
+      setTimeout(() => handleDownload(), 1000);
+    } catch (err: any) {
+      setDownloadError(err?.response?.data?.message || 'Purchase failed. Please try again.');
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!id) return;
+
+    setIsDownloading(true);
+    setDownloadError(null);
+
+    try {
+      if (isAdmin) {
+        // Admin direct download
+        const response = await adminDownloadPlan(id);
+        const blob = new Blob([response.data], { type: 'application/zip' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${plan?.name || 'plan'}-technical-files.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        // Customer one-time download link
+        const linkResponse = await generateDownloadLink(id);
+        const { download_token } = linkResponse.data;
+        
+        const response = await downloadPlanFile(download_token);
+        const blob = new Blob([response.data], { type: 'application/zip' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${plan?.name || 'plan'}-technical-files.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      setDownloadError(err?.response?.data?.message || 'Download failed. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const checkPurchaseStatus = async () => {
+    if (!id || !isAuthenticated) return;
+    
+    try {
+      const response = await verifyPurchase(id);
+      const { purchased } = response.data;
+      setPurchaseStatus(purchased ? 'purchased' : 'none');
+    } catch (err) {
+      setPurchaseStatus('none');
+    }
   };
 
   const getImageUrls = (): string[] => {
@@ -381,26 +481,125 @@ export default function PlanDetailsPage() {
             </div>
           </div>
 
-          {/* Technical contents (non-paid overview) */}
+          {/* Technical contents with purchase/download functionality */}
           {(hasStructural || availableFileTypes.length > 0) && (
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-teal-600" />
                 Technical contents
               </h3>
-              <div className="space-y-3 text-sm text-gray-700">
-                {hasStructural && (
-                  <p>
-                    Structural design set included ({structuralSpecs.length} specification
-                    {structuralSpecs.length === 1 ? '' : 's'}).
+              
+              <div className="space-y-4">
+                {/* Technical overview */}
+                <div className="space-y-3 text-sm text-gray-700">
+                  {hasStructural && (
+                    <p>
+                      Structural design set included ({structuralSpecs.length} specification
+                      {structuralSpecs.length === 1 ? '' : 's'}).
+                    </p>
+                  )}
+                  {availableFileTypes.length > 0 && (
+                    <p>Available technical formats: {availableFileTypes.join(', ')}.</p>
+                  )}
+                  <p className="text-xs text-gray-500 italic">
+                    Purchase plan to get full access to all technical drawings and detailed specifications.
                   </p>
-                )}
-                {availableFileTypes.length > 0 && (
-                  <p>Available technical formats: {availableFileTypes.join(', ')}.</p>
-                )}
-                <p className="text-xs text-gray-500 italic">
-                  Detailed drawings and files are delivered after purchase but you can review the scope here.
-                </p>
+                </div>
+
+                {/* Purchase/Download section */}
+                <div className="border-t pt-4">
+                  {purchaseSuccess && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-green-800">Purchase successful! Download started...</span>
+                    </div>
+                  )}
+
+                  {downloadError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      <span className="text-sm text-red-800">{downloadError}</span>
+                    </div>
+                  )}
+
+                  {isAdmin ? (
+                    // Admin download button
+                    <button
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isDownloading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          Download Technical Files (Admin)
+                        </>
+                      )}
+                    </button>
+                  ) : !isAuthenticated ? (
+                    // Not logged in - prompt to login
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      Login to Purchase Plan
+                    </button>
+                  ) : purchaseStatus === 'purchased' ? (
+                    // Already purchased - download button
+                    <button
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isDownloading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Generating download link...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          Download Technical Files
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    // Not purchased - purchase button
+                    <button
+                      onClick={handlePurchase}
+                      disabled={isPurchasing}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isPurchasing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing purchase...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4" />
+                          Purchase Plan - KSH {Number(plan.price).toLocaleString()}
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    {isAdmin ? (
+                      "Admin access: Direct download of all technical files"
+                    ) : purchaseStatus === 'purchased' ? (
+                      "One-time download link will be generated and revoked after use"
+                    ) : (
+                      "Secure payment via M-Pesa. Download access granted immediately after purchase"
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
           )}

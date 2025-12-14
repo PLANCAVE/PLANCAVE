@@ -161,7 +161,7 @@ export default function BrowsePlans() {
       filtered = filtered.filter(plan => {
         const floors = plan.floors || 1;
         return (
-          (selectedFloors === 'bungalow' && floors === 1) ||
+          (selectedFloors === 'bungalow' && (floors === 1 || plan.project_type === 'Bungalows')) ||
           (selectedFloors === '2-story' && floors === 2) ||
           (selectedFloors === 'multi' && floors >= 3)
         );

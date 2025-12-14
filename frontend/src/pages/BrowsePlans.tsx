@@ -533,7 +533,7 @@ export default function BrowsePlans() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v8a2 2 0 01-2 2z"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V9a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2h-5l-5 1a2 2 0 01-2-2z"
                   />
                 </svg>
               </button>
@@ -558,25 +558,6 @@ export default function BrowsePlans() {
                 />
               </div>
             )}
-            <div className="flex flex-wrap gap-2">
-              {featureOptions.map(feature => (
-                <button
-                  key={feature.id}
-                  onClick={() => setSelectedFeatures(prev => 
-                    prev.includes(feature.id) 
-                      ? prev.filter(id => id !== feature.id)
-                      : [...prev, feature.id]
-                  )}
-                  className={`px-3 py-1 text-sm rounded-full border ${
-                    selectedFeatures.includes(feature.id)
-                      ? 'bg-teal-50 text-teal-700 border-teal-200'
-                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  {feature.label}
-                </button>
-              ))}
-            </div>
             {(activeChips.length > 0 || search) && (
               <div className="flex flex-wrap items-center gap-3 text-sm">
                 {activeChips.map((chip) => (

@@ -53,15 +53,34 @@ def save_file_locally(file, plan_id, category, filename):
     safe_filename = secure_filename(filename)
     unique_name = f"{uuid.uuid4()}_{safe_filename}"
     
-    # Create directory structure
     dir_path = os.path.join(UPLOAD_FOLDER, plan_id, category)
     os.makedirs(dir_path, exist_ok=True)
     
     file_path = os.path.join(dir_path, unique_name)
     file.save(file_path)
     
-    # Return relative path
     return f"/uploads/plans/{plan_id}/{category}/{unique_name}"
+
+
+def resolve_upload_absolute_path(relative_path: str) -> str:
+    relative = relative_path.lstrip('/')
+    return os.path.join(os.getcwd(), relative)
+
+
+def add_plan_file_record(records, file_type: str, relative_path: str, original_name: str | None = None):
+    if not relative_path:
+        return
+
+    absolute_path = resolve_upload_absolute_path(relative_path)
+    file_size = os.path.getsize(absolute_path) if os.path.exists(absolute_path) else None
+    file_name = secure_filename(original_name) if original_name else os.path.basename(relative_path)
+
+    records.append({
+        'file_name': file_name,
+        'file_type': file_type,
+        'file_path': relative_path,
+        'file_size': file_size
+    })
 
 
 @plans_bp.route('/upload', methods=['POST'])
@@ -112,6 +131,7 @@ def upload_plan():
 
     plan_id = str(uuid.uuid4())
     created_at = datetime.utcnow()
+    plan_file_records = []
 
     # Initialize file paths storage
     file_paths = {
@@ -133,6 +153,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
                     path = save_file_locally(file, plan_id, 'architectural', file.filename)
                     file_paths['architectural'].append(path)
+                    add_plan_file_record(plan_file_records, 'ARCHITECTURAL', path, file.filename)
 
         # Save Structural Files
         if 'structural_files' in files:
@@ -141,6 +162,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
                     path = save_file_locally(file, plan_id, 'structural', file.filename)
                     file_paths['structural'].append(path)
+                    add_plan_file_record(plan_file_records, 'STRUCTURAL', path, file.filename)
 
         # Save MEP Files
         if 'mep_mechanical_files' in files:
@@ -149,6 +171,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
                     path = save_file_locally(file, plan_id, 'mep/mechanical', file.filename)
                     file_paths['mep'].append(path)
+                    add_plan_file_record(plan_file_records, 'MEP_MECHANICAL', path, file.filename)
 
         if 'mep_electrical_files' in files:
             mep_files = request.files.getlist('mep_electrical_files')
@@ -156,6 +179,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
                     path = save_file_locally(file, plan_id, 'mep/electrical', file.filename)
                     file_paths['mep'].append(path)
+                    add_plan_file_record(plan_file_records, 'MEP_ELECTRICAL', path, file.filename)
 
         if 'mep_plumbing_files' in files:
             mep_files = request.files.getlist('mep_plumbing_files')
@@ -163,6 +187,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
                     path = save_file_locally(file, plan_id, 'mep/plumbing', file.filename)
                     file_paths['mep'].append(path)
+                    add_plan_file_record(plan_file_records, 'MEP_PLUMBING', path, file.filename)
 
         # Save Civil Files
         if 'civil_files' in files:
@@ -171,6 +196,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
                     path = save_file_locally(file, plan_id, 'civil', file.filename)
                     file_paths['civil'].append(path)
+                    add_plan_file_record(plan_file_records, 'CIVIL', path, file.filename)
 
         # Save Fire Safety Files
         if 'fire_safety_files' in files:
@@ -179,6 +205,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
                     path = save_file_locally(file, plan_id, 'fire_safety', file.filename)
                     file_paths['fire_safety'].append(path)
+                    add_plan_file_record(plan_file_records, 'FIRE_SAFETY', path, file.filename)
 
         # Save Interior Files
         if 'interior_files' in files:
@@ -187,6 +214,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS | ALLOWED_EXTENSIONS_IMAGES):
                     path = save_file_locally(file, plan_id, 'interior', file.filename)
                     file_paths['interior'].append(path)
+                    add_plan_file_record(plan_file_records, 'INTERIOR', path, file.filename)
 
         # Save 3D Renders
         if 'renders' in files:
@@ -195,6 +223,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMAGES | {'pdf'}):
                     path = save_file_locally(file, plan_id, 'renders', file.filename)
                     file_paths['renders'].append(path)
+                    add_plan_file_record(plan_file_records, 'RENDER', path, file.filename)
 
         # Save BOQ Files
         if form.get('includes_boq') == 'true':
@@ -203,28 +232,33 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_BOQ):
                     path = save_file_locally(file, plan_id, 'boq', f'architectural_boq_{file.filename}')
                     file_paths['boq'].append(path)
+                    add_plan_file_record(plan_file_records, 'BOQ_ARCHITECTURAL', path, file.filename)
 
             if 'boq_structural' in files:
                 file = files['boq_structural']
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_BOQ):
                     path = save_file_locally(file, plan_id, 'boq', f'structural_boq_{file.filename}')
                     file_paths['boq'].append(path)
+                    add_plan_file_record(plan_file_records, 'BOQ_STRUCTURAL', path, file.filename)
 
             if 'boq_mep' in files:
                 file = files['boq_mep']
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_BOQ):
                     path = save_file_locally(file, plan_id, 'boq', f'mep_boq_{file.filename}')
                     file_paths['boq'].append(path)
+                    add_plan_file_record(plan_file_records, 'BOQ_MEP', path, file.filename)
 
             if 'cost_summary' in files:
                 file = files['cost_summary']
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_BOQ):
                     path = save_file_locally(file, plan_id, 'boq', f'cost_summary_{file.filename}')
                     file_paths['boq'].append(path)
+                    add_plan_file_record(plan_file_records, 'BOQ_COST_SUMMARY', path, file.filename)
 
         # Save Thumbnail
         thumbnail = files['thumbnail']
         thumbnail_path = save_file_locally(thumbnail, plan_id, 'images', thumbnail.filename)
+        add_plan_file_record(plan_file_records, 'THUMBNAIL', thumbnail_path, thumbnail.filename)
 
         # Save Gallery Images
         gallery_paths = []
@@ -234,6 +268,7 @@ def upload_plan():
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMAGES):
                     path = save_file_locally(file, plan_id, 'images/gallery', file.filename)
                     gallery_paths.append(path)
+                    add_plan_file_record(plan_file_records, 'GALLERY', path, file.filename)
 
         # Attach gallery paths to file_paths so details endpoint can build a gallery
         if gallery_paths:
@@ -306,6 +341,21 @@ def upload_plan():
                 'Available',
                 created_at
             ))
+            for record in plan_file_records:
+                cur.execute(
+                    """
+                    INSERT INTO plan_files (plan_id, file_name, file_type, file_path, file_size)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (
+                        plan_id,
+                        record['file_name'],
+                        record['file_type'],
+                        record['file_path'],
+                        record['file_size']
+                    )
+                )
+
             conn.commit()
 
             return jsonify({

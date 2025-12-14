@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPlanDetails, generateDownloadLink, downloadPlanFile } from '../api';
+import { getPlanDetails, generateDownloadLink, downloadPlanFile, adminDownloadPlan } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
 import {
@@ -243,8 +243,19 @@ export default function PlanDetailsPage() {
     setDownloadError(null);
 
     try {
-      if (isAdmin || isPlanOwnerDesigner) {
-        // Admin direct download - get all technical files individually
+      if (isAdmin) {
+        const response = await adminDownloadPlan(id);
+        const blob = new Blob([response.data], { type: 'application/zip' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${plan.name || 'plan'}-technical-files.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else if (isPlanOwnerDesigner) {
+        // Designers downloading their own plans: fetch stored files directly
         if (plan.files && plan.files.length > 0) {
           for (const file of plan.files) {
             const fileUrl = `${apiBaseUrl}${file.file_path}`;
@@ -259,7 +270,6 @@ export default function PlanDetailsPage() {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
 
-            // Small delay between downloads
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
         }

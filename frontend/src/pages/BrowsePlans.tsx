@@ -152,8 +152,12 @@ export default function BrowsePlans() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleDropdown = (menu: 'size' | 'style' | 'budget') => {
-    setOpenDropdown((prev) => (prev === menu ? null : menu));
+  const toggleDropdown = (name: 'size' | 'style' | 'budget') => {
+    setOpenDropdown(openDropdown === name ? null : name);
+  };
+
+  const dropdownButtonClass = (isActive: boolean) => {
+    return `flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${isActive ? 'bg-[#0f4c45] text-white' : 'bg-white text-gray-800 hover:bg-gray-100 border border-gray-200'}`;
   };
 
   const presetButtonClass = (isActive: boolean) =>
@@ -161,11 +165,6 @@ export default function BrowsePlans() {
       isActive
         ? 'text-[#0f4c45] after:block after:h-0.5 after:bg-[#0f4c45] after:rounded-full'
         : 'text-gray-600 hover:text-[#0f4c45]'
-    }`;
-
-  const dropdownButtonClass = (isActive: boolean) =>
-    `flex items-center gap-1 text-sm font-semibold tracking-wide ${
-      isActive ? 'text-[#0f4c45]' : 'text-gray-700 hover:text-[#0f4c45]'
     }`;
 
   const activeChips = [
@@ -261,7 +260,7 @@ export default function BrowsePlans() {
 
             <div className="relative">
               <button
-                onClick={() => toggleDropdown('size')}
+                onClick={() => toggleDropdown('size' as 'size' | 'style' | 'budget')}
                 className={dropdownButtonClass(!!selectedSize || openDropdown === 'size')}
               >
                 By Size <ChevronDown className="w-4 h-4" />
@@ -290,7 +289,7 @@ export default function BrowsePlans() {
 
             <div className="relative">
               <button
-                onClick={() => toggleDropdown('style')}
+                onClick={() => toggleDropdown('style' as 'size' | 'style' | 'budget')}
                 className={dropdownButtonClass(!!selectedStyle || openDropdown === 'style')}
               >
                 By Style <ChevronDown className="w-4 h-4" />
@@ -319,7 +318,7 @@ export default function BrowsePlans() {
 
             <div className="relative">
               <button
-                onClick={() => toggleDropdown('budget')}
+                onClick={() => toggleDropdown('budget' as 'size' | 'style' | 'budget')}
                 className={dropdownButtonClass(!!selectedBudget || openDropdown === 'budget')}
               >
                 By Budget <ChevronDown className="w-4 h-4" />

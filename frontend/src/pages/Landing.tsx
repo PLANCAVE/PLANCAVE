@@ -30,56 +30,64 @@ const PlanShowcase = ({ title, subtitle, plans, cta, badge }: PlanShowcaseProps)
   const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
 
   return (
-    <section className="relative py-16 border-t border-white/10 bg-gradient-to-b from-transparent to-slate-900/20">
+    <section className="relative py-16 border-t border-white/5 bg-gradient-to-b from-slate-900/20 to-transparent">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
           <div>
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-3">{title}</h3>
-            <p className="text-gray-300 text-lg">{subtitle}</p>
+            <p className="text-lg text-gray-300 max-w-2xl">{subtitle}</p>
           </div>
-          <button className="self-start inline-flex items-center gap-2 text-sm uppercase tracking-[0.4em] text-white/70 hover:text-white transition">
+          <button className="flex items-center gap-2 text-sm uppercase tracking-[0.3em] text-white/70 hover:text-white transition">
             {cta}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan) => (
-            <div key={plan.id} className="group relative rounded-3xl overflow-hidden bg-white/5 border border-white/10 shadow-2xl">
+            <div key={plan.id} className="group relative rounded-2xl overflow-hidden bg-gradient-to-b from-slate-800/50 to-slate-900/80 border border-white/5 hover:border-white/20 transition-all hover:shadow-xl hover:shadow-purple-500/10">
               <div className="relative aspect-[4/3] overflow-hidden">
                 <img
-                  src={plan?.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg'}
+                  src={plan.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg'}
                   alt={plan.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                <div className="absolute top-4 left-4 flex items-center gap-2">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                
+                <div className="absolute top-4 left-4 flex gap-2">
                   {badge && (
-                    <span className="text-xs uppercase tracking-[0.35em] px-3 py-1 rounded-full bg-white/20 text-white backdrop-blur">
+                    <span className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md">
                       {badge}
                     </span>
                   )}
-                  <span className="text-xs uppercase tracking-[0.35em] px-3 py-1 rounded-full bg-white/20 text-white backdrop-blur">
+                  <span className="text-xs px-3 py-1 rounded-full bg-black/50 backdrop-blur text-white border border-white/10">
                     {plan.package_level}
                   </span>
                 </div>
-                <div className="absolute bottom-4 left-4 right-4 text-white">
-                  <h4 className="text-xl font-semibold drop-shadow">{plan.name}</h4>
-                  <p className="text-sm text-white/80 line-clamp-2">{plan.description}</p>
-                </div>
               </div>
-              <div className="p-6 flex items-center justify-between text-white">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.35em] text-white/60">From</p>
-                  <p className="text-2xl font-bold">KSH {Number(plan.price).toLocaleString()}</p>
+
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-3">
+                  <h4 className="text-xl font-bold text-white line-clamp-1">{plan.name}</h4>
+                  <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400">
+                    {plan.sales_count || 0} sold
+                  </span>
                 </div>
-                <Link
-                  to={`/plans/${plan.id}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/30 hover:bg-white/10 transition"
-                >
-                  View
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+                
+                <p className="text-sm text-gray-300 line-clamp-2 mb-4">{plan.description}</p>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-gray-400">From</p>
+                    <p className="text-2xl font-bold text-white">KSH {Number(plan.price).toLocaleString()}</p>
+                  </div>
+                  <Link 
+                    to={`/plans/${plan.id}`}
+                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition border border-white/10"
+                  >
+                    <ArrowRight className="w-4 h-4 text-white" />
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
@@ -96,6 +104,51 @@ interface PlanShowcaseProps {
   cta: string;
   badge?: string;
 }
+
+const SizeShowcase = ({ plans }: { plans: Plan[] }) => {
+  const sizeGroups = useMemo(() => ({
+    small: plans.filter(p => p.area < 100),
+    medium: plans.filter(p => p.area >= 100 && p.area < 200),
+    large: plans.filter(p => p.area >= 200)
+  }), [plans]);
+
+  return (
+    <section className="py-16 bg-gradient-to-b from-slate-900/20 to-transparent">
+      <div className="max-w-7xl mx-auto px-4">
+        <h3 className="text-3xl font-bold text-white mb-8">Browse by Size</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { title: "Compact (<100m²)", plans: sizeGroups.small.slice(0,4), color: "from-blue-500 to-cyan-500" },
+            { title: "Family (100-200m²)", plans: sizeGroups.medium.slice(0,4), color: "from-teal-500 to-emerald-500" },
+            { title: "Estates (200m²+)", plans: sizeGroups.large.slice(0,4), color: "from-purple-500 to-pink-500" }
+          ].map((group) => (
+            <div key={group.title} className="group">
+              <div className={`h-1 bg-gradient-to-r ${group.color} rounded-full`}></div>
+              <div className="pt-6">
+                <h4 className="text-xl font-bold text-white mb-4">{group.title}</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {group.plans.map(plan => (
+                    <div key={plan.id} className="bg-slate-800/50 rounded-lg overflow-hidden border border-white/5 hover:border-white/20 transition-all">
+                      <div className="aspect-[4/3] relative">
+                        <img src={plan.image_url || '/placeholder.jpg'} className="w-full h-full object-cover" alt={plan.name} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                      </div>
+                      <div className="p-4">
+                        <h5 className="text-sm font-medium text-white">{plan.name}</h5>
+                        <p className="text-xs text-gray-300">{plan.area}m² • {plan.bedrooms || '--'} beds</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
@@ -261,7 +314,7 @@ export default function Landing() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-[0.5rem] uppercase tracking-[0.35em] text-white/90">
-                    <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
+                    <span className="px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
                       KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
                     </span>
                     <span className={`px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
@@ -286,7 +339,7 @@ export default function Landing() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-4 bg-black/5 backdrop-blur-[1px] rounded-full border border-white/5 px-4 py-2 text-[0.6rem] uppercase tracking-[0.35em] text-white/90">
+                  <div className="flex items-center gap-4 bg-black/5 backdrop-blur-[1px] rounded-full border border-white/30 px-4 py-2 text-[0.6rem] uppercase tracking-[0.35em] text-white/90">
                     <span className="text-white text-lg font-light drop-shadow">{currentPlan?.area ?? '—'} m²</span>
                     <span className="text-white text-lg font-light drop-shadow">{currentPlan?.bedrooms ?? '—'} beds</span>
                     <span className="text-white text-lg font-light drop-shadow">{currentPlan?.floors ?? '—'} floors</span>
@@ -420,12 +473,12 @@ export default function Landing() {
         </div>
       </div>
 
-
       {/* Plan Collections */}
       <PlanShowcase title="Plans for every budget" subtitle="Smart cost-saving designs without sacrificing aesthetics." plans={budgetPlans} cta="View all" />
       <PlanShowcase title="Best selling plans" subtitle="Functional, beautiful homes our buyers love." plans={bestSellingPlans} cta="View all" badge="Best Seller" />
       <PlanShowcase title="New plans every week" subtitle="Fresh drops curated weekly by top architects." plans={newPlans} cta="View all" />
       <PlanShowcase title="Plans for every family size" subtitle="Layouts tuned for how your household really lives." plans={familyPlans} cta="View all" />
+      <SizeShowcase plans={featuredPlans} />
 
       {/* CTA Section */}
       <div className="relative py-24">

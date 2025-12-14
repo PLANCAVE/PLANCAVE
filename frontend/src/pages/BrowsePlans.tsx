@@ -23,6 +23,7 @@ interface Plan {
   sales_count: number;
   certifications?: string[];
   created_at: string;
+  features?: string[];
 }
 
 export default function BrowsePlans() {
@@ -35,8 +36,11 @@ export default function BrowsePlans() {
   const [selectedStyle, setSelectedStyle] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedBudget, setSelectedBudget] = useState('');
+  const [selectedBedrooms, setSelectedBedrooms] = useState('');
+  const [selectedFloors, setSelectedFloors] = useState('');
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [activePreset, setActivePreset] = useState<'shop' | 'best-sellers'>('shop');
-  const [openDropdown, setOpenDropdown] = useState<null | 'size' | 'style' | 'budget'>(null);
+  const [openDropdown, setOpenDropdown] = useState<null | 'size' | 'style' | 'budget' | 'bedrooms' | 'floors' | 'features'>(null);
   const [showSearch, setShowSearch] = useState(false);
   const filterBarRef = useRef<HTMLDivElement>(null);
 
@@ -47,25 +51,46 @@ export default function BrowsePlans() {
   const [cartBusyId, setCartBusyId] = useState<string | null>(null);
 
   const planCategories = [
-    'Mansion',
-    'Bungalow',
-    'Townhouse',
-    'Duplex',
+    'Residential',
+    'Commercial', 
+    'Office',
     'Apartment',
-    'Villa',
-    'Commercial Complex'
+    'Modern',
+    'Traditional',
+    'Minimalist'
   ];
 
   const sizeOptions = [
-    { id: 'compact', label: 'Compact • Under 150 m²', max: 150 },
-    { id: 'family', label: 'Family • 150 - 250 m²', min: 150, max: 250 },
-    { id: 'estate', label: 'Estate • 250 m² +', min: 250 },
+    { id: 'small', label: 'Small (50-100 m²)', min: 50, max: 100 },
+    { id: 'medium', label: 'Medium (100-250 m²)', min: 100, max: 250 },
+    { id: 'large', label: 'Large (250-500 m²)', min: 250, max: 500 },
+    { id: 'xl', label: 'Extra Large (500+ m²)', min: 500 }
   ];
 
   const budgetOptions = [
-    { id: 'starter', label: 'Under KSH 250K', max: 250000 },
-    { id: 'midrange', label: 'KSH 250K - 750K', min: 250000, max: 750000 },
-    { id: 'premium', label: 'KSH 750K+', min: 750000 },
+    { id: 'budget', label: 'Budget (Under KSH 150K)', max: 150000 },
+    { id: 'standard', label: 'Standard (KSH 150K-500K)', min: 150000, max: 500000 },
+    { id: 'premium', label: 'Premium (KSH 500K-1.5M)', min: 500000, max: 1500000 },
+    { id: 'luxury', label: 'Luxury (KSH 1.5M+)', min: 1500000 }
+  ];
+
+  const bedroomOptions = [
+    { id: '1-2', label: '1-2 Bedrooms', min: 1, max: 2 },
+    { id: '3-4', label: '3-4 Bedrooms', min: 3, max: 4 }, 
+    { id: '5+', label: '5+ Bedrooms', min: 5 }
+  ];
+
+  const floorOptions = [
+    { id: 'bungalow', label: 'Bungalow (1 Floor)' },
+    { id: '2-story', label: '2 Story' },
+    { id: 'multi', label: 'Multi-Story (3+ Floors)' }
+  ];
+
+  const featureOptions = [
+    { id: 'boq', label: 'Includes BOQ' },
+    { id: 'pool', label: 'Swimming Pool' },
+    { id: 'parking', label: 'Parking' },
+    { id: 'security', label: 'Security Features' }
   ];
 
   // Initial load: fetch all available plans from backend
@@ -127,18 +152,57 @@ export default function BrowsePlans() {
       }
     }
 
+    if (selectedBedrooms) {
+      const config = bedroomOptions.find(o => o.id === selectedBedrooms);
+      if (config) {
+        filtered = filtered.filter(plan => {
+          const beds = plan.bedrooms || 0;
+          return (!config.min || beds >= config.min) && 
+                 (!config.max || beds <= config.max);
+        });
+      }
+    }
+
+    if (selectedFloors) {
+      filtered = filtered.filter(plan => {
+        const floors = plan.floors || 1;
+        return (
+          (selectedFloors === 'bungalow' && floors === 1) ||
+          (selectedFloors === '2-story' && floors === 2) ||
+          (selectedFloors === 'multi' && floors >= 3)
+        );
+      });
+    }
+
+    if (selectedFeatures.length > 0) {
+      filtered = filtered.filter(plan => {
+        return selectedFeatures.every(feature => {
+          switch(feature) {
+            case 'boq': return plan.includes_boq;
+            case 'pool': return plan.features?.includes('pool');
+            case 'parking': return plan.features?.includes('parking');
+            case 'security': return plan.features?.includes('security');
+            default: return false;
+          }
+        });
+      });
+    }
+
     if (activePreset === 'best-sellers') {
       filtered = [...filtered].sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
     }
 
     setPlans(filtered);
-  }, [allPlans, search, selectedStyle, selectedSize, selectedBudget, activePreset]);
+  }, [allPlans, search, selectedStyle, selectedSize, selectedBudget, selectedBedrooms, selectedFloors, selectedFeatures, activePreset]);
 
   const clearFilters = () => {
     setSearch('');
     setSelectedStyle('');
     setSelectedSize('');
     setSelectedBudget('');
+    setSelectedBedrooms('');
+    setSelectedFloors('');
+    setSelectedFeatures([]);
     setActivePreset('shop');
   };
 
@@ -152,7 +216,7 @@ export default function BrowsePlans() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleDropdown = (name: 'size' | 'style' | 'budget') => {
+  const toggleDropdown = (name: 'size' | 'style' | 'budget' | 'bedrooms' | 'floors' | 'features') => {
     setOpenDropdown(openDropdown === name ? null : name);
   };
 
@@ -176,6 +240,18 @@ export default function BrowsePlans() {
     selectedBudget && {
       label: budgetOptions.find((option) => option.id === selectedBudget)?.label || 'Budget',
       onRemove: () => setSelectedBudget(''),
+    },
+    selectedBedrooms && {
+      label: bedroomOptions.find((option) => option.id === selectedBedrooms)?.label || 'Bedrooms',
+      onRemove: () => setSelectedBedrooms(''),
+    },
+    selectedFloors && {
+      label: floorOptions.find((option) => option.id === selectedFloors)?.label || 'Floors',
+      onRemove: () => setSelectedFloors(''),
+    },
+    selectedFeatures.length > 0 && {
+      label: 'Features',
+      onRemove: () => setSelectedFeatures([]),
     },
     activePreset === 'best-sellers' && {
       label: 'Best sellers',
@@ -245,7 +321,7 @@ export default function BrowsePlans() {
                 clearFilters();
                 setActivePreset('shop');
               }}
-              className={presetButtonClass(activePreset === 'shop' && !selectedStyle && !selectedSize && !selectedBudget)}
+              className={presetButtonClass(activePreset === 'shop' && !selectedStyle && !selectedSize && !selectedBudget && !selectedBedrooms && !selectedFloors && !selectedFeatures.length)}
             >
               Show All
             </button>
@@ -344,6 +420,95 @@ export default function BrowsePlans() {
                 </div>
               )}
             </div>
+
+            <div className="relative">
+              <button
+                onClick={() => toggleDropdown('bedrooms')}
+                className={dropdownButtonClass(!!selectedBedrooms || openDropdown === 'bedrooms')}
+              >
+                By Bedrooms <ChevronDown className="w-4 h-4" />
+              </button>
+              {openDropdown === 'bedrooms' && (
+                <div className="absolute mt-3 w-56 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-[60]">
+                  {bedroomOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedBedrooms(option.id === selectedBedrooms ? '' : option.id);
+                        setOpenDropdown(null);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        selectedBedrooms === option.id ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => toggleDropdown('floors')}
+                className={dropdownButtonClass(!!selectedFloors || openDropdown === 'floors')}
+              >
+                By Floors <ChevronDown className="w-4 h-4" />
+              </button>
+              {openDropdown === 'floors' && (
+                <div className="absolute mt-3 w-48 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-[60]">
+                  {floorOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFloors(option.id === selectedFloors ? '' : option.id);
+                        setOpenDropdown(null);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        selectedFloors === option.id ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => toggleDropdown('features')}
+                className={dropdownButtonClass(!!selectedFeatures.length || openDropdown === 'features')}
+              >
+                By Features <ChevronDown className="w-4 h-4" />
+              </button>
+              {openDropdown === 'features' && (
+                <div className="absolute mt-3 w-60 bg-white text-gray-800 rounded-2xl shadow-xl p-2 border border-gray-200 z-[60]">
+                  {featureOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (selectedFeatures.includes(option.id)) {
+                          setSelectedFeatures(selectedFeatures.filter((feature) => feature !== option.id));
+                        } else {
+                          setSelectedFeatures([...selectedFeatures, option.id]);
+                        }
+                        setOpenDropdown(null);
+                        setActivePreset('shop');
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        selectedFeatures.includes(option.id) ? 'bg-teal-50 text-[#0f4c45]' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -364,7 +529,25 @@ export default function BrowsePlans() {
                 />
               </div>
             )}
-
+            <div className="flex flex-wrap gap-2">
+              {featureOptions.map(feature => (
+                <button
+                  key={feature.id}
+                  onClick={() => setSelectedFeatures(prev => 
+                    prev.includes(feature.id) 
+                      ? prev.filter(id => id !== feature.id)
+                      : [...prev, feature.id]
+                  )}
+                  className={`px-3 py-1 text-sm rounded-full border ${
+                    selectedFeatures.includes(feature.id)
+                      ? 'bg-teal-50 text-teal-700 border-teal-200'
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  {feature.label}
+                </button>
+              ))}
+            </div>
             {(activeChips.length > 0 || search) && (
               <div className="flex flex-wrap items-center gap-3 text-sm">
                 {activeChips.map((chip) => (

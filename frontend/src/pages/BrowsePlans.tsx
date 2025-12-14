@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { browsePlans } from '../api';
 import { Search, Heart, ShoppingCart, Building2, Award, FileText, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -38,6 +38,7 @@ export default function BrowsePlans() {
   const [activePreset, setActivePreset] = useState<'shop' | 'best-sellers'>('shop');
   const [openDropdown, setOpenDropdown] = useState<null | 'size' | 'style' | 'budget'>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const filterBarRef = useRef<HTMLDivElement>(null);
 
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -141,9 +142,13 @@ export default function BrowsePlans() {
   };
 
   useEffect(() => {
-    const handleDocumentClick = () => setOpenDropdown(null);
-    document.addEventListener('click', handleDocumentClick);
-    return () => document.removeEventListener('click', handleDocumentClick);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterBarRef.current && !filterBarRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const toggleDropdown = (menu: 'size' | 'style' | 'budget') => {
@@ -221,25 +226,19 @@ export default function BrowsePlans() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30">
       {/* Header with browse label and controls */}
-      <div className="relative bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] py-4">
+      <div className="relative bg-gradient-to-r from-[#1c4c4c] via-[#123636] to-[#082020] py-4 shadow-inner">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="absolute top-0 right-10 w-40 h-40 bg-teal-400/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-10 w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl"></div>
 
         <div className="relative z-10">
-          <div className="max-w-6xl mx-auto px-4 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium tracking-wide text-teal-100 uppercase">Browse plans</span>
-              <span className="text-xs text-white/70">Curated categories for faster discovery</span>
-            </div>
-
-            <div
-              className="flex items-center gap-6 overflow-x-auto text-white/90"
-              onClick={(event) => event.stopPropagation()}
-            >
+          <div className="max-w-6xl mx-auto px-4" ref={filterBarRef}>
+            <div className="flex flex-wrap items-center gap-4 overflow-x-auto text-white">
               <button
                 onClick={() => setShowSearch((prev) => !prev)}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white hover:bg-white/20 transition"
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition border ${
+                  showSearch ? 'bg-white text-teal-700 border-white' : 'bg-white/10 border-white/30 hover:bg-white/20'
+                }`}
               >
                 <Search className="w-4 h-4" />
                 <span>Search plans</span>
@@ -262,7 +261,7 @@ export default function BrowsePlans() {
                 Best Sellers
               </button>
 
-              <div className="relative" onClick={(event) => event.stopPropagation()}>
+              <div className="relative">
                 <button
                   onClick={() => toggleDropdown('size')}
                   className={dropdownButtonClass(!!selectedSize || openDropdown === 'size')}
@@ -291,7 +290,7 @@ export default function BrowsePlans() {
                 )}
               </div>
 
-              <div className="relative" onClick={(event) => event.stopPropagation()}>
+              <div className="relative">
                 <button
                   onClick={() => toggleDropdown('style')}
                   className={dropdownButtonClass(!!selectedStyle || openDropdown === 'style')}
@@ -320,7 +319,7 @@ export default function BrowsePlans() {
                 )}
               </div>
 
-              <div className="relative" onClick={(event) => event.stopPropagation()}>
+              <div className="relative">
                 <button
                   onClick={() => toggleDropdown('budget')}
                   className={dropdownButtonClass(!!selectedBudget || openDropdown === 'budget')}

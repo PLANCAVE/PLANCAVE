@@ -95,7 +95,7 @@ export default function Analytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Designer Revenue</p>
-                <p className="text-3xl font-bold text-emerald-600">KSH {totalDesignerRevenue.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-emerald-600">$ {totalDesignerRevenue.toLocaleString()}</p>
               </div>
               <DollarSign className="w-10 h-10 text-emerald-400" />
             </div>

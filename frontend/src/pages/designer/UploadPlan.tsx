@@ -918,7 +918,7 @@ export default function UploadPlan() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Estimated Cost (Min) - KSH
+            Estimated Cost (Min) - $
           </label>
           <input
             type="number"
@@ -930,7 +930,7 @@ export default function UploadPlan() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Estimated Cost (Max) - KSH
+            Estimated Cost (Max) - $
           </label>
           <input
             type="number"
@@ -958,10 +958,10 @@ export default function UploadPlan() {
         </label>
         <div className="space-y-3">
           {[
-            {value: 'basic', label: 'Basic', desc: 'Architectural plans only', badge: 'KSH 5K-15K'},
-            {value: 'standard', label: 'Standard', desc: 'Architectural + Structural', badge: 'KSH 15K-30K'},
-            {value: 'premium', label: 'Premium', desc: 'Arch + Struct + MEP + BOQ', badge: 'KSH 30K-60K'},
-            {value: 'complete', label: 'Complete', desc: 'Everything (All disciplines + Interior + Civil + Fire)', badge: 'KSH 60K+'}
+            {value: 'basic', label: 'Basic', desc: 'Architectural plans only', badge: '$5K-15K'},
+            {value: 'standard', label: 'Standard', desc: 'Architectural + Structural', badge: '$15K-30K'},
+            {value: 'premium', label: 'Premium', desc: 'Arch + Struct + MEP + BOQ', badge: '$30K-60K'},
+            {value: 'complete', label: 'Complete', desc: 'Everything (All disciplines + Interior + Civil + Fire)', badge: '$60K+'}
           ].map(pkg => (
             <label key={pkg.value} 
                    className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-purple-50 transition-colors"
@@ -1039,7 +1039,7 @@ export default function UploadPlan() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Base Price (KSH) *
+          Base Price ($) *
         </label>
         <input
           type="number"

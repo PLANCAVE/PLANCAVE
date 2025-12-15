@@ -84,7 +84,7 @@ const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge }: PlanShowc
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-gray-400">From</p>
-                    <p className="text-2xl font-bold text-white">KSH {Number(plan.price).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-white">$ {Number(plan.price).toLocaleString()}</p>
                   </div>
                   <Link 
                     to={`/plans/${plan.id}`}

@@ -139,7 +139,7 @@ export default function Cart() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs text-white/60">Price</p>
-                      <p className="text-lg font-semibold">KSH {Number(plan.price || 0).toLocaleString()}</p>
+                      <p className="text-lg font-semibold">$ {Number(plan.price || 0).toLocaleString()}</p>
                     </div>
                     <Link
                       to={`/plans/${plan.id}`}

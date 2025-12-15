@@ -442,7 +442,7 @@ export default function PlanDetailsPage() {
             <div className="mb-6">
               <div className="text-sm text-gray-600 mb-1">Price</div>
               <div className="text-3xl font-bold text-teal-600 mb-2">
-                {priceNumber ? `KSH ${priceNumber.toLocaleString()}` : 'Contact for price'}
+                {priceNumber ? `$${priceNumber.toLocaleString()}` : 'Contact for price'}
               </div>
               <div className="inline-block px-3 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
                 {plan.package_level?.toUpperCase()}
@@ -593,7 +593,7 @@ export default function PlanDetailsPage() {
                 <div className="pt-3 border-t">
                   <div className="text-gray-600 mb-1">Estimated build cost:</div>
                   <div className="font-medium text-gray-900">
-                    KSH {plan.estimated_cost_min.toLocaleString()} - {plan.estimated_cost_max.toLocaleString()}
+                    $ {plan.estimated_cost_min.toLocaleString()} - ${plan.estimated_cost_max.toLocaleString()}
                   </div>
                 </div>
               )}
@@ -727,7 +727,7 @@ export default function PlanDetailsPage() {
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4" />
-                        Purchase plan · KSH {Number(plan.price).toLocaleString()}
+                        Purchase plan · $ {Number(plan.price).toLocaleString()}
                       </>
                     )}
                   </button>

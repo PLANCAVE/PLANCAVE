@@ -83,10 +83,10 @@ export default function BrowsePlans() {
   ];
 
   const budgetOptions = [
-    { id: 'budget', label: 'Budget (Under KSH 150K)', max: 150000 },
-    { id: 'standard', label: 'Standard (KSH 150K-500K)', min: 150000, max: 500000 },
-    { id: 'premium', label: 'Premium (KSH 500K-1.5M)', min: 500000, max: 1500000 },
-    { id: 'luxury', label: 'Luxury (KSH 1.5M+)', min: 1500000 }
+    { id: 'budget', label: 'Budget (Under $150K)', max: 150000 },
+    { id: 'standard', label: 'Standard ($150K-500K)', min: 150000, max: 500000 },
+    { id: 'premium', label: 'Premium ($500K-1.5M)', min: 500000, max: 1500000 },
+    { id: 'luxury', label: 'Luxury ($1.5M+)', min: 1500000 }
   ];
 
   const bedroomOptions = [
@@ -681,7 +681,7 @@ export default function BrowsePlans() {
                         {plan.name.trim()}
                       </h3>
                       <span className="text-sm font-bold text-teal-300 bg-black/40 px-2 py-1 rounded-md whitespace-nowrap">
-                        KSH {Number(plan.price).toLocaleString()}
+                        $ {Number(plan.price).toLocaleString()}
                       </span>
                     </div>
                     <div className="absolute top-3 right-3 flex gap-2">
@@ -757,7 +757,7 @@ export default function BrowsePlans() {
                       <div>
                         <p className="text-xs text-gray-500">Starting from</p>
                         <p className="text-base font-semibold text-gray-900">
-                          KSH {Number(plan.price).toLocaleString()}
+                          $ {Number(plan.price).toLocaleString()}
                         </p>
                       </div>
                       <div className="flex gap-2">

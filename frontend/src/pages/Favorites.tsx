@@ -131,7 +131,7 @@ export default function Favorites() {
                 <div className="flex items-center justify-between pt-4 border-t border-white/10">
                   <div>
                     <p className="text-xs text-white/60">Price</p>
-                    <p className="text-lg font-semibold">KSH {Number(plan.price || 0).toLocaleString()}</p>
+                    <p className="text-lg font-semibold">$ {Number(plan.price || 0).toLocaleString()}</p>
                   </div>
                   <Link
                     to={`/plans/${plan.id}`}

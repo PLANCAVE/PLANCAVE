@@ -90,7 +90,7 @@ export default function PlanManagement() {
                         {plan.category}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-semibold">KSH {plan.price.toLocaleString()}</td>
+                    <td className="py-3 px-4 font-semibold">$ {plan.price.toLocaleString()}</td>
                     <td className="py-3 px-4">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-semibold ${

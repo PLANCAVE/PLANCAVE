@@ -193,7 +193,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-sm text-gray-600">Total Spent</p>
                     <p className="text-2xl font-bold mt-1">
-                      KSH {(data.purchase_summary?.total_spent || 0).toLocaleString()}
+                      $ {(data.purchase_summary?.total_spent || 0).toLocaleString()}
                     </p>
                   </div>
                   <DollarSign className="w-8 h-8 text-green-600" />

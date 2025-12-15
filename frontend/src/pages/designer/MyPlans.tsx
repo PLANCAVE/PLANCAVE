@@ -89,7 +89,7 @@ export default function MyPlans() {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Price:</span>
-                    <span className="font-semibold">KSH {plan.price.toLocaleString()}</span>
+                    <span className="font-semibold">$ {plan.price.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 flex items-center gap-1">

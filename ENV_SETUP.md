@@ -7,8 +7,8 @@ Add these to your `.env` file on the VPS:
 PAYSTACK_SECRET_KEY=sk_test_f61f897b4d617f01c154826e8954d9fca4bb5714
 PAYSTACK_PUBLIC_KEY=pk_test_6bc288065e6d75d009d6833eb4dadc29ce92a94d
 PAYSTACK_CURRENCY=USD
-PAYSTACK_CALLBACK_URL=https://34.135.248.249/paystack-callback
-PAYSTACK_WEBHOOK_URL=https://34.135.248.249/customer/payments/paystack/webhook
+PAYSTACK_CALLBACK_URL=http://34.135.248.249/paystack-callback
+PAYSTACK_WEBHOOK_URL=http://34.135.248.249/customer/payments/paystack/webhook
 
 # Database (existing)
 DATABASE_URL=postgresql://username:password@localhost:5432/plancave
@@ -58,12 +58,12 @@ psql -d plancave -f Backend/database/migrations.sql
 
 In your Paystack dashboard, set webhook URL to:
 ```
-https://34.135.248.249/customer/payments/paystack/webhook
+http://34.135.248.249/customer/payments/paystack/webhook
 ```
 
-**Important:** Paystack requires HTTPS URLs for callbacks and webhooks. You'll need to:
-1. Set up SSL/TLS certificate on your VPS (Let's Encrypt recommended)
-2. Configure your web server (nginx/apache) to handle HTTPS
-3. Update your server configuration to redirect HTTP to HTTPS
+**Note:** Paystack prefers HTTPS but may accept HTTP for testing. If HTTP doesn't work:
+1. Use ngrok to create HTTPS tunnel: `ngrok http 80`
+2. Or set up SSL/TLS later for production
+3. Manual verification (clicking "I have paid") works without webhooks
 
-Note: Webhook endpoint not yet implemented - you'll need to add it to handle automatic payment verification.
+Current implementation uses manual verification, so webhooks are optional.

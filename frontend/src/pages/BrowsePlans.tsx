@@ -653,10 +653,15 @@ export default function BrowsePlans() {
         ) : (
           <>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wide">
-                {pagination.total} plans available
-              </h2>
-              <div className="text-sm text-gray-500">
+              <div className="flex flex-col">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Over {pagination.total.toLocaleString()} Plans Available
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Discover your perfect architectural design
+                </p>
+              </div>
+              <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                 Page {pagination.current_page} of {pagination.total_pages}
               </div>
             </div>

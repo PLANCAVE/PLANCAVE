@@ -90,6 +90,13 @@ BEGIN
     END IF;
 END$$;
 
+-- Initialize default quotas for existing users
+INSERT INTO user_quotas (user_id, quota_type, quota_limit, quota_used)
+SELECT u.id, 'downloads', -1, 0
+FROM users u
+LEFT JOIN user_quotas uq ON u.id = uq.user_id AND uq.quota_type = 'downloads'
+WHERE uq.user_id IS NULL;
+
 -- Favorites table
 CREATE TABLE IF NOT EXISTS favorites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

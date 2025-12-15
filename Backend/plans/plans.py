@@ -7,6 +7,7 @@ import psycopg
 from psycopg.rows import dict_row
 from datetime import datetime
 import json
+import math
 
 plans_bp = Blueprint('plans', __name__, url_prefix='/plans')
 
@@ -564,7 +565,7 @@ def browse_plans():
         includes_boq = request.args.get('includes_boq', type=str)
         sort_by = request.args.get('sort_by', default='created_at', type=str)
         order = request.args.get('order', default='desc', type=str)
-        limit = request.args.get('limit', default=12, type=int)
+        limit = request.args.get('limit', default=50, type=int)
         offset = request.args.get('offset', default=0, type=int)
 
         allowed_sort_fields = ['price', 'sales_count', 'created_at', 'area']
@@ -608,6 +609,11 @@ def browse_plans():
         count_row = cur.fetchone()
         # count_row may be a dict (with row_factory=dict_row) or a sequence
         total_count = count_row["total"] if isinstance(count_row, dict) else count_row[0]
+        total_pages = math.ceil(total_count / limit) if limit > 0 else 0
+        current_page = (offset // limit) + 1
+
+        next_page = current_page + 1 if current_page < total_pages else None
+        prev_page = current_page - 1 if current_page > 1 else None
 
         data_query = f"""
             SELECT id, name, category, project_type, description, package_level, price, area, 
@@ -638,7 +644,11 @@ def browse_plans():
                 "offset": offset,
                 "returned": len(plans),
                 "sort_by": sort_by,
-                "order": order
+                "order": order,
+                "total_pages": total_pages,
+                "current_page": current_page,
+                "next_page": next_page,
+                "prev_page": prev_page,
             },
             "results": plans
         }), 200

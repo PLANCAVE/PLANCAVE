@@ -333,7 +333,7 @@ export default function BrowsePlans() {
   };
 
   const handlePageChange = (newPage: number) => {
-    const offset = (newPage - 1) * 50; // 50 plans per page
+    const offset = (newPage - 1) * 20; // 20 plans per page
     loadAllPlans(offset);
   };
 

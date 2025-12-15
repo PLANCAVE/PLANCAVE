@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { browsePlans } from '../api';
-import { Search, Heart, ShoppingCart, Building2, Award, FileText, ChevronDown } from 'lucide-react';
+import { Search, Heart, ShoppingCart, Building2, Award, FileText, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
@@ -30,6 +30,13 @@ export default function BrowsePlans() {
   const [allPlans, setAllPlans] = useState<Plan[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    total_pages: 0,
+    current_page: 1,
+    next_page: null as number | null,
+    prev_page: null as number | null,
+    total: 0,
+  });
   
   // Filter states
   const [search, setSearch] = useState('');
@@ -97,13 +104,21 @@ export default function BrowsePlans() {
 
   // Initial load: fetch all available plans from backend
   useEffect(() => {
-    const loadAllPlans = async () => {
+    const loadAllPlans = async (offset = 0) => {
       setLoading(true);
       try {
-        const response = await browsePlans();
+        const response = await browsePlans({ offset });
         const results: Plan[] = response.data.results || [];
+        const metadata = response.data.metadata || {};
         setAllPlans(results);
         setPlans(results);
+        setPagination({
+          total_pages: metadata.total_pages || 0,
+          current_page: metadata.current_page || 1,
+          next_page: metadata.next_page || null,
+          prev_page: metadata.prev_page || null,
+          total: metadata.total || 0,
+        });
       } catch (error) {
         console.error('Failed to load plans:', error);
       } finally {
@@ -315,6 +330,33 @@ export default function BrowsePlans() {
       return false;
     }
     return true;
+  };
+
+  const handlePageChange = (newPage: number) => {
+    const offset = (newPage - 1) * 50; // 50 plans per page
+    loadAllPlans(offset);
+  };
+
+  const loadAllPlans = async (offset = 0) => {
+    setLoading(true);
+    try {
+      const response = await browsePlans({ offset });
+      const results: Plan[] = response.data.results || [];
+      const metadata = response.data.metadata || {};
+      setAllPlans(results);
+      setPlans(results);
+      setPagination({
+        total_pages: metadata.total_pages || 0,
+        current_page: metadata.current_page || 1,
+        next_page: metadata.next_page || null,
+        prev_page: metadata.prev_page || null,
+        total: metadata.total || 0,
+      });
+    } catch (error) {
+      console.error('Failed to load plans:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFavoriteClick = async (planId: string) => {
@@ -612,8 +654,11 @@ export default function BrowsePlans() {
           <>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wide">
-                {plans.length === 1 ? '1 plan' : `${plans.length} plans`} available
+                {pagination.total} plans available
               </h2>
+              <div className="text-sm text-gray-500">
+                Page {pagination.current_page} of {pagination.total_pages}
+              </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -746,6 +791,51 @@ export default function BrowsePlans() {
                 </Link>
               ))}
             </div>
+
+            {/* Pagination Controls */}
+            {pagination.total_pages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-8">
+                <button
+                  onClick={() => pagination.prev_page && handlePageChange(pagination.prev_page)}
+                  disabled={!pagination.prev_page}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition ${
+                    pagination.prev_page
+                      ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                  }`}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`w-8 h-8 rounded-md text-sm font-medium transition ${
+                        page === pagination.current_page
+                          ? 'bg-[#0f4c45] text-white'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => pagination.next_page && handlePageChange(pagination.next_page)}
+                  disabled={!pagination.next_page}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition ${
+                    pagination.next_page
+                      ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                  }`}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

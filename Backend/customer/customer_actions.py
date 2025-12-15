@@ -10,9 +10,10 @@ import os
 import io
 import zipfile
 import json
+import requests
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from auth.auth_utils import get_current_user, log_user_activity, check_user_quota, increment_user_quota
+from auth.auth_utils import get_current_user, log_user_activity
 from utils.download_helpers import (
     fetch_plan_bundle,
     build_plan_zip,
@@ -28,6 +29,10 @@ def get_db():
 
 DOWNLOAD_LINK_EXPIRY_MINUTES = int(os.environ.get('DOWNLOAD_LINK_EXPIRY_MINUTES', '30'))
 MAX_DOWNLOADS_PER_TOKEN = int(os.environ.get('MAX_DOWNLOADS_PER_TOKEN', '1'))
+PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
+PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
+PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL')
+PAYSTACK_CURRENCY = os.environ.get('PAYSTACK_CURRENCY', 'USD')
 
 
 def resolve_plan_file_path(file_path: str) -> str | None:
@@ -57,6 +62,50 @@ def json_default(value):
     if isinstance(value, uuid.UUID):
         return str(value)
     return value
+
+
+def _paystack_headers():
+    if not PAYSTACK_SECRET_KEY:
+        raise RuntimeError("PAYSTACK_SECRET_KEY is not configured")
+    return {
+        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json",
+    }
+
+
+def _init_paystack_transaction(email: str, amount: float, plan_id: str, user_id: int):
+    """
+    Initialize a Paystack transaction and return authorization URL + reference.
+    Amount should be provided in major units; Paystack expects the smallest currency unit.
+    """
+    if not PAYSTACK_SECRET_KEY:
+        raise RuntimeError("PAYSTACK_SECRET_KEY is not configured")
+
+    amount_smallest_unit = int(round(float(amount) * 100))
+    payload = {
+        "email": email,
+        "amount": amount_smallest_unit,
+        "currency": PAYSTACK_CURRENCY,
+        "metadata": {
+            "plan_id": plan_id,
+            "user_id": user_id,
+        }
+    }
+    if PAYSTACK_CALLBACK_URL:
+        payload["callback_url"] = PAYSTACK_CALLBACK_URL
+
+    resp = requests.post(
+        "https://api.paystack.co/transaction/initialize",
+        headers=_paystack_headers(),
+        json=payload,
+        timeout=10,
+    )
+    data = resp.json() if resp.content else {}
+    if resp.status_code != 200 or not data.get("status"):
+        raise RuntimeError(data.get("message") or "Failed to initialize Paystack transaction")
+
+    auth_data = data.get("data", {})
+    return auth_data.get("authorization_url"), auth_data.get("reference")
 
 
 @customer_bp.route('/plans/purchase', methods=['POST'])
@@ -119,47 +168,159 @@ def purchase_plan():
         if cur.fetchone():
             return jsonify(message="You have already purchased this plan"), 409
         
-        # Create purchase record
-        purchase_id = str(uuid.uuid4())
-        transaction_id = f"TXN-{uuid.uuid4().hex[:12].upper()}"
-        
+        # If Paystack flow, initialize payment and mark purchase pending
+        if payment_method == 'paystack':
+            contact = fetch_user_contact(user_id, conn)
+            payer_email = (contact or {}).get('email') or f"user-{user_id}@example.com"
+            try:
+                authorization_url, reference = _init_paystack_transaction(
+                    payer_email,
+                    float(plan['price']),
+                    plan_id,
+                    user_id,
+                )
+            except Exception as e:
+                conn.rollback()
+                return jsonify(message=f"Failed to start Paystack payment: {e}"), 502
+
+            purchase_id = str(uuid.uuid4())
+            cur.execute("""
+                INSERT INTO purchases (
+                    id, user_id, plan_id, amount, payment_method,
+                    payment_status, transaction_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                purchase_id, user_id, plan_id, plan['price'],
+                payment_method, 'pending', reference
+            ))
+
+            conn.commit()
+            return jsonify({
+                "message": "Paystack payment initialized",
+                "status": "pending",
+                "authorization_url": authorization_url,
+                "reference": reference,
+                "purchase_id": purchase_id
+            }), 201
+
+        # Reject non-Paystack payment methods
+        return jsonify(message="Only Paystack payments are supported"), 400
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@customer_bp.route('/payments/paystack/verify/<string:reference>', methods=['POST', 'GET'])
+@jwt_required()
+def verify_paystack(reference: str):
+    """
+    Verify Paystack transaction by reference and mark purchase as completed.
+    """
+    user_id, role = get_current_user()
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        # Verify with Paystack
+        resp = requests.get(
+            f"https://api.paystack.co/transaction/verify/{reference}",
+            headers=_paystack_headers(),
+            timeout=10,
+        )
+        data = resp.json() if resp.content else {}
+        if resp.status_code != 200 or not data.get("status"):
+            return jsonify(message=data.get("message") or "Failed to verify Paystack payment"), 400
+
+        paystack_data = data.get("data") or {}
+        if paystack_data.get("status") != "success":
+            return jsonify(message="Payment not completed yet"), 202
+
+        # Find existing purchase
         cur.execute("""
-            INSERT INTO purchases (
-                id, user_id, plan_id, amount, payment_method, 
-                payment_status, transaction_id
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            purchase_id, user_id, plan_id, plan['price'],
-            payment_method, 'completed', transaction_id
-        ))
-        
-        # Update plan sales count
+            SELECT id, user_id, plan_id, payment_status
+            FROM purchases
+            WHERE transaction_id = %s
+        """, (reference,))
+        purchase = cur.fetchone()
+
+        if not purchase:
+            return jsonify(message="Purchase record not found"), 404
+
+        if purchase['user_id'] != user_id and role != 'admin':
+            return jsonify(message="Not authorized to verify this purchase"), 403
+
+        if purchase['payment_status'] == 'completed':
+            return jsonify(message="Payment already completed"), 200
+
+        plan_id = purchase['plan_id']
+
+        # Mark purchase completed
+        cur.execute("""
+            UPDATE purchases
+            SET payment_status = 'completed'
+            WHERE id = %s
+        """, (purchase['id'],))
+
+        # Increment sales count
         cur.execute("""
             UPDATE plans
             SET sales_count = sales_count + 1
             WHERE id = %s
         """, (plan_id,))
-        
-        # Log activity
+
         log_user_activity(user_id, 'purchase', {
             'plan_id': plan_id,
-            'plan_name': plan['name'],
-            'amount': float(plan['price']),
-            'transaction_id': transaction_id
+            'transaction_id': reference,
+            'payment_provider': 'paystack',
+            'amount': float(paystack_data.get('amount', 0)) / 100.0
         }, conn)
-        
+
         conn.commit()
-        
+
         return jsonify({
-            "message": "Purchase successful",
-            "purchase_id": purchase_id,
-            "transaction_id": transaction_id,
-            "amount": float(plan['price'])
-        }), 201
-        
+            "message": "Payment verified and purchase activated",
+            "plan_id": plan_id,
+            "transaction_id": reference
+        }), 200
+
     except Exception as e:
         conn.rollback()
-        return jsonify(error=str(e)), 500
+        return jsonify(message=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@customer_bp.route('/plans/<string:plan_id>/purchase-status', methods=['GET'])
+@jwt_required()
+def purchase_status(plan_id: str):
+    """Return purchase status for the current user and plan."""
+    user_id, role = get_current_user()
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            """
+            SELECT payment_status, transaction_id
+            FROM purchases
+            WHERE user_id = %s AND plan_id = %s
+            ORDER BY purchased_at DESC
+            LIMIT 1
+            """,
+            (user_id, plan_id)
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify(status="none")
+        return jsonify(status=row['payment_status'], transaction_id=row.get('transaction_id'))
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message=str(e)), 500
     finally:
         cur.close()
         conn.close()
@@ -196,9 +357,7 @@ def generate_download_link():
             if not cur.fetchone():
                 return jsonify(message="Purchase required before downloading"), 403
 
-        has_quota, _ = check_user_quota(user_id, 'downloads', conn)
-        if not has_quota:
-            return jsonify(message="Download quota exceeded"), 429
+        # Quota check removed - paying customers get unlimited downloads
 
         # Invalidate previous unused tokens for the same plan/user
         cur.execute(

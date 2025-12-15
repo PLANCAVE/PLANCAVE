@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPlanDetails, generateDownloadLink, downloadPlanFile, adminDownloadPlan } from '../api';
+import { getPlanDetails, generateDownloadLink, downloadPlanFile, adminDownloadPlan, purchasePlan, verifyPurchase, verifyPaystackPayment } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
 import {
@@ -84,6 +84,7 @@ export default function PlanDetailsPage() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState<'none' | 'purchased' | 'processing'>('none');
+  const [pendingReference, setPendingReference] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   
@@ -219,16 +220,23 @@ export default function PlanDetailsPage() {
     setPurchaseSuccess(false);
 
     try {
-      // Mock purchase - just simulate success
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
-      
-      setPurchaseSuccess(true);
-      setPurchaseStatus('purchased');
-      
-      // Auto-trigger download after successful purchase
-      setTimeout(() => handleDownload(), 1000);
+      const resp = await purchasePlan(id, 'paystack');
+      const { authorization_url, reference, status } = resp.data || {};
+
+      if (authorization_url && reference) {
+        setPendingReference(reference);
+        setPurchaseStatus('processing');
+        window.open(authorization_url, '_blank', 'noopener');
+      } else if (status === 'pending') {
+        setPurchaseStatus('processing');
+      } else {
+        setPurchaseStatus('purchased');
+        setPurchaseSuccess(true);
+        setTimeout(() => handleDownload(), 500);
+      }
     } catch (err: any) {
-      setDownloadError('Purchase failed. Please try again.');
+      const msg = err?.response?.data?.message || 'Purchase failed. Please try again.';
+      setDownloadError(msg);
     } finally {
       setIsPurchasing(false);
     }
@@ -297,13 +305,54 @@ export default function PlanDetailsPage() {
     }
   };
 
+  const handleVerifyPayment = async (referenceToVerify?: string) => {
+    const ref = referenceToVerify || pendingReference;
+    if (!ref) {
+      setDownloadError('No payment reference to verify.');
+      return;
+    }
+    setDownloadError(null);
+    setIsPurchasing(true);
+    try {
+      await verifyPaystackPayment(ref);
+      setPurchaseStatus('purchased');
+      setPurchaseSuccess(true);
+      setPendingReference(null);
+      setTimeout(() => handleDownload(), 500);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Payment not completed yet. Please retry after Paystack confirms.';
+      setDownloadError(msg);
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
   const checkPurchaseStatus = async () => {
     if (!id || !isAuthenticated) return;
-    
-    // Mock purchase status check - always return 'none' for now
-    // In real implementation, this would check with backend
-    setPurchaseStatus('none');
+    try {
+      const resp = await verifyPurchase(id);
+      const status = resp.data?.status;
+      if (status === 'completed' || status === 'purchased') {
+        setPurchaseStatus('purchased');
+      } else if (status === 'pending') {
+        setPurchaseStatus('processing');
+      } else {
+        setPurchaseStatus('none');
+      }
+    } catch {
+      setPurchaseStatus('none');
+    }
   };
+
+  // Auto-verify if a Paystack reference is present in URL (callback flow)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('reference');
+    if (ref && isAuthenticated) {
+      handleVerifyPayment(ref);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   const getImageUrls = (): string[] => {
     if (!plan) return [];
@@ -695,6 +744,29 @@ export default function PlanDetailsPage() {
                     <ShoppingCart className="w-4 h-4" />
                     Login to purchase
                   </button>
+                ) : purchaseStatus === 'processing' ? (
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleVerifyPayment()}
+                      disabled={isPurchasing}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-amber-400 text-slate-900 font-semibold hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isPurchasing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Verifying payment...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4" />
+                          I have paid — verify payment
+                        </>
+                      )}
+                    </button>
+                    <p className="text-[11px] text-amber-100 text-center">
+                      Complete Paystack payment in the opened tab, then click “Verify payment”.
+                    </p>
+                  </div>
                 ) : purchaseStatus === 'purchased' ? (
                   <button
                     onClick={handleDownload}

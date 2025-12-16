@@ -81,9 +81,9 @@ def _init_paystack_transaction(email: str, amount: float, plan_id: str, user_id:
     if not PAYSTACK_SECRET_KEY:
         raise RuntimeError("PAYSTACK_SECRET_KEY is not configured")
 
-    # Convert USD to KES if Paystack currency is KES (approx 1 USD = 130 KES)
+    # Convert USD to KES if Paystack currency is KES (approx 1 USD = 1 KES for testing)
     if PAYSTACK_CURRENCY == 'KES':
-        amount = amount * 130  # Conversion rate
+        amount = amount * 1  # Conversion rate
     
     amount_smallest_unit = int(round(float(amount) * 100))
     payload = {

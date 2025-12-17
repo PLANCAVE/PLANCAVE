@@ -250,12 +250,12 @@ def upload_avatar():
         return jsonify(message="Unsupported file type"), 400
 
     try:
-        from utils import cloudinary_uploader
-        upload_result = cloudinary_uploader.upload(file)
-        secure_url = upload_result.get('secure_url') if isinstance(upload_result, dict) else None
+        from utils.cloudinary_config import upload_to_cloudinary
+        secure_url = upload_to_cloudinary(file, folder="avatars")
         if not secure_url:
-            return jsonify(message="Failed to upload avatar"), 500
+            return jsonify(message="Failed to upload avatar: no URL returned"), 500
     except Exception as e:
+        app.logger.error(f"Avatar upload error: {e}")
         return jsonify(message="Failed to upload avatar", error=str(e)), 500
 
     conn = get_db()

@@ -27,7 +27,19 @@ interface Plan {
 const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge }: PlanShowcaseProps) => {
   if (!plans.length) return null;
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+  const resolveMediaUrl = (path?: string) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) {
+      try {
+        const url = new URL(path);
+        return url.pathname.replace(/^\/api(?=\/)/, '');
+      } catch {
+        return path;
+      }
+    }
+    if (path.startsWith('/api/')) return path.replace(/^\/api/, '');
+    return path.startsWith('/') ? path : `/${path}`;
+  };
 
   return (
     <section className="relative py-16 border-t border-white/5 bg-gradient-to-b from-slate-900/20 to-transparent">
@@ -53,7 +65,7 @@ const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge }: PlanShowc
             <div key={plan.id} className="group relative rounded-2xl overflow-hidden bg-gradient-to-b from-slate-800/50 to-slate-900/80 border border-white/5 hover:border-white/20 transition-all hover:shadow-xl hover:shadow-purple-500/10">
               <div className="relative aspect-[4/3] overflow-hidden">
                 <img
-                  src={plan.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg'}
+                  src={plan.image_url ? resolveMediaUrl(plan.image_url) : '/vite.svg'}
                   alt={plan.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -157,7 +169,19 @@ export default function Landing() {
     }
   };
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+  const resolveMediaUrl = (path?: string) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) {
+      try {
+        const url = new URL(path);
+        return url.pathname.replace(/^\/api(?=\/)/, '');
+      } catch {
+        return path;
+      }
+    }
+    if (path.startsWith('/api/')) return path.replace(/^\/api/, '');
+    return path.startsWith('/') ? path : `/${path}`;
+  };
   const currentPlan = featuredPlans[currentPlanIndex];
 
   const { budgetPlans, bestSellingPlans, newPlans, popularCategoryPlans } = useMemo(() => {
@@ -271,7 +295,7 @@ export default function Landing() {
             {/* Hero image */}
             <div className="absolute inset-0 w-full h-full">
               <img
-                src={currentPlan?.image_url ? `${apiBaseUrl}${currentPlan.image_url}` : '/placeholder.jpg'}
+                src={currentPlan?.image_url ? resolveMediaUrl(currentPlan.image_url) : '/vite.svg'}
                 className="w-full h-full object-cover object-center"
                 alt="Featured plan"
               />

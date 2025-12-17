@@ -389,7 +389,19 @@ export default function BrowsePlans() {
     }
   };
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+  const resolveMediaUrl = (path?: string) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) {
+      try {
+        const url = new URL(path);
+        return url.pathname.replace(/^\/api(?=\/)/, '');
+      } catch {
+        return path;
+      }
+    }
+    if (path.startsWith('/api/')) return path.replace(/^\/api/, '');
+    return path.startsWith('/') ? path : `/${path}`;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30 relative">
@@ -671,7 +683,7 @@ export default function BrowsePlans() {
                   {/* Image */}
                   <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
                     <img
-                      src={(plan.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg')}
+                      src={(plan.image_url ? resolveMediaUrl(plan.image_url) : '/vite.svg')}
                       alt={plan.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />

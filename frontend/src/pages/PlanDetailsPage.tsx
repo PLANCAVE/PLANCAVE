@@ -94,7 +94,19 @@ export default function PlanDetailsPage() {
   const [cartSuccess, setCartSuccess] = useState(false);
   const [favoriteSuccess, setFavoriteSuccess] = useState(false);
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+  const resolveMediaUrl = (path?: string) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) {
+      try {
+        const url = new URL(path);
+        return url.pathname.replace(/^\/api(?=\/)/, '');
+      } catch {
+        return path;
+      }
+    }
+    if (path.startsWith('/api/')) return path.replace(/^\/api/, '');
+    return path.startsWith('/') ? path : `/${path}`;
+  };
 
   // Helper functions to check cart and favorites status
   const isInCart = cartItems.some(item => item.id === id);
@@ -266,7 +278,7 @@ export default function PlanDetailsPage() {
         // Designers downloading their own plans: fetch stored files directly
         if (plan.files && plan.files.length > 0) {
           for (const file of plan.files) {
-            const fileUrl = `${apiBaseUrl}${file.file_path}`;
+            const fileUrl = resolveMediaUrl(file.file_path);
             const response = await fetch(fileUrl);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -360,8 +372,7 @@ export default function PlanDetailsPage() {
     const imageUrls: string[] = [];
     const makeUrl = (path: string | undefined) => {
       if (!path) return '';
-      const normalized = path.startsWith('/') ? path : `/${path}`;
-      return `${apiBaseUrl}${normalized}`;
+      return resolveMediaUrl(path);
     };
 
     if (plan.image_url) {

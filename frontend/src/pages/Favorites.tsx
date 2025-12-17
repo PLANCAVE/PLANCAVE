@@ -8,7 +8,20 @@ export default function Favorites() {
   const { isAuthenticated } = useAuth();
   const { favorites, loadingFavorites, removeFavorite } = useCustomerData();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+
+  const resolveMediaUrl = (path?: string) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) {
+      try {
+        const url = new URL(path);
+        return url.pathname.replace(/^\/api(?=\/)/, '');
+      } catch {
+        return path;
+      }
+    }
+    if (path.startsWith('/api/')) return path.replace(/^\/api/, '');
+    return path.startsWith('/') ? path : `/${path}`;
+  };
 
   const handleRemove = async (planId: string) => {
     setBusyId(planId);
@@ -97,7 +110,7 @@ export default function Favorites() {
             <div key={plan.id} className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 p-4 md:p-6 flex gap-4">
               <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden flex-shrink-0 bg-white/10 border border-white/10">
                 <img
-                  src={plan.image_url ? `${apiBaseUrl}${plan.image_url}` : '/placeholder.jpg'}
+                  src={plan.image_url ? resolveMediaUrl(plan.image_url) : '/vite.svg'}
                   alt={plan.name}
                   className="w-full h-full object-cover"
                 />

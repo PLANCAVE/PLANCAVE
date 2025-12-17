@@ -283,6 +283,11 @@ export default function Landing() {
     Boolean(currentPlan) &&
     (!shouldGateHero || heroImageLoaded || !showLoader);
 
+  // Simplified: if we have data and aren't on first load, show immediately
+  const shouldShowHero = !isLoadingFeaturedPlans && Boolean(currentPlan) && (hasCompletedInitialHeroLoad || heroImageLoaded || !showLoader);
+
+  const heroImageSrc = currentPlan?.image_url ? resolveMediaUrl(currentPlan.image_url) : '';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] overflow-x-hidden">
       {/* Hero Section with 3D Elements */}
@@ -295,34 +300,36 @@ export default function Landing() {
           <div className="absolute top-40 right-20 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-float-delayed"></div>
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
-        <div className="relative w-full left-1/2 -translate-x-1/2 px-0 pb-0">
+        <div className="relative w-full h-full px-0 pb-0">
           {shouldGateHero && !isHeroReady && showLoader ? (
-            <div className="absolute inset-0 z-40 flex items-center justify-center">
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0f2a2a]">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
             </div>
           ) : null}
 
           {/* Mobile hero (image fits, details below) */}
           <div
-            className={`md:hidden px-4 pb-4 transition-opacity ${isHeroReady ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            className={`md:hidden px-4 pb-4 transition-opacity ${shouldShowHero ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             <div className="max-w-6xl mx-auto">
               <div
                 className="relative w-full aspect-[16/9] overflow-hidden rounded-2xl border border-white/10 bg-black cursor-pointer"
                 onClick={handlePlanOpen}
               >
-                <img
-                  src={currentPlan?.image_url ? resolveMediaUrl(currentPlan.image_url) : '/vite.svg'}
-                  className="w-full h-full object-contain"
-                  alt="Featured plan"
-                  onLoad={() => {
-                    setHeroImageLoaded(true);
-                    if (!hasCompletedInitialHeroLoad) {
-                      setShowLoader(false);
-                      setHasCompletedInitialHeroLoad(true);
-                    }
-                  }}
-                />
+                {heroImageSrc ? (
+                  <img
+                    src={heroImageSrc}
+                    className="w-full h-full object-contain"
+                    alt="Featured plan"
+                    onLoad={() => {
+                      setHeroImageLoaded(true);
+                      if (!hasCompletedInitialHeroLoad) {
+                        setShowLoader(false);
+                        setHasCompletedInitialHeroLoad(true);
+                      }
+                    }}
+                  />
+                ) : null}
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center text-white/80 space-y-3 pointer-events-none z-20">
                   <div className="flex items-center gap-3 justify-center text-[0.6rem] tracking-[0.8em] text-white/70">
@@ -403,7 +410,7 @@ export default function Landing() {
 
           {/* Desktop hero (overlay) */}
           <div
-            className={`hidden md:block relative w-screen h-full overflow-hidden cursor-pointer transition-opacity ${isHeroReady ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            className={`hidden md:block relative w-screen h-full overflow-hidden cursor-pointer transition-opacity ${shouldShowHero ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={handlePlanOpen}
             onMouseEnter={() => setIsHoveringCarousel(true)}
             onMouseLeave={() => setIsHoveringCarousel(false)}
@@ -423,18 +430,20 @@ export default function Landing() {
             </div>
 
             <div className="absolute inset-0 w-full h-full">
-              <img
-                src={currentPlan?.image_url ? resolveMediaUrl(currentPlan.image_url) : '/vite.svg'}
-                className="w-full h-full object-cover object-center"
-                alt="Featured plan"
-                onLoad={() => {
-                  setHeroImageLoaded(true);
-                  if (!hasCompletedInitialHeroLoad) {
-                    setShowLoader(false);
-                    setHasCompletedInitialHeroLoad(true);
-                  }
-                }}
-              />
+              {heroImageSrc ? (
+                <img
+                  src={heroImageSrc}
+                  className="w-full h-full object-cover object-center"
+                  alt="Featured plan"
+                  onLoad={() => {
+                    setHeroImageLoaded(true);
+                    if (!hasCompletedInitialHeroLoad) {
+                      setShowLoader(false);
+                      setHasCompletedInitialHeroLoad(true);
+                    }
+                  }}
+                />
+              ) : null}
               <div className="absolute inset-0 bg-black/25" />
             </div>
 

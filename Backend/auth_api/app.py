@@ -110,13 +110,15 @@ def health_check():
 
 
 @app.route('/uploads/<path:filename>')
+@app.route('/api/uploads/<path:filename>')
 def serve_uploads(filename):
     """Serve uploaded plan files (thumbnails, galleries, documents).
 
     This makes URLs like /uploads/plans/<plan_id>/images/<file> accessible
     from the frontend using the backend base URL.
     """
-    upload_root = os.path.join(os.getcwd(), 'uploads')
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    upload_root = os.path.join(project_root, 'uploads')
     return send_from_directory(upload_root, filename)
 
 
@@ -238,7 +240,8 @@ def upload_avatar():
     if ext not in allowed_exts:
         return jsonify(message="Unsupported file type"), 400
 
-    upload_root = os.path.join(os.getcwd(), 'uploads', 'profiles')
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    upload_root = os.path.join(project_root, 'uploads', 'profiles')
     os.makedirs(upload_root, exist_ok=True)
 
     new_name = f"user_{user_id}{ext}"

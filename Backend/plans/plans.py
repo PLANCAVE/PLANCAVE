@@ -13,7 +13,9 @@ from utils.cloudinary_config import upload_to_cloudinary
 plans_bp = Blueprint('plans', __name__, url_prefix='/plans')
 
 # Upload directory for local storage (fallback if GCS not configured)
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads', 'plans')
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, '..', '..', '..'))
+UPLOAD_FOLDER = os.path.join(_PROJECT_ROOT, 'uploads', 'plans')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 ALLOWED_EXTENSIONS_PLANS = {'pdf', 'dwg', 'zip'}
@@ -65,8 +67,12 @@ def save_file_locally(file, plan_id, category, filename):
 
 
 def resolve_upload_absolute_path(relative_path: str) -> str:
+    if not relative_path:
+        return ''
+    if relative_path.startswith('http://') or relative_path.startswith('https://'):
+        return ''
     relative = relative_path.lstrip('/')
-    return os.path.join(os.getcwd(), relative)
+    return os.path.join(_PROJECT_ROOT, relative)
 
 
 def add_plan_file_record(records, file_type: str, relative_path: str, original_name: str | None = None):
@@ -74,7 +80,7 @@ def add_plan_file_record(records, file_type: str, relative_path: str, original_n
         return
 
     absolute_path = resolve_upload_absolute_path(relative_path)
-    file_size = os.path.getsize(absolute_path) if os.path.exists(absolute_path) else None
+    file_size = os.path.getsize(absolute_path) if absolute_path and os.path.exists(absolute_path) else None
     file_name = secure_filename(original_name) if original_name else os.path.basename(relative_path)
 
     records.append({

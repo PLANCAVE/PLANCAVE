@@ -23,10 +23,11 @@ def resolve_plan_file_path(file_path: str) -> str | None:
         return file_path
 
     normalized = file_path.lstrip('/')
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
     candidate_paths = [file_path, normalized, os.path.join('uploads', normalized)]
 
     for candidate in candidate_paths:
-        absolute_candidate = candidate if os.path.isabs(candidate) else os.path.join(os.getcwd(), candidate)
+        absolute_candidate = candidate if os.path.isabs(candidate) else os.path.join(project_root, candidate)
         if os.path.exists(absolute_candidate):
             return absolute_candidate
 

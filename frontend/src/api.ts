@@ -1,7 +1,14 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 
+const getApiBaseUrl = () => {
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
+  return import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
+  baseURL: getApiBaseUrl(),
   withCredentials: false,
   headers: {
     'Content-Type': 'application/json',

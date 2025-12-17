@@ -8,6 +8,7 @@ from psycopg.rows import dict_row
 from datetime import datetime
 import json
 import math
+from utils.cloudinary_config import upload_to_cloudinary
 
 plans_bp = Blueprint('plans', __name__, url_prefix='/plans')
 
@@ -256,9 +257,12 @@ def upload_plan():
                     file_paths['boq'].append(path)
                     add_plan_file_record(plan_file_records, 'BOQ_COST_SUMMARY', path, file.filename)
 
-        # Save Thumbnail
+        # Save Thumbnail to Cloudinary
         thumbnail = files['thumbnail']
-        thumbnail_path = save_file_locally(thumbnail, plan_id, 'images', thumbnail.filename)
+        try:
+            thumbnail_path = upload_to_cloudinary(thumbnail, public_id=f"{plan_id}_thumbnail")
+        except ValueError as e:
+            return jsonify(message=str(e)), 500
         add_plan_file_record(plan_file_records, 'THUMBNAIL', thumbnail_path, thumbnail.filename)
 
         # Save Gallery Images
@@ -267,8 +271,11 @@ def upload_plan():
             gallery_files = request.files.getlist('gallery')
             for file in gallery_files:
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMAGES):
-                    path = save_file_locally(file, plan_id, 'images/gallery', file.filename)
-                    gallery_paths.append(path)
+                    try:
+                        path = upload_to_cloudinary(file, folder=f"plancave_plans/{plan_id}/gallery")
+                        gallery_paths.append(path)
+                    except ValueError as e:
+                        return jsonify(message=str(e)), 500
                     add_plan_file_record(plan_file_records, 'GALLERY', path, file.filename)
 
         # Attach gallery paths to file_paths so details endpoint can build a gallery
@@ -500,8 +507,11 @@ def update_plan(plan_id):
         if 'thumbnail' in files:
             thumb = files['thumbnail']
             if thumb and allowed_file(thumb.filename, ALLOWED_EXTENSIONS_IMAGES):
-                thumb_path = save_file_locally(thumb, plan_id, 'images', thumb.filename)
-                update_fields['image_url'] = thumb_path
+                try:
+                    thumb_path = upload_to_cloudinary(thumb, public_id=f"{plan_id}_thumbnail_updated")
+                    update_fields['image_url'] = thumb_path
+                except ValueError as e:
+                    return jsonify(message=str(e)), 500
 
         # Add extra gallery images if provided
         if 'gallery' in files:
@@ -509,8 +519,11 @@ def update_plan(plan_id):
             new_gallery_paths = []
             for file in gallery_files:
                 if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMAGES):
-                    path = save_file_locally(file, plan_id, 'images/gallery', file.filename)
-                    new_gallery_paths.append(path)
+                    try:
+                        path = upload_to_cloudinary(file, folder=f"plancave_plans/{plan_id}/gallery")
+                        new_gallery_paths.append(path)
+                    except ValueError as e:
+                        return jsonify(message=str(e)), 500
 
             if new_gallery_paths:
                 existing_gallery = file_paths.get('gallery') or []

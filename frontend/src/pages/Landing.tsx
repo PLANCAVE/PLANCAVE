@@ -29,16 +29,13 @@ const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge }: PlanShowc
 
   const resolveMediaUrl = (path?: string) => {
     if (!path) return '';
+    // If it's a full URL (like from Cloudinary), use it directly.
     if (/^https?:\/\//i.test(path)) {
-      try {
-        const url = new URL(path);
-        return url.pathname.replace(/^\/api(?=\/)/, '');
-      } catch {
-        return path;
-      }
+      return path;
     }
-    if (path.startsWith('/api/')) return path.replace(/^\/api/, '');
-    return path.startsWith('/') ? path : `/${path}`;
+    // For local paths, ensure it's a root-relative path.
+    const cleanedPath = path.replace(/^\/api(?=\/)/, '');
+    return cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
   };
 
   return (
@@ -171,16 +168,13 @@ export default function Landing() {
 
   const resolveMediaUrl = (path?: string) => {
     if (!path) return '';
+    // If it's a full URL (like from Cloudinary), use it directly.
     if (/^https?:\/\//i.test(path)) {
-      try {
-        const url = new URL(path);
-        return url.pathname.replace(/^\/api(?=\/)/, '');
-      } catch {
-        return path;
-      }
+      return path;
     }
-    if (path.startsWith('/api/')) return path.replace(/^\/api/, '');
-    return path.startsWith('/') ? path : `/${path}`;
+    // For local paths, ensure it's a root-relative path.
+    const cleanedPath = path.replace(/^\/api(?=\/)/, '');
+    return cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
   };
   const currentPlan = featuredPlans[currentPlanIndex];
 

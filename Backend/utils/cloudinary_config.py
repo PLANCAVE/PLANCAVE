@@ -15,7 +15,7 @@ cloudinary.config(
 
 def upload_to_cloudinary(file_stream, public_id=None, folder="plancave_plans"):
     """Uploads a file stream to Cloudinary and returns the secure URL."""
-    if not all([os.getenv("CLOUDINARY_CLOUD_NAME"), os.getenv("CLOUDINARY_API_KEY"), os.getenv("CLOUDINARY_API_SECRET")]:
+    if not all([os.getenv("CLOUDINARY_CLOUD_NAME"), os.getenv("CLOUDINARY_API_KEY"), os.getenv("CLOUDINARY_API_SECRET")]):
         # Fallback or error if Cloudinary is not configured
         raise ValueError("Cloudinary is not configured. Set CLOUDINARY environment variables.")
 

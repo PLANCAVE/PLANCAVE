@@ -46,38 +46,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedToken = localStorage.getItem('access_token');
     const storedUser = localStorage.getItem('user');
 
-    if (storedToken && storedUser) {
-      // Trust stored token/user; do not auto-logout based on expiry or inactivity
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    } else if (storedToken && !storedUser) {
-      // Recover user from JWT if user profile isn't in storage (e.g. after manual clears)
-      try {
-        const payload = JSON.parse(atob(storedToken.split('.')[1]));
-        const rawId = payload.sub ?? payload.id;
-        const id = typeof rawId === 'string' ? parseInt(rawId, 10) : rawId;
-        const role = (payload.role as User['role']) ?? 'customer';
-        const emailClaim = (payload.email as string) || '';
+    try {
+      if (storedToken && storedUser) {
+        // Trust stored token/user; do not auto-logout based on expiry or inactivity
+        try {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        } catch {
+          // If localStorage user is corrupted, clear auth storage so we can recover.
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+        }
+      } else if (storedToken && !storedUser) {
+        // Recover user from JWT if user profile isn't in storage (e.g. after manual clears)
+        try {
+          const payload = JSON.parse(atob(storedToken.split('.')[1]));
+          const rawId = payload.sub ?? payload.id;
+          const id = typeof rawId === 'string' ? parseInt(rawId, 10) : rawId;
+          const role = (payload.role as User['role']) ?? 'customer';
+          const emailClaim = (payload.email as string) || '';
 
-        const userData: User = {
-          id,
-          email: emailClaim,
-          role,
-        };
+          const userData: User = {
+            id,
+            email: emailClaim,
+            role,
+          };
 
-        localStorage.setItem('user', JSON.stringify(userData));
-        setToken(storedToken);
-        setUser(userData);
-      } catch {
-        // If token is malformed, clear auth storage so the app can recover cleanly.
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        setToken(null);
-        setUser(null);
+          localStorage.setItem('user', JSON.stringify(userData));
+          setToken(storedToken);
+          setUser(userData);
+        } catch {
+          // If token is malformed, clear auth storage so the app can recover cleanly.
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+        }
       }
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {

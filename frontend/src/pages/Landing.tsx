@@ -379,21 +379,7 @@ export default function Landing() {
                 >
                   <ArrowLeft className="w-6 h-6" />
                 </button>
-                <div className="flex justify-center gap-2">
-                  {featuredPlans.map((plan, idx) => (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      aria-label={`Go to plan ${plan.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        triggerManualPause();
-                        setCurrentPlanIndex(idx);
-                      }}
-                      className={`h-1 w-10 rounded-full transition-all ${idx === currentPlanIndex ? 'bg-white' : 'bg-white/30'}`}
-                    />
-                  ))}
-                </div>
+                <div />
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -528,21 +514,6 @@ export default function Landing() {
               <ArrowRight className="w-6 h-6" />
             </button>
 
-            <div className="absolute bottom-5 inset-x-0 flex justify-center gap-2 z-10">
-              {featuredPlans.map((plan, idx) => (
-                <button
-                  key={plan.id}
-                  type="button"
-                  aria-label={`Go to plan ${plan.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerManualPause();
-                    setCurrentPlanIndex(idx);
-                  }}
-                  className={`h-1 w-10 rounded-full transition-all ${idx === currentPlanIndex ? 'bg-white' : 'bg-white/30'}`}
-                />
-              ))}
-            </div>
           </div>
         </div>
       </div>

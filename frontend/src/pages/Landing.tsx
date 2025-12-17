@@ -130,6 +130,7 @@ export default function Landing() {
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
   const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
   const [isManualPause, setIsManualPause] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
   const manualPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -262,7 +263,16 @@ export default function Landing() {
     setHeroImageLoaded(false);
   }, [currentPlanIndex, featuredPlans.length]);
 
-  const isHeroReady = !isLoadingFeaturedPlans && Boolean(currentPlan) && heroImageLoaded;
+  // Hide loader after max 2s regardless of image load
+  useEffect(() => {
+    setShowLoader(true);
+    const timer = setTimeout(() => {
+      setShowLoader(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [currentPlanIndex, featuredPlans.length]);
+
+  const isHeroReady = !isLoadingFeaturedPlans && Boolean(currentPlan) && (heroImageLoaded || !showLoader);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] overflow-x-hidden">
@@ -277,7 +287,7 @@ export default function Landing() {
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
         <div className="relative w-full left-1/2 -translate-x-1/2 px-0 pb-0">
-          {!isHeroReady ? (
+          {!isHeroReady && showLoader ? (
             <div className="absolute inset-0 z-40 flex items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
             </div>

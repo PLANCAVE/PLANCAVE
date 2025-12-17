@@ -19,7 +19,7 @@ enhanced_uploads_bp = Blueprint('enhanced_uploads', __name__, url_prefix='/plans
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 ALLOWED_FILE_EXTENSIONS = {'pdf', 'dwg', 'dxf', 'rvt', 'ifc', 'skp', 'blend'}
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, '..', '..', '..'))
+_PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, '..', '..'))
 UPLOAD_FOLDER = os.path.join(_PROJECT_ROOT, 'uploads', 'plans')
 
 

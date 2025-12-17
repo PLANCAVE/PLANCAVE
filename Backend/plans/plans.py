@@ -14,7 +14,7 @@ plans_bp = Blueprint('plans', __name__, url_prefix='/plans')
 
 # Upload directory for local storage (fallback if GCS not configured)
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, '..', '..', '..'))
+_PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, '..', '..'))
 UPLOAD_FOLDER = os.path.join(_PROJECT_ROOT, 'uploads', 'plans')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 

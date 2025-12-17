@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
+_PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
 
 _dotenv_candidates = [
     os.path.join(_PROJECT_ROOT, ".env"),

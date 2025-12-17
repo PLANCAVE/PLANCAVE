@@ -23,7 +23,7 @@ def resolve_plan_file_path(file_path: str) -> str | None:
         return file_path
 
     normalized = file_path.lstrip('/')
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     candidate_paths = [file_path, normalized, os.path.join('uploads', normalized)]
 
     for candidate in candidate_paths:

@@ -278,13 +278,14 @@ export default function Landing() {
         </div>
         <div className="relative w-full left-1/2 -translate-x-1/2 px-0 pb-0">
           {!isHeroReady ? (
-            <div className="min-h-[70vh] md:min-h-[100vh] flex items-center justify-center">
+            <div className="absolute inset-0 z-40 flex items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
             </div>
           ) : null}
 
           {/* Mobile hero (image fits, details below) */}
-          <div className={`${isHeroReady ? '' : 'hidden'} md:hidden px-4 pt-6 pb-8`}
+          <div
+            className={`md:hidden px-4 pb-8 transition-opacity ${isHeroReady ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             <div className="max-w-6xl mx-auto">
               <div
@@ -377,7 +378,7 @@ export default function Landing() {
 
           {/* Desktop hero (overlay) */}
           <div
-            className={`${isHeroReady ? '' : 'hidden'} hidden md:block relative w-screen h-screen max-h-[100dvh] overflow-hidden cursor-pointer`}
+            className={`hidden md:block relative w-screen h-screen max-h-[100dvh] overflow-hidden cursor-pointer transition-opacity ${isHeroReady ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={handlePlanOpen}
             onMouseEnter={() => setIsHoveringCarousel(true)}
             onMouseLeave={() => setIsHoveringCarousel(false)}

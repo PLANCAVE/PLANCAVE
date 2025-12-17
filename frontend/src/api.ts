@@ -40,8 +40,8 @@ api.interceptors.response.use(
           return api.request(originalRequest);
         }
       } catch {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
+        // If refresh fails (e.g. missing/blocked refresh cookie), don't forcibly log the user out here.
+        // Let the calling UI decide how to handle the 401.
       }
     }
 

@@ -249,22 +249,21 @@ def upload_avatar():
     if ext not in allowed_exts:
         return jsonify(message="Unsupported file type"), 400
 
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    upload_root = os.path.join(project_root, 'uploads', 'profiles')
-    os.makedirs(upload_root, exist_ok=True)
-
-    new_name = f"user_{user_id}{ext}"
-    save_path = os.path.join(upload_root, new_name)
-    file.save(save_path)
-
-    relative_url = f"/uploads/profiles/{new_name}"
+    try:
+        from utils import cloudinary_uploader
+        upload_result = cloudinary_uploader.upload(file)
+        secure_url = upload_result.get('secure_url') if isinstance(upload_result, dict) else None
+        if not secure_url:
+            return jsonify(message="Failed to upload avatar"), 500
+    except Exception as e:
+        return jsonify(message="Failed to upload avatar", error=str(e)), 500
 
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
     try:
         cur.execute(
             "UPDATE users SET profile_picture_url = %s WHERE id = %s RETURNING id, username, role, first_name, middle_name, last_name, profile_picture_url;",
-            (relative_url, user_id),
+            (secure_url, user_id),
         )
         row = cur.fetchone()
         conn.commit()

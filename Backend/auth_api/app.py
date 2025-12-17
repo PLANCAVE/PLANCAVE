@@ -1,5 +1,14 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    create_refresh_token,
+    get_jwt,
+    get_jwt_identity,
+    jwt_required,
+    set_refresh_cookies,
+    unset_jwt_cookies,
+)
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flasgger import Swagger
@@ -434,13 +443,43 @@ def login():
         return jsonify(message="Your account has been deactivated. Please contact admin@plancave.com."), 403
 
     if bcrypt.check_password_hash(hashed_pw, password):
-        token = create_access_token(
+        access_token = create_access_token(
             identity=str(user_id),
             additional_claims={"role": role, "email": username}
         )
-        return jsonify(access_token=token)
+
+        refresh_token = create_refresh_token(
+            identity=str(user_id),
+            additional_claims={"role": role, "email": username}
+        )
+
+        resp = jsonify(access_token=access_token)
+        set_refresh_cookies(resp, refresh_token)
+        return resp
     else:
         return jsonify(message="Invalid credentials"), 401
+
+
+@app.route('/auth/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh_access_token():
+    identity = get_jwt_identity()
+    claims = get_jwt() or {}
+    role = claims.get('role')
+    email = claims.get('email')
+
+    access_token = create_access_token(
+        identity=str(identity),
+        additional_claims={"role": role, "email": email}
+    )
+    return jsonify(access_token=access_token)
+
+
+@app.route('/auth/logout', methods=['POST'])
+def logout():
+    resp = jsonify(message="Logged out")
+    unset_jwt_cookies(resp)
+    return resp
 
 
 @app.route('/dashboard', methods=['GET'])

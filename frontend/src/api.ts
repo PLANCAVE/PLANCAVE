@@ -9,7 +9,7 @@ const getApiBaseUrl = () => {
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
-  withCredentials: false,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,11 +23,40 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean });
+
+    if (error?.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const refreshResp = await api.post('/auth/refresh');
+        const newAccessToken = refreshResp.data?.access_token as string | undefined;
+        if (newAccessToken) {
+          localStorage.setItem('access_token', newAccessToken);
+          originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return api.request(originalRequest);
+        }
+      } catch {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 // Auth
 // Note: Backend expects 'username' field, but we're using it for email.
 // Always normalize to lowercase so login/registration are case-insensitive.
 export const login = (email: string, password: string) =>
   api.post('/login', { username: email.toLowerCase(), password });
+
+export const logout = () =>
+  api.post('/auth/logout');
 
 export const registerCustomer = (email: string, password: string, firstName?: string, middleName?: string, lastName?: string) =>
   api.post('/register/customer', { username: email.toLowerCase(), password, first_name: firstName, middle_name: middleName, last_name: lastName });

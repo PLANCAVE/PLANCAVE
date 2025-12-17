@@ -16,6 +16,8 @@ export default function Header() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const canSeePurchases = isAuthenticated && (user?.role === 'designer' || user?.role === 'customer');
+
   const getInitials = () => {
     if (!user) return '';
     const nameParts: string[] = [];
@@ -105,12 +107,14 @@ export default function Header() {
                   Dashboard
                 </Link>
 
-                <Link
-                  to="/purchases"
-                  className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-4 py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm"
-                >
-                  Purchases
-                </Link>
+                {canSeePurchases ? (
+                  <Link
+                    to="/purchases"
+                    className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-4 py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm"
+                  >
+                    Purchases
+                  </Link>
+                ) : null}
                 
                 <div className="flex items-center gap-4 ml-4 pl-4 border-l border-teal-400/40">
                   <button
@@ -215,13 +219,15 @@ export default function Header() {
                     Dashboard
                   </Link>
 
-                  <Link
-                    to="/purchases"
-                    className="text-gray-300 hover:text-white"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Purchases
-                  </Link>
+                  {canSeePurchases ? (
+                    <Link
+                      to="/purchases"
+                      className="text-gray-300 hover:text-white"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Purchases
+                    </Link>
+                  ) : null}
                   <div className="pt-4 border-t border-teal-500/20">
                     <button
                       onClick={() => {

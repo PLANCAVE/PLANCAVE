@@ -108,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUserProfile,
     isAuthenticated: !!token,
     isAdmin: user?.role === 'admin',
-    isDesigner: user?.role === 'designer' || user?.role === 'admin',
-    isCustomer: user?.role === 'customer' || user?.role === 'admin',
+    isDesigner: user?.role === 'designer',
+    isCustomer: user?.role === 'customer',
   };
 
   if (loading) {

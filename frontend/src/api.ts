@@ -37,7 +37,13 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean });
 
-    if (error?.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    const reqUrl = (originalRequest?.url || '').toString();
+    const isAuthEndpoint =
+      reqUrl.includes('/auth/refresh') ||
+      reqUrl.includes('/auth/logout') ||
+      reqUrl.includes('/login');
+
+    if (error?.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       try {
         const refreshResp = await api.post('/auth/refresh');

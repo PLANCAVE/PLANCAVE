@@ -125,6 +125,8 @@ export default function Landing() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [featuredPlans, setFeaturedPlans] = useState<Plan[]>([]);
+  const [isLoadingFeaturedPlans, setIsLoadingFeaturedPlans] = useState(true);
+  const [heroImageLoaded, setHeroImageLoaded] = useState(false);
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
   const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
   const [isManualPause, setIsManualPause] = useState(false);
@@ -141,7 +143,7 @@ export default function Landing() {
       } catch (error) {
         console.error('Failed to load featured plans:', error);
       } finally {
-        // setLoadingPlans(false);
+        setIsLoadingFeaturedPlans(false);
       }
     };
 
@@ -177,6 +179,10 @@ export default function Landing() {
     return cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
   };
   const currentPlan = featuredPlans[currentPlanIndex];
+
+  useEffect(() => {
+    setHeroImageLoaded(false);
+  }, [currentPlanIndex]);
 
   const { budgetPlans, bestSellingPlans, newPlans, popularCategoryPlans } = useMemo(() => {
     const shuffle = (plans: Plan[]) => {
@@ -251,6 +257,13 @@ export default function Landing() {
     navigate(`/plans/${currentPlan.id}`);
   };
 
+  useEffect(() => {
+    if (!featuredPlans.length) return;
+    setHeroImageLoaded(false);
+  }, [currentPlanIndex, featuredPlans.length]);
+
+  const isHeroReady = !isLoadingFeaturedPlans && Boolean(currentPlan) && heroImageLoaded;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] overflow-x-hidden">
       {/* Hero Section with 3D Elements */}
@@ -263,10 +276,108 @@ export default function Landing() {
           <div className="absolute top-40 right-20 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-float-delayed"></div>
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-teal-600/20 rounded-full blur-3xl animate-float-slow"></div>
         </div>
-        {/* Full-bleed hero carousel */}
         <div className="relative w-full left-1/2 -translate-x-1/2 px-0 pb-0">
+          {!isHeroReady ? (
+            <div className="min-h-[70vh] md:min-h-[100vh] flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+            </div>
+          ) : null}
+
+          {/* Mobile hero (image fits, details below) */}
+          <div className={`${isHeroReady ? '' : 'hidden'} md:hidden px-4 pt-6 pb-8`}
+          >
+            <div className="max-w-6xl mx-auto">
+              <div
+                className="relative w-full aspect-[16/9] overflow-hidden rounded-2xl border border-white/10 bg-black cursor-pointer"
+                onClick={handlePlanOpen}
+              >
+                <img
+                  src={currentPlan?.image_url ? resolveMediaUrl(currentPlan.image_url) : '/vite.svg'}
+                  className="w-full h-full object-contain"
+                  alt="Featured plan"
+                  onLoad={() => setHeroImageLoaded(true)}
+                />
+                <div className="absolute inset-0 bg-black/20" />
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center text-white/80 space-y-3 pointer-events-none z-20">
+                  <div className="flex items-center gap-3 justify-center text-[0.6rem] tracking-[0.8em] text-white/70">
+                    <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/30 to-white/70"></div>
+                    <span>THE</span>
+                    <div className="h-px w-20 bg-gradient-to-l from-transparent via-white/30 to-white/70"></div>
+                  </div>
+                  <h1 className="text-3xl font-serif tracking-[0.55em] text-white drop-shadow-2xl">PLANCAVE</h1>
+                </div>
+              </div>
+
+              <div className="mt-4 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-4 text-white">
+                <div className="flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.4em] text-white/70">
+                  <span>{currentPlan?.project_type}</span>
+                  {currentPlan?.category && <span className="text-white/60">• {currentPlan.category}</span>}
+                </div>
+                <h3 className="mt-2 text-xl font-semibold tracking-[0.2em] text-white">{currentPlan?.name}</h3>
+                <p className="mt-2 text-sm text-white/90 line-clamp-3">{currentPlan?.description}</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-[0.55rem] uppercase tracking-[0.35em] text-white/90">
+                  <span className="px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
+                    KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
+                  </span>
+                  <span className={`px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
+                    {currentPlan?.package_level?.toUpperCase()}
+                  </span>
+                </div>
+                <button
+                  className="mt-4 w-full inline-flex items-center justify-center gap-3 px-5 py-3 rounded-full border border-white/30 bg-white/20 backdrop-blur-md text-[0.6rem] uppercase tracking-[0.4em] text-white hover:bg-white/30 shadow-xl transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlanOpen();
+                  }}
+                >
+                  View Details
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevPlan();
+                  }}
+                  className="text-white/70 hover:text-white transition"
+                  aria-label="Previous plan"
+                >
+                  <ArrowLeft className="w-6 h-6" />
+                </button>
+                <div className="flex justify-center gap-2">
+                  {featuredPlans.map((plan, idx) => (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      aria-label={`Go to plan ${plan.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerManualPause();
+                        setCurrentPlanIndex(idx);
+                      }}
+                      className={`h-1 w-10 rounded-full transition-all ${idx === currentPlanIndex ? 'bg-white' : 'bg-white/30'}`}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextPlan();
+                  }}
+                  className="text-white/70 hover:text-white transition"
+                  aria-label="Next plan"
+                >
+                  <ArrowRight className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop hero (overlay) */}
           <div
-            className="relative w-screen h-screen max-h-[100dvh] overflow-hidden cursor-pointer"
+            className={`${isHeroReady ? '' : 'hidden'} hidden md:block relative w-screen h-screen max-h-[100dvh] overflow-hidden cursor-pointer`}
             onClick={handlePlanOpen}
             onMouseEnter={() => setIsHoveringCarousel(true)}
             onMouseLeave={() => setIsHoveringCarousel(false)}
@@ -274,7 +385,6 @@ export default function Landing() {
             onTouchEnd={() => setIsHoveringCarousel(false)}
             onTouchCancel={() => setIsHoveringCarousel(false)}
           >
-            {/* PLANCAVE title overlay */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center text-white/80 space-y-3 pointer-events-none z-20">
               <div className="flex items-center gap-3 justify-center text-[0.6rem] tracking-[0.8em] text-white/70">
                 <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/30 to-white/70"></div>
@@ -286,17 +396,16 @@ export default function Landing() {
               </h1>
             </div>
 
-            {/* Hero image */}
             <div className="absolute inset-0 w-full h-full">
               <img
                 src={currentPlan?.image_url ? resolveMediaUrl(currentPlan.image_url) : '/vite.svg'}
                 className="w-full h-full object-cover object-center"
                 alt="Featured plan"
+                onLoad={() => setHeroImageLoaded(true)}
               />
               <div className="absolute inset-0 bg-black/25" />
             </div>
 
-            {/* Card details overlay */}
             <div className="absolute inset-x-0 bottom-0 px-4 pb-6 text-white z-10">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between max-w-6xl mx-auto">
                 <div className="flex flex-col gap-2 bg-black/5 backdrop-blur-[1px] rounded-2xl border border-white/5 px-3 py-2 max-w-2xl">

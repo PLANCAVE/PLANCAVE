@@ -11,6 +11,8 @@ import io
 import zipfile
 import json
 import requests
+import hmac
+import hashlib
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.auth_utils import get_current_user, log_user_activity
@@ -32,6 +34,7 @@ MAX_DOWNLOADS_PER_TOKEN = int(os.environ.get('MAX_DOWNLOADS_PER_TOKEN', '1'))
 PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
 PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
 PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL')
+PAYSTACK_WEBHOOK_SECRET = os.environ.get('PAYSTACK_SECRET_KEY')
 PAYSTACK_CURRENCY = os.environ.get('PAYSTACK_CURRENCY', 'USD')
 
 
@@ -72,6 +75,83 @@ def _paystack_headers():
         "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
         "Content-Type": "application/json",
     }
+
+
+def _paystack_signature_for(body: bytes) -> str:
+    if not PAYSTACK_WEBHOOK_SECRET:
+        return ''
+    return hmac.new(
+        PAYSTACK_WEBHOOK_SECRET.encode('utf-8'),
+        body,
+        hashlib.sha512,
+    ).hexdigest()
+
+
+def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
+    """Mark a Paystack purchase as completed after verifying all invariants."""
+    cur.execute(
+        """
+        SELECT p.id, p.user_id, p.plan_id, p.amount, p.payment_status, pl.price, pl.sales_count
+        FROM purchases p
+        JOIN plans pl ON p.plan_id = pl.id
+        WHERE p.transaction_id = %s
+        """,
+        (reference,)
+    )
+    purchase = cur.fetchone()
+    if not purchase:
+        return False, ("Purchase record not found", 404)
+
+    if purchase['payment_status'] == 'completed':
+        return True, ("Payment already completed", 200)
+
+    # Validate Paystack metadata matches our pending purchase
+    metadata = (paystack_data.get('metadata') or {})
+    if str(metadata.get('plan_id')) != str(purchase['plan_id']) or int(metadata.get('user_id')) != int(purchase['user_id']):
+        return False, ("Payment metadata mismatch", 400)
+
+    # Validate currency and amount
+    currency = paystack_data.get('currency')
+    if currency and currency != PAYSTACK_CURRENCY:
+        return False, ("Payment currency mismatch", 400)
+
+    expected_amount_major = float(purchase['amount'])
+    expected_amount_minor = int(round(expected_amount_major * 100))
+    paid_amount_minor = int(paystack_data.get('amount') or 0)
+    if paid_amount_minor != expected_amount_minor:
+        return False, ("Payment amount mismatch", 400)
+
+    cur.execute(
+        """
+        UPDATE purchases
+        SET payment_status = 'completed'
+        WHERE id = %s
+        """,
+        (purchase['id'],)
+    )
+
+    cur.execute(
+        """
+        UPDATE plans
+        SET sales_count = sales_count + 1
+        WHERE id = %s
+        """,
+        (purchase['plan_id'],)
+    )
+
+    log_user_activity(
+        purchase['user_id'],
+        'purchase',
+        {
+            'plan_id': str(purchase['plan_id']),
+            'transaction_id': reference,
+            'payment_provider': 'paystack',
+            'amount': expected_amount_major,
+        },
+        conn,
+    )
+
+    return True, ("Payment verified and purchase activated", 200)
 
 
 def _init_paystack_transaction(email: str, amount: float, plan_id: str, user_id: int):
@@ -218,6 +298,47 @@ def purchase_plan():
         conn.close()
 
 
+@customer_bp.route('/payments/paystack/webhook', methods=['POST'])
+def paystack_webhook():
+    """Paystack webhook handler. Verifies signature and completes purchases."""
+    raw_body = request.get_data() or b''
+    signature = request.headers.get('x-paystack-signature')
+    expected = _paystack_signature_for(raw_body)
+    if not expected or not signature or not hmac.compare_digest(signature, expected):
+        return jsonify(message="Invalid Paystack signature"), 401
+
+    payload = request.get_json(silent=True) or {}
+    event = payload.get('event')
+    data = payload.get('data') or {}
+
+    # Only handle successful charges
+    if event not in ('charge.success', 'transaction.success'):
+        return jsonify(status="ignored"), 200
+
+    reference = data.get('reference')
+    if not reference:
+        return jsonify(message="Missing reference"), 400
+
+    if data.get('status') != 'success':
+        return jsonify(status="ignored"), 200
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        ok, (msg, code) = _complete_paystack_purchase(reference, data, conn, cur)
+        if not ok and code != 200:
+            conn.rollback()
+            return jsonify(message=msg), code
+        conn.commit()
+        return jsonify(status="ok"), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @customer_bp.route('/payments/paystack/verify/<string:reference>', methods=['POST', 'GET'])
 @jwt_required()
 def verify_paystack(reference: str):
@@ -244,51 +365,30 @@ def verify_paystack(reference: str):
         if paystack_data.get("status") != "success":
             return jsonify(message="Payment not completed yet"), 202
 
-        # Find existing purchase
-        cur.execute("""
-            SELECT id, user_id, plan_id, payment_status
+        # Ensure the authenticated user is allowed to verify this reference
+        cur.execute(
+            """
+            SELECT user_id, plan_id
             FROM purchases
             WHERE transaction_id = %s
-        """, (reference,))
-        purchase = cur.fetchone()
-
-        if not purchase:
+            """,
+            (reference,)
+        )
+        owner = cur.fetchone()
+        if not owner:
             return jsonify(message="Purchase record not found"), 404
-
-        if purchase['user_id'] != user_id and role != 'admin':
+        if int(owner['user_id']) != int(user_id) and role != 'admin':
             return jsonify(message="Not authorized to verify this purchase"), 403
 
-        if purchase['payment_status'] == 'completed':
-            return jsonify(message="Payment already completed"), 200
-
-        plan_id = purchase['plan_id']
-
-        # Mark purchase completed
-        cur.execute("""
-            UPDATE purchases
-            SET payment_status = 'completed'
-            WHERE id = %s
-        """, (purchase['id'],))
-
-        # Increment sales count
-        cur.execute("""
-            UPDATE plans
-            SET sales_count = sales_count + 1
-            WHERE id = %s
-        """, (plan_id,))
-
-        log_user_activity(user_id, 'purchase', {
-            'plan_id': plan_id,
-            'transaction_id': reference,
-            'payment_provider': 'paystack',
-            'amount': float(paystack_data.get('amount', 0)) / 100.0
-        }, conn)
+        ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)
+        if not ok and code != 200:
+            conn.rollback()
+            return jsonify(message=msg), code
 
         conn.commit()
-
         return jsonify({
-            "message": "Payment verified and purchase activated",
-            "plan_id": plan_id,
+            "message": msg,
+            "plan_id": str(owner['plan_id']),
             "transaction_id": reference
         }), 200
 
@@ -371,7 +471,8 @@ def generate_download_link():
         )
 
         token = str(uuid.uuid4())
-        expires_at = datetime.utcnow() + timedelta(minutes=DOWNLOAD_LINK_EXPIRY_MINUTES)
+        # Tokens should never expire unless used. Column is NOT NULL, so store a far-future expiry.
+        expires_at = datetime(9999, 12, 31)
 
         cur.execute(
             """
@@ -379,7 +480,8 @@ def generate_download_link():
             VALUES (%s, %s, %s, %s, %s)
             RETURNING token, expires_at
             """,
-            (user_id, plan_id, token, expires_at, MAX_DOWNLOADS_PER_TOKEN)
+            # Single-use download only
+            (user_id, plan_id, token, expires_at, 1)
         )
 
         log_user_activity(user_id, 'download_link_requested', {
@@ -408,7 +510,6 @@ def generate_download_link():
 def download_plan_files(download_token: str):
     """Download the plan's technical files as a zip using a one-time token."""
     user_id, role = get_current_user()
-
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
 
@@ -427,16 +528,12 @@ def download_plan_files(download_token: str):
         if not token_row:
             return jsonify(message="Invalid or expired download token"), 404
 
-        if role != 'admin' and token_row['user_id'] != user_id:
+        # Only the purchaser (or admin) can use this token.
+        if role != 'admin' and int(token_row['user_id']) != int(user_id):
             return jsonify(message="Download token does not belong to you"), 403
 
         if token_row['used']:
             return jsonify(message="Download token already used"), 410
-
-        if datetime.utcnow() > token_row['expires_at']:
-            cur.execute("UPDATE download_tokens SET used = TRUE WHERE token = %s", (download_token,))
-            conn.commit()
-            return jsonify(message="Download token has expired"), 410
 
         if token_row['download_count'] >= token_row.get('max_downloads', 1):
             cur.execute("UPDATE download_tokens SET used = TRUE WHERE token = %s", (download_token,))

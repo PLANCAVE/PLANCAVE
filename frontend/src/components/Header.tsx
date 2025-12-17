@@ -104,6 +104,13 @@ export default function Header() {
                   <LayoutDashboard className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                   Dashboard
                 </Link>
+
+                <Link
+                  to="/purchases"
+                  className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-4 py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm"
+                >
+                  Purchases
+                </Link>
                 
                 <div className="flex items-center gap-4 ml-4 pl-4 border-l border-teal-400/40">
                   <button
@@ -206,6 +213,14 @@ export default function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Dashboard
+                  </Link>
+
+                  <Link
+                    to="/purchases"
+                    className="text-gray-300 hover:text-white"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Purchases
                   </Link>
                   <div className="pt-4 border-t border-teal-500/20">
                     <button

@@ -11,6 +11,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
 import Cart from './pages/Cart';
+import Purchases from './pages/Purchases';
+import PaystackCallback from './pages/PaystackCallback';
 import UserManagement from './pages/admin/UserManagement';
 import PlanManagement from './pages/admin/PlanManagement';
 import Analytics from './pages/admin/Analytics';
@@ -49,6 +51,15 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/paystack/callback" element={<PaystackCallback />} />
+          <Route
+            path="/purchases"
+            element={
+              <ProtectedRoute>
+                <Purchases />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={

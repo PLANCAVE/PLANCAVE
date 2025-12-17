@@ -11,7 +11,7 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_SECONDS", "900")))
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES_SECONDS", "2592000")))
     JWT_COOKIE_SECURE = os.getenv("ENV") == "production"
-    JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "Lax")
+    JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "None" if os.getenv("ENV") == "production" else "Lax")
     JWT_COOKIE_CSRF_PROTECT = False
 
 

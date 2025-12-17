@@ -38,6 +38,13 @@ function DesignerRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function CreatorRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isDesigner, isAdmin } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (!isDesigner && !isAdmin) return <Navigate to="/dashboard" />;
+  return <>{children}</>;
+}
+
 function AppContent() {
   return (
     <BrowserRouter>
@@ -105,9 +112,9 @@ function AppContent() {
           <Route
             path="/designer/upload"
             element={
-              <DesignerRoute>
+              <CreatorRoute>
                 <UploadPlan />
-              </DesignerRoute>
+              </CreatorRoute>
             }
           />
           <Route

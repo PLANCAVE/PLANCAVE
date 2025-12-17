@@ -67,6 +67,8 @@ interface PlanDetailsData {
   files?: PlanFile[];
   structural_specs?: StructuralSpec[];
   designer_id?: number;
+  designer_name?: string | null;
+  designer_role?: string | null;
 }
 
 export default function PlanDetailsPage() {
@@ -93,6 +95,12 @@ export default function PlanDetailsPage() {
   const [isAddingToFavorites, setIsAddingToFavorites] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [favoriteSuccess, setFavoriteSuccess] = useState(false);
+
+  const designerLabel = (() => {
+    if (!plan) return '';
+    if (plan.designer_role === 'admin') return 'Plancave LTD';
+    return plan.designer_name || '—';
+  })();
 
   const resolveMediaUrl = (path?: string) => {
     if (!path) return '';
@@ -471,6 +479,19 @@ export default function PlanDetailsPage() {
               </div>
             )}
 
+            {isAuthenticated && isAdmin && id ? (
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/designer/upload?edit=${id}`)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  Edit plan
+                </button>
+              </div>
+            ) : null}
+
             {imageUrls.length > 1 && (
               <div className="flex gap-2 mt-4 overflow-x-auto">
                 {imageUrls.map((url, idx) => (
@@ -496,6 +517,10 @@ export default function PlanDetailsPage() {
               {plan.project_type}
               {plan.category ? ` · ${plan.category}` : ''}
             </p>
+
+            <div className="text-sm text-gray-600 mb-6">
+              Designer: <span className="font-medium text-gray-900">{designerLabel}</span>
+            </div>
 
             <div className="mb-6">
               <div className="text-sm text-gray-600 mb-1">Price</div>

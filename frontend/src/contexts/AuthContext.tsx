@@ -69,11 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(storedToken);
         setUser(userData);
       } catch {
-        // If token is malformed, keep user logged out.
+        // If token is malformed, clear auth storage so the app can recover cleanly.
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
       }
-    } else if (!storedToken && !storedUser) {
-      setLoading(false);
     }
+
+    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {

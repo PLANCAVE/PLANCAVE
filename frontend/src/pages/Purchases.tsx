@@ -101,9 +101,7 @@ export default function Purchases() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between gap-4 mb-8">
           <div>
-            <p className="text-xs tracking-[0.4em] uppercase text-gray-500">LIBRARY</p>
             <h1 className="text-3xl font-bold text-gray-900 mt-2">Purchased Plans</h1>
-            <p className="text-gray-600 mt-1">Download your verified purchases anytime. Generate a secure link to share with your team.</p>
           </div>
           <button
             type="button"

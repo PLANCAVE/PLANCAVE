@@ -341,7 +341,7 @@ export default function Landing() {
                 </div>
               </div>
 
-              <div className="mt-4 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-4 text-white">
+              <div className="mt-4 bg-black/30 backdrop-blur-2xl border border-white/20 rounded-2xl p-4 text-white">
                 <div className="flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.4em] text-white/70">
                   <span>{currentPlan?.project_type}</span>
                   {currentPlan?.category && <span className="text-white/60">• {currentPlan.category}</span>}

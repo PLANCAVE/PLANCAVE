@@ -1,5 +1,13 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 
+let memoryAccessToken: string | null = null;
+
+export const setAccessToken = (token: string | null) => {
+  memoryAccessToken = token;
+};
+
+export const getAccessToken = () => memoryAccessToken;
+
 const getApiBaseUrl = () => {
   if (import.meta.env.PROD) {
     return '/api';
@@ -17,7 +25,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('access_token');
+  const token = memoryAccessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -35,7 +43,7 @@ api.interceptors.response.use(
         const refreshResp = await api.post('/auth/refresh');
         const newAccessToken = refreshResp.data?.access_token as string | undefined;
         if (newAccessToken) {
-          localStorage.setItem('access_token', newAccessToken);
+          memoryAccessToken = newAccessToken;
           originalRequest.headers = originalRequest.headers || {};
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return api.request(originalRequest);
@@ -43,6 +51,7 @@ api.interceptors.response.use(
       } catch {
         // If refresh fails (e.g. missing/blocked refresh cookie), don't forcibly log the user out here.
         // Let the calling UI decide how to handle the 401.
+        memoryAccessToken = null;
       }
     }
 
@@ -58,6 +67,9 @@ export const login = (email: string, password: string) =>
 
 export const logout = () =>
   api.post('/auth/logout');
+
+export const refreshAccessToken = () =>
+  api.post('/auth/refresh');
 
 export const registerCustomer = (email: string, password: string, firstName?: string, middleName?: string, lastName?: string) =>
   api.post('/register/customer', { username: email.toLowerCase(), password, first_name: firstName, middle_name: middleName, last_name: lastName });

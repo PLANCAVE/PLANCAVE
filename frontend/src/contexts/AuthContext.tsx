@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { login as apiLogin } from '../api';
+import { login as apiLogin, logout as apiLogout, refreshAccessToken, setAccessToken } from '../api';
 
 interface User {
   id: number;
@@ -33,36 +33,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout function
   const logout = () => {
     // Keep behavior simple and quiet: clear auth state without noisy alerts/logging
+    // Also clear any legacy localStorage values from previous builds.
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
+    setAccessToken(null);
     setToken(null);
     setUser(null);
+    apiLogout().catch(() => {
+      // ignore logout errors
+    });
   };
 
   // No automatic token expiry or inactivity-based logout on the client.
 
   // Initial load
   useEffect(() => {
-    const storedToken = localStorage.getItem('access_token');
-    const storedUser = localStorage.getItem('user');
+    const bootstrap = async () => {
+      try {
+        // Legacy cleanup in case old builds left tokens in storage.
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
 
-    try {
-      if (storedToken && storedUser) {
-        // Trust stored token/user; do not auto-logout based on expiry or inactivity
-        try {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
-        } catch {
-          // If localStorage user is corrupted, clear auth storage so we can recover.
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
+        // Attempt to restore session via HttpOnly refresh cookie.
+        const refreshResp = await refreshAccessToken();
+        const accessToken = refreshResp.data?.access_token as string | undefined;
+        if (!accessToken) {
+          setAccessToken(null);
           setToken(null);
           setUser(null);
+          return;
         }
-      } else if (storedToken && !storedUser) {
-        // Recover user from JWT if user profile isn't in storage (e.g. after manual clears)
+
+        setAccessToken(accessToken);
+        setToken(accessToken);
+
         try {
-          const payload = JSON.parse(atob(storedToken.split('.')[1]));
+          const payload = JSON.parse(atob(accessToken.split('.')[1]));
           const rawId = payload.sub ?? payload.id;
           const id = typeof rawId === 'string' ? parseInt(rawId, 10) : rawId;
           const role = (payload.role as User['role']) ?? 'customer';
@@ -73,21 +79,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: emailClaim,
             role,
           };
-
-          localStorage.setItem('user', JSON.stringify(userData));
-          setToken(storedToken);
           setUser(userData);
         } catch {
-          // If token is malformed, clear auth storage so the app can recover cleanly.
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
+          // If JWT can't be decoded, drop session.
+          setAccessToken(null);
           setToken(null);
           setUser(null);
         }
+      } catch {
+        setAccessToken(null);
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    bootstrap();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -110,9 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: emailClaim,
       role,
     };
-    
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('user', JSON.stringify(userData));
+
+    setAccessToken(access_token);
     setToken(access_token);
     setUser(userData);
   };
@@ -121,16 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, ...profile };
-
-      try {
-        const stored = localStorage.getItem('user');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          localStorage.setItem('user', JSON.stringify({ ...parsed, ...profile }));
-        }
-      } catch {
-        // ignore storage errors
-      }
 
       return updated;
     });

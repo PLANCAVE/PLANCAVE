@@ -744,11 +744,27 @@ def get_my_purchases():
     
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
+
+    def _serialize_purchase_row(row: dict) -> dict:
+        purchase = dict(row)
+        purchased_at = purchase.get('purchased_at')
+        if purchased_at is not None and hasattr(purchased_at, 'isoformat'):
+            purchase['purchased_at'] = purchased_at.isoformat() + 'Z'
+
+        amount = purchase.get('amount')
+        try:
+            if amount is not None:
+                purchase['amount'] = float(amount)
+        except Exception:
+            pass
+
+        return purchase
     
     try:
         # Count total
-        cur.execute("SELECT COUNT(*) FROM purchases WHERE user_id = %s", (user_id,))
-        total_count = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) AS total FROM purchases WHERE user_id = %s", (user_id,))
+        total_row = cur.fetchone() or {}
+        total_count = int(total_row.get('total') or 0)
         
         # Get purchases
         cur.execute("""
@@ -766,7 +782,7 @@ def get_my_purchases():
             LIMIT %s OFFSET %s
         """, (user_id, limit, offset))
         
-        purchases = [dict(row) for row in cur.fetchall()]
+        purchases = [_serialize_purchase_row(row) for row in cur.fetchall()]
         
         return jsonify({
             "metadata": {
@@ -779,7 +795,7 @@ def get_my_purchases():
         }), 200
         
     except Exception as e:
-        return jsonify(error=str(e)), 500
+        return jsonify(message="Failed to fetch purchases", error=str(e)), 500
     finally:
         cur.close()
         conn.close()

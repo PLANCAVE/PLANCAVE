@@ -14,7 +14,11 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 def get_db():
-    return psycopg.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(
+        current_app.config['DATABASE_URL'],
+        connect_timeout=5,
+        options='-c statement_timeout=15000'
+    )
 
 
 @admin_bp.route('/dashboard', methods=['GET'])

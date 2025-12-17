@@ -14,7 +14,11 @@ creator_tools_bp = Blueprint('creator_tools', __name__, url_prefix='/creator')
 
 
 def get_db():
-    return psycopg.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(
+        current_app.config['DATABASE_URL'],
+        connect_timeout=5,
+        options='-c statement_timeout=15000'
+    )
 
 
 @creator_tools_bp.route('/analytics/overview', methods=['GET'])

@@ -26,7 +26,11 @@ customer_bp = Blueprint('customer', __name__, url_prefix='/customer')
 
 
 def get_db():
-    return psycopg.connect(current_app.config['DATABASE_URL'])
+    return psycopg.connect(
+        current_app.config['DATABASE_URL'],
+        connect_timeout=5,
+        options='-c statement_timeout=15000'
+    )
 
 
 DOWNLOAD_LINK_EXPIRY_MINUTES = int(os.environ.get('DOWNLOAD_LINK_EXPIRY_MINUTES', '30'))

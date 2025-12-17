@@ -13,8 +13,10 @@ export default function Dashboard() {
   const [migrationMessage, setMigrationMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
+    setLoading(true);
     loadDashboard();
-  }, []);
+  }, [user, isAdmin, isDesigner, isCustomer]);
 
   const loadDashboard = async () => {
     try {
@@ -61,6 +63,27 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="max-w-lg w-full bg-white border border-gray-200 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Dashboard unavailable</h2>
+          <p className="text-sm text-gray-700 mb-4">{error}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              loadDashboard();
+            }}
+            className="px-4 py-2 rounded bg-gray-900 text-white hover:bg-gray-800"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

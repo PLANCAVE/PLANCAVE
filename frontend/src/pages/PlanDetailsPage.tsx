@@ -350,15 +350,22 @@ export default function PlanDetailsPage() {
     try {
       const resp = await verifyPurchase(id);
       const status = resp.data?.status;
+      const transactionId = resp.data?.transaction_id as string | undefined;
       if (status === 'completed' || status === 'purchased') {
         setPurchaseStatus('purchased');
+        setPendingReference(null);
       } else if (status === 'pending') {
         setPurchaseStatus('processing');
+        if (transactionId) {
+          setPendingReference(transactionId);
+        }
       } else {
         setPurchaseStatus('none');
+        setPendingReference(null);
       }
     } catch {
       setPurchaseStatus('none');
+      setPendingReference(null);
     }
   };
 

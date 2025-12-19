@@ -1,32 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { verifyPaystackPayment } from '../api';
-import { useAuth } from '../contexts/AuthContext';
 
 export default function PaystackCallback() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState<string>('Verifying your payment…');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const reference = params.get('reference') || localStorage.getItem('pending_paystack_reference');
+    const reference = params.get('reference');
 
     if (!reference) {
       setStatus('error');
       setMessage('Missing payment reference.');
       return;
     }
-
-    // If the user is not logged in, stash the reference and send them to login.
-    if (!isAuthenticated) {
-      localStorage.setItem('pending_paystack_reference', reference);
-      navigate('/login');
-      return;
-    }
-
-    localStorage.removeItem('pending_paystack_reference');
 
     const run = async () => {
       try {
@@ -49,7 +38,7 @@ export default function PaystackCallback() {
     };
 
     run();
-  }, [isAuthenticated, navigate]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-teal-50/20 px-4">

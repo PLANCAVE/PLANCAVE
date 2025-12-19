@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, send_file
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 import psycopg
 from psycopg.rows import dict_row
 from datetime import datetime, date, timedelta
@@ -344,12 +344,15 @@ def paystack_webhook():
 
 
 @customer_bp.route('/payments/paystack/verify/<string:reference>', methods=['POST', 'GET'])
-@jwt_required()
+@jwt_required(optional=True)
 def verify_paystack(reference: str):
     """
     Verify Paystack transaction by reference and mark purchase as completed.
     """
-    user_id, role = get_current_user()
+    identity = get_jwt_identity()
+    claims = get_jwt() or {}
+    user_id = int(identity) if identity is not None else None
+    role = claims.get('role')
 
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
@@ -381,7 +384,7 @@ def verify_paystack(reference: str):
         owner = cur.fetchone()
         if not owner:
             return jsonify(message="Purchase record not found"), 404
-        if int(owner['user_id']) != int(user_id) and role != 'admin':
+        if user_id is not None and int(owner['user_id']) != int(user_id) and role != 'admin':
             return jsonify(message="Not authorized to verify this purchase"), 403
 
         ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)

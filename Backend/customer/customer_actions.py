@@ -207,13 +207,16 @@ def _init_paystack_transaction(email: str, amount: float, plan_id: str, user_id:
         amount = amount * 1  # Conversion rate
     
     amount_smallest_unit = int(round(float(amount) * 100))
+    plan_id_str = str(plan_id) if plan_id is not None else None
+    user_id_val = int(user_id) if user_id is not None else None
+
     payload = {
         "email": email,
         "amount": amount_smallest_unit,
         "currency": PAYSTACK_CURRENCY,
         "metadata": {
-            "plan_id": plan_id,
-            "user_id": user_id,
+            "plan_id": plan_id_str,
+            "user_id": user_id_val,
         }
     }
     if PAYSTACK_CALLBACK_URL:

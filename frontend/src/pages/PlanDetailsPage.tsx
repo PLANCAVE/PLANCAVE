@@ -69,6 +69,7 @@ interface PlanDetailsData {
   designer_id?: number;
   designer_name?: string | null;
   designer_role?: string | null;
+  deliverable_prices?: Record<string, number | string> | null;
 }
 
 export default function PlanDetailsPage() {
@@ -95,6 +96,8 @@ export default function PlanDetailsPage() {
   const [isAddingToFavorites, setIsAddingToFavorites] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [favoriteSuccess, setFavoriteSuccess] = useState(false);
+
+  const [selectedDeliverables, setSelectedDeliverables] = useState<string[]>([]);
 
   const designerLabel = (() => {
     if (!plan) return '';
@@ -184,6 +187,18 @@ export default function PlanDetailsPage() {
     loadPlan();
   }, [id]);
 
+  useEffect(() => {
+    if (!plan) return;
+    const prices = plan.deliverable_prices;
+    if (!prices || typeof prices !== 'object') {
+      setSelectedDeliverables([]);
+      return;
+    }
+
+    const keys = Object.keys(prices);
+    setSelectedDeliverables(keys);
+  }, [plan]);
+
   // Check purchase status when plan loads and user is authenticated
   useEffect(() => {
     if (plan && isAuthenticated) {
@@ -238,7 +253,11 @@ export default function PlanDetailsPage() {
     setPurchaseSuccess(false);
 
     try {
-      const resp = await purchasePlan(id, 'paystack');
+      const resp = await purchasePlan(
+        id,
+        'paystack',
+        selectedDeliverables.length > 0 ? selectedDeliverables : undefined
+      );
       const { authorization_url, reference, status } = resp.data || {};
 
       if (authorization_url && reference) {
@@ -434,6 +453,15 @@ export default function PlanDetailsPage() {
   }
 
   const priceNumber = typeof plan.price === 'string' ? Number(plan.price) : plan.price;
+  const deliverablePrices = plan.deliverable_prices && typeof plan.deliverable_prices === 'object' ? plan.deliverable_prices : null;
+  const selectedTotal = (() => {
+    if (!deliverablePrices) return priceNumber || 0;
+    return selectedDeliverables.reduce((sum, key) => {
+      const raw = deliverablePrices[key];
+      const n = raw === '' || raw === null || raw === undefined ? 0 : Number(raw);
+      return sum + (Number.isFinite(n) ? n : 0);
+    }, 0);
+  })();
   const imageUrls = getImageUrls();
   const mainImageUrl = imageUrls[currentImageIndex] || '';
   const structuralSpecs = plan.structural_specs || [];
@@ -532,12 +560,52 @@ export default function PlanDetailsPage() {
             <div className="mb-6">
               <div className="text-sm text-gray-600 mb-1">Price</div>
               <div className="text-3xl font-bold text-teal-600 mb-2">
-                {priceNumber ? `$${priceNumber.toLocaleString()}` : 'Contact for price'}
+                {(deliverablePrices ? selectedTotal : priceNumber)
+                  ? `$${Number(deliverablePrices ? selectedTotal : priceNumber).toLocaleString()}`
+                  : 'Contact for price'}
               </div>
               <div className="inline-block px-3 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
                 {plan.package_level?.toUpperCase()}
               </div>
             </div>
+
+            {deliverablePrices && (
+              <div className="mb-6">
+                <div className="text-sm font-medium text-gray-700 mb-3">Choose what to buy</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {Object.entries(deliverablePrices).map(([key, value]) => {
+                    const n = value === '' || value === null || value === undefined ? 0 : Number(value);
+                    const checked = selectedDeliverables.includes(key);
+                    return (
+                      <label
+                        key={key}
+                        className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              setSelectedDeliverables((prev) => {
+                                if (e.target.checked) return Array.from(new Set([...prev, key]));
+                                return prev.filter((x) => x !== key);
+                              });
+                            }}
+                            className="rounded text-teal-600"
+                          />
+                          <span className="text-sm text-gray-900 capitalize">{key.replace(/_/g, ' ')}</span>
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900">$ {Number.isFinite(n) ? n.toLocaleString() : '—'}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex items-center justify-between p-3 rounded-lg border border-teal-200 bg-teal-50">
+                  <span className="text-sm text-teal-900 font-medium">Total</span>
+                  <span className="text-lg font-bold text-teal-900">$ {Number(selectedTotal || 0).toLocaleString()}</span>
+                </div>
+              </div>
+            )}
 
             {/* Quick Actions */}
             {isAuthenticated && !isAdmin && (

@@ -102,6 +102,16 @@ export default function UploadPlan() {
     support_duration: '0'
   });
 
+  const [deliverablePrices, setDeliverablePrices] = useState({
+    architectural: '',
+    renders: '',
+    structural: '',
+    mep: '',
+    civil: '',
+    fire_safety: '',
+    interior: ''
+  });
+
   // Section 9: Additional Information
   const [additional, setAdditional] = useState({
     project_timeline_ref: '',
@@ -231,9 +241,25 @@ export default function UploadPlan() {
       formDataToSend.append('certifications', JSON.stringify(compliance.certifications));
 
       // Pricing
-      Object.entries(pricing).forEach(([key, value]) => {
+      const cumulativePrice = (() => {
+        const keys = Object.keys(deliverablePrices) as Array<keyof typeof deliverablePrices>;
+        return keys.reduce((sum, k) => {
+          const raw = deliverablePrices[k];
+          const n = raw === '' ? 0 : Number(raw);
+          return sum + (Number.isFinite(n) ? n : 0);
+        }, 0);
+      })();
+
+      const pricingToSend = {
+        ...pricing,
+        price: String(cumulativePrice || pricing.price || '')
+      };
+
+      Object.entries(pricingToSend).forEach(([key, value]) => {
         formDataToSend.append(key, value.toString());
       });
+
+      formDataToSend.append('deliverable_prices', JSON.stringify(deliverablePrices));
 
       // Additional
       Object.entries(additional).forEach(([key, value]) => {
@@ -1037,19 +1063,136 @@ export default function UploadPlan() {
         Pricing & Licensing
       </h3>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Base Price ($) *
-        </label>
-        <input
-          type="number"
-          value={pricing.price}
-          onChange={(e) => setPricing({...pricing, price: e.target.value})}
-          className="input-field"
-          placeholder="e.g., 25000"
-          required
-        />
-        <p className="text-sm text-gray-500 mt-1">Set your selling price for this plan package</p>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Architectural Price ($) *
+            </label>
+            <input
+              type="number"
+              value={deliverablePrices.architectural}
+              onChange={(e) => setDeliverablePrices({ ...deliverablePrices, architectural: e.target.value })}
+              className="input-field"
+              placeholder="e.g., 100"
+              required
+              min={0}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Renders Price ($) *
+            </label>
+            <input
+              type="number"
+              value={deliverablePrices.renders}
+              onChange={(e) => setDeliverablePrices({ ...deliverablePrices, renders: e.target.value })}
+              className="input-field"
+              placeholder="e.g., 50"
+              required
+              min={0}
+            />
+          </div>
+
+          {disciplines.structural && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Structural Price ($)
+              </label>
+              <input
+                type="number"
+                value={deliverablePrices.structural}
+                onChange={(e) => setDeliverablePrices({ ...deliverablePrices, structural: e.target.value })}
+                className="input-field"
+                placeholder="e.g., 75"
+                min={0}
+              />
+            </div>
+          )}
+
+          {(disciplines.mep.mechanical || disciplines.mep.electrical || disciplines.mep.plumbing) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                MEP Price ($)
+              </label>
+              <input
+                type="number"
+                value={deliverablePrices.mep}
+                onChange={(e) => setDeliverablePrices({ ...deliverablePrices, mep: e.target.value })}
+                className="input-field"
+                placeholder="e.g., 120"
+                min={0}
+              />
+            </div>
+          )}
+
+          {disciplines.civil && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Civil Price ($)
+              </label>
+              <input
+                type="number"
+                value={deliverablePrices.civil}
+                onChange={(e) => setDeliverablePrices({ ...deliverablePrices, civil: e.target.value })}
+                className="input-field"
+                placeholder="e.g., 40"
+                min={0}
+              />
+            </div>
+          )}
+
+          {disciplines.fire_safety && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fire Safety Price ($)
+              </label>
+              <input
+                type="number"
+                value={deliverablePrices.fire_safety}
+                onChange={(e) => setDeliverablePrices({ ...deliverablePrices, fire_safety: e.target.value })}
+                className="input-field"
+                placeholder="e.g., 30"
+                min={0}
+              />
+            </div>
+          )}
+
+          {disciplines.interior && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Interior Price ($)
+              </label>
+              <input
+                type="number"
+                value={deliverablePrices.interior}
+                onChange={(e) => setDeliverablePrices({ ...deliverablePrices, interior: e.target.value })}
+                className="input-field"
+                placeholder="e.g., 60"
+                min={0}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 rounded-lg border bg-green-50">
+          <div className="text-sm text-gray-700">Cumulative plan price</div>
+          <div className="text-2xl font-bold text-green-700">
+            ${(() => {
+              const keys = Object.keys(deliverablePrices) as Array<keyof typeof deliverablePrices>;
+              const total = keys.reduce((sum, k) => {
+                const raw = deliverablePrices[k];
+                const n = raw === '' ? 0 : Number(raw);
+                return sum + (Number.isFinite(n) ? n : 0);
+              }, 0);
+              return total.toLocaleString();
+            })()}
+          </div>
+          <p className="text-sm text-gray-600 mt-1">
+            Buyers can later select/deselect deliverables; this is the default total shown.
+          </p>
+        </div>
       </div>
 
       <div>
@@ -1212,7 +1355,14 @@ export default function UploadPlan() {
         )}
 
         <div className="bg-white rounded-xl shadow-lg p-8">
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && currentStep < steps.length) {
+                e.preventDefault();
+              }
+            }}
+          >
             {steps[currentStep - 1].render()}
 
             <div className="flex justify-between mt-8 pt-6 border-t">

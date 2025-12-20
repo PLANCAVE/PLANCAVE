@@ -237,6 +237,7 @@ def purchase_plan():
     
     plan_id = data.get('plan_id')
     payment_method = data.get('payment_method', 'mpesa')
+    selected_deliverables = data.get('selected_deliverables')
     
     if not plan_id:
         return jsonify(message="plan_id is required"), 400
@@ -246,7 +247,10 @@ def purchase_plan():
     
     try:
         # Get plan details
-        cur.execute("SELECT id, name, price FROM plans WHERE id = %s AND status = 'Available'", (plan_id,))
+        cur.execute(
+            "SELECT id, name, price, deliverable_prices FROM plans WHERE id = %s AND status = 'Available'",
+            (plan_id,)
+        )
         plan = cur.fetchone()
         
         if not plan:
@@ -257,6 +261,44 @@ def purchase_plan():
         if cur.fetchone():
             return jsonify(message="You have already purchased this plan"), 409
         
+        # Determine amount (support per-deliverable pricing)
+        amount = float(plan['price'])
+        normalized_selection = None
+
+        raw_deliverable_prices = plan.get('deliverable_prices')
+        deliverable_prices = None
+        if raw_deliverable_prices is not None:
+            if isinstance(raw_deliverable_prices, str):
+                try:
+                    deliverable_prices = json.loads(raw_deliverable_prices)
+                except Exception:
+                    deliverable_prices = None
+            elif isinstance(raw_deliverable_prices, dict):
+                deliverable_prices = raw_deliverable_prices
+
+        if selected_deliverables is not None and deliverable_prices and isinstance(deliverable_prices, dict):
+            if not isinstance(selected_deliverables, list) or not all(isinstance(x, str) for x in selected_deliverables):
+                return jsonify(message="selected_deliverables must be a list of strings"), 400
+
+            normalized_selection = []
+            total = 0.0
+            for key in selected_deliverables:
+                if key not in deliverable_prices:
+                    continue
+                val = deliverable_prices.get(key)
+                if val is None or val == '':
+                    continue
+                try:
+                    total += float(val)
+                    normalized_selection.append(key)
+                except (ValueError, TypeError):
+                    continue
+
+            if total <= 0:
+                return jsonify(message="Selected deliverables total must be greater than 0"), 400
+
+            amount = total
+
         # If Paystack flow, initialize payment and mark purchase pending
         if payment_method == 'paystack':
             contact = fetch_user_contact(user_id, conn)
@@ -264,7 +306,7 @@ def purchase_plan():
             try:
                 authorization_url, reference = _init_paystack_transaction(
                     payer_email,
-                    float(plan['price']),
+                    float(amount),
                     plan_id,
                     user_id,
                 )
@@ -276,11 +318,11 @@ def purchase_plan():
             cur.execute("""
                 INSERT INTO purchases (
                     id, user_id, plan_id, amount, payment_method,
-                    payment_status, transaction_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    payment_status, transaction_id, selected_deliverables
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
-                purchase_id, user_id, plan_id, plan['price'],
-                payment_method, 'pending', reference
+                purchase_id, user_id, plan_id, amount,
+                payment_method, 'pending', reference, json.dumps(normalized_selection) if normalized_selection is not None else None
             ))
 
             conn.commit()

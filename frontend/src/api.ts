@@ -109,8 +109,11 @@ export const getPlanDetails = (id: string) =>
   api.get(`/plans/${id}/details`);
 
 // Customer
-export const purchasePlan = (plan_id: string, payment_method?: string) =>
-  api.post('/customer/plans/purchase', { plan_id, payment_method });
+export const purchasePlan = (
+  plan_id: string,
+  payment_method?: string,
+  selected_deliverables?: string[]
+) => api.post('/customer/plans/purchase', { plan_id, payment_method, selected_deliverables });
 
 export const getMyPurchases = () =>
   api.get('/customer/purchases');

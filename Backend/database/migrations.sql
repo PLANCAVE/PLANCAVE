@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS purchases (
     purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Selected deliverables for partial purchases
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS selected_deliverables JSONB;
+
 -- Ensure uniqueness of user/plan purchases
 DO $$
 BEGIN
@@ -143,6 +146,7 @@ ALTER TABLE plans ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS tags TEXT[];
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1;
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS parent_plan_id UUID REFERENCES plans(id);
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS deliverable_prices JSONB;
 
 -- Bill of Quantities (BOQs) table
 CREATE TABLE IF NOT EXISTS boqs (

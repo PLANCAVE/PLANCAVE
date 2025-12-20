@@ -67,12 +67,24 @@ CREATE TABLE IF NOT EXISTS plans (
     license_type VARCHAR(50) DEFAULT 'single_use',
     customization_available BOOLEAN DEFAULT FALSE,
     support_duration INTEGER DEFAULT 0,
+    deliverable_prices JSONB,
     file_paths JSONB DEFAULT '{"architectural": [], "structural": [], "mep": [], "civil": [], "fire_safety": [], "interior": [], "boq": [], "renders": []}',
     project_timeline_ref TEXT,
     material_specifications TEXT,
     construction_notes TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     sales_count INT DEFAULT 0
+);
+
+-- Core purchases table
+CREATE TABLE IF NOT EXISTS purchases (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id),
+    plan_id UUID NOT NULL REFERENCES plans(id),
+    purchase_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    license_type VARCHAR(50) NOT NULL DEFAULT 'single_use',
+    selected_deliverables JSONB,
+    UNIQUE (user_id, plan_id)
 );
 
 -- Basic indexes for core tables

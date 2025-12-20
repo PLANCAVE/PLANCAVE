@@ -18,7 +18,9 @@ _PROJECT_ROOT = os.path.abspath(os.path.join(_HERE, '..', '..'))
 UPLOAD_FOLDER = os.path.join(_PROJECT_ROOT, 'uploads', 'plans')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-ALLOWED_EXTENSIONS_PLANS = {'pdf', 'dwg', 'zip'}
+# Technical plan files commonly come in multiple CAD/BIM formats.
+# Keep this list permissive so discipline uploads (civil/fire/etc.) don't fail unexpectedly.
+ALLOWED_EXTENSIONS_PLANS = {'pdf', 'dwg', 'dxf', 'rvt', 'ifc', 'skp', 'zip'}
 ALLOWED_EXTENSIONS_BOQ = {'xlsx', 'xls', 'pdf'}
 ALLOWED_EXTENSIONS_IMAGES = {'jpg', 'jpeg', 'png'}
 
@@ -137,6 +139,13 @@ def upload_plan():
     if 'thumbnail' not in files:
         return jsonify(message="Thumbnail image is required"), 400
 
+    # Enforce mandatory deliverables
+    if 'architectural_files' not in files or len(request.files.getlist('architectural_files')) == 0:
+        return jsonify(message="Architectural files are required"), 400
+
+    if 'renders' not in files or len(request.files.getlist('renders')) == 0:
+        return jsonify(message="Renders are required"), 400
+
     plan_id = str(uuid.uuid4())
     created_at = datetime.utcnow()
     plan_file_records = []
@@ -201,7 +210,7 @@ def upload_plan():
         if 'civil_files' in files:
             civil_files = request.files.getlist('civil_files')
             for file in civil_files:
-                if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
+                if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS | ALLOWED_EXTENSIONS_IMAGES):
                     path = save_file_locally(file, plan_id, 'civil', file.filename)
                     file_paths['civil'].append(path)
                     add_plan_file_record(plan_file_records, 'CIVIL', path, file.filename)
@@ -210,7 +219,7 @@ def upload_plan():
         if 'fire_safety_files' in files:
             fire_files = request.files.getlist('fire_safety_files')
             for file in fire_files:
-                if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS):
+                if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_PLANS | ALLOWED_EXTENSIONS_IMAGES):
                     path = save_file_locally(file, plan_id, 'fire_safety', file.filename)
                     file_paths['fire_safety'].append(path)
                     add_plan_file_record(plan_file_records, 'FIRE_SAFETY', path, file.filename)
@@ -293,6 +302,36 @@ def upload_plan():
         certifications = json.loads(form.get('certifications', '[]'))
         special_features = json.loads(form.get('special_features', '[]'))
 
+        # Optional per-deliverable pricing (stored in DB; price becomes cumulative)
+        deliverable_prices_raw = form.get('deliverable_prices')
+        deliverable_prices = None
+        if deliverable_prices_raw:
+            try:
+                deliverable_prices = json.loads(deliverable_prices_raw)
+            except Exception:
+                return jsonify(message="deliverable_prices must be valid JSON"), 400
+
+            if not isinstance(deliverable_prices, dict):
+                return jsonify(message="deliverable_prices must be a JSON object"), 400
+
+            # Enforce required deliverables
+            required_price_keys = ['architectural', 'renders']
+            for key in required_price_keys:
+                if key not in deliverable_prices:
+                    return jsonify(message=f"deliverable_prices missing required key: {key}"), 400
+
+            try:
+                cumulative_price = 0.0
+                for _, v in deliverable_prices.items():
+                    if v is None or v == '':
+                        continue
+                    cumulative_price += float(v)
+                if cumulative_price <= 0:
+                    return jsonify(message="Cumulative deliverable_prices must be a positive number"), 400
+                price = cumulative_price
+            except (ValueError, TypeError):
+                return jsonify(message="deliverable_prices values must be numeric"), 400
+
         # Insert into database
         conn = get_db()
         cur = conn.cursor()
@@ -308,7 +347,7 @@ def upload_plan():
                     customization_available, support_duration,
                     estimated_cost_min, estimated_cost_max,
                     project_timeline_ref, material_specifications, construction_notes,
-                    file_paths, image_url, designer_id, status, created_at
+                    file_paths, image_url, deliverable_prices, designer_id, status, created_at
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s,
@@ -318,7 +357,7 @@ def upload_plan():
                     %s, %s,
                     %s, %s,
                     %s, %s, %s,
-                    %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s
                 );
             """, (
                 plan_id,
@@ -351,6 +390,7 @@ def upload_plan():
                 form.get('construction_notes', ''),
                 json.dumps(file_paths),
                 thumbnail_path,
+                json.dumps(deliverable_prices) if deliverable_prices is not None else None,
                 user_id,
                 'Available',
                 created_at

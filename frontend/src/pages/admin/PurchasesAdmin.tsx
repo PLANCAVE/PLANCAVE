@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getAdminPurchases, adminVerifyPaystackPayment, adminConfirmPaystackPayment } from '../../api';
-import { Loader2, RefreshCw, Filter, DollarSign, Users, FileText, ShoppingCart, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Loader2, RefreshCw, Filter, DollarSign, Users, FileText, ShoppingCart, AlertTriangle, CheckCircle, Eye, X } from 'lucide-react';
 
 interface PurchaseRow {
   id: string;
@@ -71,6 +71,34 @@ const formatDeliverableLabel = (value: string) =>
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
+const formatMetadata = (raw: unknown): string | null => {
+  if (!raw) return null;
+
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === 'object') {
+        return JSON.stringify(parsed, null, 2);
+      }
+    } catch {
+      return trimmed;
+    }
+    return trimmed;
+  }
+
+  if (typeof raw === 'object') {
+    try {
+      return JSON.stringify(raw, null, 2);
+    } catch {
+      return String(raw);
+    }
+  }
+
+  return String(raw);
+};
+
 export default function PurchasesAdmin() {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +109,7 @@ export default function PurchasesAdmin() {
   const [metadata, setMetadata] = useState<PurchasesResponse['metadata'] | null>(null);
   const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(null);
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRow | null>(null);
 
   const totalRevenue = useMemo(() => {
     return purchases.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
@@ -90,6 +119,21 @@ export default function PurchasesAdmin() {
     loadPurchases({ reset: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, methodFilter]);
+
+  useEffect(() => {
+    if (!selectedPurchase) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedPurchase(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedPurchase]);
 
   const loadPurchases = async ({ reset }: { reset?: boolean } = {}) => {
     if (reset) {
@@ -391,50 +435,60 @@ export default function PurchasesAdmin() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {purchase.payment_status === 'pending' && purchase.transaction_id ? (
+                      <div className="flex flex-col gap-2">
+                        {purchase.payment_status === 'pending' && purchase.transaction_id ? (
+                          <button
+                            onClick={() => handleCompletePayment(purchase.transaction_id!)}
+                            disabled={verifyingPayment === purchase.transaction_id}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                          >
+                            {verifyingPayment === purchase.transaction_id ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Verifying...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="w-3 h-3" />
+                                Complete Payment
+                              </>
+                            )}
+                          </button>
+                        ) : purchase.payment_status === 'completed' && purchase.transaction_id && !purchase.admin_confirmed_at ? (
+                          <button
+                            onClick={() => handleConfirmPayment(purchase.transaction_id!)}
+                            disabled={confirmingPayment === purchase.transaction_id}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                          >
+                            {confirmingPayment === purchase.transaction_id ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Confirming...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="w-3 h-3" />
+                                Confirm Payment
+                              </>
+                            )}
+                          </button>
+                        ) : purchase.admin_confirmed_at ? (
+                          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-100 text-green-800 text-xs font-medium">
+                            <CheckCircle className="w-3 h-3" />
+                            Confirmed
+                          </span>
+                        ) : (
+                          <span className="text-white/40 text-xs">—</span>
+                        )}
                         <button
-                          onClick={() => handleCompletePayment(purchase.transaction_id!)}
-                          disabled={verifyingPayment === purchase.transaction_id}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                          type="button"
+                          onClick={() => setSelectedPurchase(purchase)}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/15 bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors"
                         >
-                          {verifyingPayment === purchase.transaction_id ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              Verifying...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-3 h-3" />
-                              Complete Payment
-                            </>
-                          )}
+                          <Eye className="w-3 h-3" />
+                          View details
                         </button>
-                      ) : purchase.payment_status === 'completed' && purchase.transaction_id && !purchase.admin_confirmed_at ? (
-                        <button
-                          onClick={() => handleConfirmPayment(purchase.transaction_id!)}
-                          disabled={confirmingPayment === purchase.transaction_id}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
-                        >
-                          {confirmingPayment === purchase.transaction_id ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              Confirming...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-3 h-3" />
-                              Confirm Payment
-                            </>
-                          )}
-                        </button>
-                      ) : purchase.admin_confirmed_at ? (
-                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-100 text-green-800 text-xs font-medium">
-                          <CheckCircle className="w-3 h-3" />
-                          Confirmed
-                        </span>
-                      ) : (
-                        <span className="text-white/40 text-xs">—</span>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -462,6 +516,13 @@ export default function PurchasesAdmin() {
           ) : null}
         </section>
       </div>
+
+      {selectedPurchase ? (
+        <PurchaseDetailModal
+          purchase={selectedPurchase}
+          onClose={() => setSelectedPurchase(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -477,4 +538,116 @@ function StatusDot({ status }: { status: string | null }) {
   };
   const color = colors[status as keyof typeof colors] || 'bg-gray-400';
   return <div className={`w-2 h-2 rounded-full ${color}`} />;
+}
+
+function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onClose: () => void }) {
+  const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return '—';
+    try {
+      return new Date(value).toLocaleString();
+    } catch {
+      return value;
+    }
+  };
+
+  const metadataDisplay = formatMetadata(purchase.payment_metadata);
+  const deliverables = purchase.selected_deliverables || [];
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center"
+      onClick={handleOverlayClick}
+    >
+      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" />
+      <div className="relative w-full max-w-3xl mx-4 bg-slate-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+        <header className="flex items-start justify-between gap-4 border-b border-white/10 p-6 text-white">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-white/60">Purchase Details</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white flex flex-wrap items-center gap-3">
+              {purchase.plan_name}
+              <span className="text-sm text-white/50 font-normal">#{purchase.plan_id}</span>
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white p-2 transition-colors"
+            aria-label="Close purchase details"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </header>
+
+        <div className="p-6 space-y-6 text-white/90 text-sm">
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Buyer</p>
+              <p className="text-base font-semibold text-white">{purchase.user_email}</p>
+              <p className="text-xs text-white/60">User ID: {purchase.user_id}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Payment</p>
+              <p className="text-base font-semibold text-emerald-300">KSH {Number(purchase.amount || 0).toLocaleString()}</p>
+              <div className="flex items-center gap-2 text-xs text-white/70">
+                <StatusDot status={purchase.payment_status ?? null} />
+                <span>{purchase.payment_status ?? 'unknown'}</span>
+              </div>
+              <p className="text-xs text-white/60">Method: {purchase.payment_method ?? '—'}</p>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Timeline</p>
+              <p className="text-xs text-white/60">Purchased: {formatDate(purchase.purchased_at)}</p>
+              <p className="text-xs text-white/60">Admin Confirmed: {formatDate(purchase.admin_confirmed_at)}</p>
+              <p className="text-xs text-white/60">Last Download: {formatDate(purchase.last_downloaded_at)}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Transaction</p>
+              <p className="text-xs text-white/60">Reference: {purchase.transaction_id ?? '—'}</p>
+              <p className="text-xs text-white/60">Tokens Generated: {purchase.download_tokens_generated ?? 0}</p>
+              <p className="text-xs text-white/60">Tokens Used: {purchase.download_tokens_used ?? 0}</p>
+              <p className="text-xs text-white/60">Download Status: {purchase.download_status ?? 'unknown'}</p>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/60">Selected Deliverables</p>
+            {deliverables.length ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {deliverables.map((item) => (
+                  <span
+                    key={item}
+                    className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-medium text-white"
+                  >
+                    {formatDeliverableLabel(item)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-white/50">No deliverables were selected.</p>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/60">Payment Metadata</p>
+            {metadataDisplay ? (
+              <pre className="mt-3 max-h-64 overflow-auto rounded-xl bg-black/40 p-4 text-xs leading-relaxed text-emerald-100">
+                {metadataDisplay}
+              </pre>
+            ) : (
+              <p className="mt-2 text-xs text-white/50">No payment metadata recorded.</p>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
 }

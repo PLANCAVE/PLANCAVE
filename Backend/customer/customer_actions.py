@@ -1135,7 +1135,15 @@ def add_to_cart():
 
     try:
         # Ensure plan exists and is available
-        cur.execute("SELECT id, name FROM plans WHERE id = %s AND status = 'Available'", (plan_id,))
+        cur.execute(
+            """
+            SELECT id, name
+            FROM plans
+            WHERE id = %s
+              AND (status IS NULL OR LOWER(status) = 'available')
+            """,
+            (plan_id,)
+        )
         plan = cur.fetchone()
 
         if not plan:
@@ -1191,7 +1199,6 @@ def get_cart_items():
             JOIN plans p ON c.plan_id = p.id
             LEFT JOIN users u ON p.designer_id = u.id
             WHERE c.user_id = %s
-              AND (p.status IS NULL OR LOWER(p.status) = 'available')
             ORDER BY c.added_at DESC
             """,
             (user_id,)

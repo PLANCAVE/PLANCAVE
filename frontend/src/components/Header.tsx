@@ -1,8 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Heart, LayoutDashboard, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react';
-import api from '../api';
-import { useState } from 'react';
+import api, { getMyProfile } from '../api';
+import { useEffect, useState } from 'react';
 
 const resolveAvatarUrl = (url?: string | null) => {
   if (!url) return '';
@@ -12,7 +12,7 @@ const resolveAvatarUrl = (url?: string | null) => {
 };
 
 export default function Header() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, refreshUserProfile, token } = useAuth() as any;
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -33,6 +33,26 @@ export default function Header() {
     const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('');
     return initials || (user.email ? user.email[0].toUpperCase() : '');
   };
+
+  useEffect(() => {
+    const loadProfileForHeader = async () => {
+      if (!isAuthenticated || !token) return;
+      try {
+        const res = await getMyProfile();
+        const data = res.data || {};
+        refreshUserProfile({
+          first_name: data.first_name,
+          middle_name: data.middle_name,
+          last_name: data.last_name,
+          profile_picture_url: data.profile_picture_url,
+        });
+      } catch {
+        // Keep header resilient: if /me fails, fall back to whatever is in JWT.
+      }
+    };
+
+    loadProfileForHeader();
+  }, [isAuthenticated, token, refreshUserProfile]);
 
   return (
     <header className="bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] border-b border-teal-500/30 sticky top-0 z-50 backdrop-blur-xl shadow-2xl shadow-black/30">

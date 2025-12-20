@@ -13,7 +13,7 @@ interface PurchaseRow {
   payment_status: string;
   transaction_id: string | null;
   purchased_at: string | null;
-  selected_deliverables?: Record<string, any> | null;
+  selected_deliverables?: string[];
   payment_metadata?: Record<string, any> | null;
 }
 
@@ -29,6 +29,41 @@ interface PurchasesResponse {
 
 const STATUS_OPTIONS = ['all', 'completed', 'pending', 'failed'];
 const METHOD_OPTIONS = ['all', 'paystack'];
+
+const normalizeDeliverables = (raw: unknown): string[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((value) => String(value));
+  }
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((value) => String(value));
+      }
+      if (parsed && typeof parsed === 'object') {
+        return Object.entries(parsed)
+          .filter(([, enabled]) => Boolean(enabled))
+          .map(([key]) => String(key));
+      }
+    } catch {
+      return raw.split(',').map((piece) => piece.trim()).filter(Boolean);
+    }
+  }
+  if (typeof raw === 'object') {
+    return Object.entries(raw as Record<string, any>)
+      .filter(([, enabled]) => Boolean(enabled))
+      .map(([key]) => String(key));
+  }
+  return [];
+};
+
+const formatDeliverableLabel = (value: string) =>
+  value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 
 export default function PurchasesAdmin() {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -66,8 +101,12 @@ export default function PurchasesAdmin() {
 
       const resp = await getAdminPurchases(params);
       const payload: PurchasesResponse = resp.data;
+      const normalized = (payload.purchases || []).map((row: any) => ({
+        ...row,
+        selected_deliverables: normalizeDeliverables(row.selected_deliverables),
+      })) as PurchaseRow[];
       setMetadata(payload.metadata);
-      setPurchases((prev) => (reset ? payload.purchases : [...prev, ...payload.purchases]));
+      setPurchases((prev) => (reset ? normalized : [...prev, ...normalized]));
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || 'Failed to load purchases');
     } finally {
@@ -194,6 +233,7 @@ export default function PurchasesAdmin() {
                 <tr>
                   <th className="px-4 py-3">Buyer</th>
                   <th className="px-4 py-3">Plan</th>
+                  <th className="px-4 py-3">Deliverables</th>
                   <th className="px-4 py-3">Amount</th>
                   <th className="px-4 py-3">Payment</th>
                   <th className="px-4 py-3">Status</th>
@@ -215,6 +255,22 @@ export default function PurchasesAdmin() {
                         <span className="font-medium text-white">{purchase.plan_name}</span>
                         <span className="text-xs text-white/60">{purchase.plan_id}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {purchase.selected_deliverables && purchase.selected_deliverables.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {purchase.selected_deliverables.map((item) => (
+                            <span
+                              key={item}
+                              className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80 border border-white/15"
+                            >
+                              {formatDeliverableLabel(item)}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-white/40">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-semibold text-emerald-300">
                       KSH {Number(purchase.amount || 0).toLocaleString()}

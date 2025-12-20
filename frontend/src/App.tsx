@@ -16,6 +16,7 @@ import PaystackCallback from './pages/PaystackCallback';
 import UserManagement from './pages/admin/UserManagement';
 import PlanManagement from './pages/admin/PlanManagement';
 import Analytics from './pages/admin/Analytics';
+import PurchasesAdmin from './pages/admin/PurchasesAdmin';
 import UploadPlan from './pages/designer/UploadPlan';
 import MyPlans from './pages/designer/MyPlans';
 
@@ -111,6 +112,14 @@ function AppContent() {
             element={
               <AdminRoute>
                 <PlanManagement />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/purchases"
+            element={
+              <AdminRoute>
+                <PurchasesAdmin />
               </AdminRoute>
             }
           />

@@ -279,7 +279,6 @@ export default function PlanDetailsPage() {
       } else {
         setPurchaseStatus('purchased');
         setPurchaseSuccess(true);
-        setTimeout(() => handleDownload(), 500);
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Purchase failed. Please try again.';
@@ -299,64 +298,123 @@ export default function PlanDetailsPage() {
     return `${safeBase}/customer/plans/download/${token}`;
   };
 
-  const handleDownload = async () => {
+  const handleAdminDownload = async () => {
     if (!id || !plan) return;
 
     setIsDownloading(true);
     setDownloadError(null);
 
     try {
-      if (isAdmin) {
-        const response = await adminDownloadPlan(id);
-        const blob = new Blob([response.data], { type: 'application/zip' });
+      const response = await adminDownloadPlan(id);
+      const blob = new Blob([response.data], { type: 'application/zip' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${plan.name || 'plan'}-technical-files.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Admin download error', err);
+      const msg = err?.response?.data?.message || err?.message || 'Admin download failed. Please try again.';
+      setDownloadError(String(msg));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDesignerDownload = async () => {
+    if (!plan || !plan.files || plan.files.length === 0) {
+      setDownloadError('No files available for this plan.');
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadError(null);
+
+    try {
+      for (const file of plan.files) {
+        const fileUrl = resolveMediaUrl(file.file_path);
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${fileUrl}`);
+        }
+        const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${plan.name || 'plan'}-technical-files.zip`;
+        a.download = `${plan.name || 'plan'}-${file.file_path.split('/').pop()}`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-      } else if (isPlanOwnerDesigner) {
-        // Designers downloading their own plans: fetch stored files directly
-        if (plan.files && plan.files.length > 0) {
-          for (const file of plan.files) {
-            const fileUrl = resolveMediaUrl(file.file_path);
-            const response = await fetch(fileUrl);
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${plan.name || 'plan'}-${file.file_path.split('/').pop()}`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-        }
-      } else {
-        // Customer download - generate one-time link and receive zipped package
-        const linkResponse = await generateDownloadLink(id);
-        const { download_token } = linkResponse.data;
-
-        if (download_token) {
-          setDownloadToken(download_token);
-          setCopiedDownloadLink(false);
-        }
-
-        const response = await downloadPlanFile(download_token);
-        const blob = new Blob([response.data], { type: 'application/zip' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${plan.name || 'plan'}-technical-files.zip`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        await new Promise((resolve) => setTimeout(resolve, 250));
       }
+    } catch (err: any) {
+      console.error('Designer download error', err);
+      const msg = err?.message || 'Failed to download files. Please try again.';
+      setDownloadError(String(msg));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleGenerateDownload = async () => {
+    if (!id) return;
+
+    setIsDownloading(true);
+    setDownloadError(null);
+
+    try {
+      const linkResponse = await generateDownloadLink(id);
+      const { download_token } = linkResponse.data;
+
+      if (download_token) {
+        setDownloadToken(download_token);
+        setCopiedDownloadLink(false);
+        setPurchaseDownloadStatus('pending_download');
+      }
+
+      setPurchaseSuccess(true);
+    } catch (err: any) {
+      console.error('Generate download token error', err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Failed to generate download link. Please try again.';
+      setDownloadError(String(msg));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadFile = async (tokenOverride?: string | null) => {
+    const token = tokenOverride || downloadToken;
+    if (!plan || !token) {
+      setDownloadError('No download token available. Please generate a new link.');
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadError(null);
+
+    try {
+      const response = await downloadPlanFile(token);
+      const blob = new Blob([response.data], { type: 'application/zip' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${plan.name || 'plan'}-technical-files.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      setDownloadToken(null);
+      setPurchaseDownloadStatus('downloaded');
+      setLastDownloadedAt(new Date().toISOString());
     } catch (err: any) {
       console.error('Download error', err);
       const msg =
@@ -365,6 +423,9 @@ export default function PlanDetailsPage() {
         err?.message ||
         'Download failed. Please try again.';
       setDownloadError(String(msg));
+      if (err?.response?.status === 404 || err?.response?.status === 410) {
+        setDownloadToken(null);
+      }
     } finally {
       setIsDownloading(false);
     }
@@ -383,7 +444,6 @@ export default function PlanDetailsPage() {
       setPurchaseStatus('purchased');
       setPurchaseSuccess(true);
       setPendingReference(null);
-      setTimeout(() => handleDownload(), 500);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Payment not completed yet. Please retry after Paystack confirms.';
       setDownloadError(msg);
@@ -1071,15 +1131,35 @@ export default function PlanDetailsPage() {
                         <span className="text-xs">Open</span>
                       </a>
                     </div>
-                    <div className="mt-2 text-[11px] text-slate-400">
-                      This link is one-time use. After you download once, it will stop working.
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadFile(downloadToken)}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-300 text-slate-900 hover:bg-teal-200"
+                        disabled={isDownloading}
+                      >
+                        {isDownloading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            Download File
+                          </>
+                        )}
+                      </button>
+                      <span className="text-[11px] text-slate-300">
+                        This link is single-use. Once downloaded, generate a fresh link if you need another copy.
+                      </span>
                     </div>
                   </div>
                 ) : null}
 
                 {isAdmin ? (
                   <button
-                    onClick={handleDownload}
+                    onClick={handleAdminDownload}
                     disabled={isDownloading}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-teal-400 text-slate-900 font-semibold hover:bg-teal-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
@@ -1092,6 +1172,24 @@ export default function PlanDetailsPage() {
                       <>
                         <Download className="w-4 h-4" />
                         Download Technical Files (Admin)
+                      </>
+                    )}
+                  </button>
+                ) : isPlanOwnerDesigner ? (
+                  <button
+                    onClick={handleDesignerDownload}
+                    disabled={isDownloading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-teal-400 text-slate-900 font-semibold hover:bg-teal-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Preparing files...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Download your plan files
                       </>
                     )}
                   </button>
@@ -1128,8 +1226,8 @@ export default function PlanDetailsPage() {
                   </div>
                 ) : purchaseStatus === 'purchased' ? (
                   <button
-                    onClick={handleDownload}
-                    disabled={isDownloading || purchaseDownloadStatus === 'downloaded'}
+                    onClick={handleGenerateDownload}
+                    disabled={isDownloading}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-teal-400 text-slate-900 font-semibold hover:bg-teal-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isDownloading ? (
@@ -1137,15 +1235,10 @@ export default function PlanDetailsPage() {
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Generating link...
                       </>
-                    ) : purchaseDownloadStatus === 'downloaded' ? (
-                      <>
-                        <CheckCircle className="w-4 h-4" />
-                        Already downloaded
-                      </>
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        Download technical files
+                        Generate download link
                       </>
                     )}
                   </button>
@@ -1173,7 +1266,11 @@ export default function PlanDetailsPage() {
                   {isAdmin ? (
                     "Admin: instant access to every technical file"
                   ) : purchaseStatus === 'purchased' ? (
-                    "One-time download link issued and revoked after use"
+                    downloadToken
+                      ? "Copy or open your link to download. Need a fresh link? Click the button again."
+                      : purchaseDownloadStatus === 'downloaded'
+                        ? "You already downloaded this plan. Generate a new link if you need another copy."
+                        : "Generate a one-time download link when you're ready to download."
                   ) : (
                     "Secure checkout • access delivered instantly after payment"
                   )}

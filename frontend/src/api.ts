@@ -194,6 +194,9 @@ export const updatePlan = (planId: string, data: any) =>
 export const deletePlan = (planId: string) =>
   api.delete(`/admin/plans/${planId}`);
 
+export const getAdminPurchases = (params?: Record<string, any>) =>
+  api.get('/admin/purchases', { params });
+
 // Admin Analytics
 export const getDesignerAnalytics = () =>
   api.get('/admin/analytics/designers');

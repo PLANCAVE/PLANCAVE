@@ -817,7 +817,7 @@ export default function PlanDetailsPage() {
                           </div>
                           
                           {/* Content */}
-                          <div className="flex-1 relative z-10">
+                          <div className="flex-1 relative z-10 pr-8">
                             <div className="flex items-center justify-between gap-3">
                               <div>
                                 <h4 className="text-base font-semibold text-slate-900 capitalize leading-tight">
@@ -841,7 +841,7 @@ export default function PlanDetailsPage() {
                           </div>
                           
                           {/* Check indicator */}
-                          <div className={`absolute top-4 right-4 w-6 h-6 rounded-full transition-all duration-200 z-20 ${
+                          <div className={`absolute top-5 right-5 w-6 h-6 rounded-full transition-all duration-200 z-20 ${
                             checked
                               ? 'bg-teal-500 text-white shadow-lg'
                               : 'bg-white border-2 border-slate-300 text-transparent'

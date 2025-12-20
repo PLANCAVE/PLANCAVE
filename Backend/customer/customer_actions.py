@@ -452,7 +452,7 @@ def verify_paystack(reference: str):
 @customer_bp.route('/plans/<string:plan_id>/purchase-status', methods=['GET'])
 @jwt_required()
 def purchase_status(plan_id: str):
-    """Return purchase status for the current user and plan."""
+    """Return purchase + download status for the current user and plan."""
     user_id, role = get_current_user()
 
     conn = get_db()
@@ -460,7 +460,7 @@ def purchase_status(plan_id: str):
     try:
         cur.execute(
             """
-            SELECT payment_status, transaction_id
+            SELECT id, payment_status, transaction_id, purchased_at
             FROM purchases
             WHERE user_id = %s AND plan_id = %s
             ORDER BY purchased_at DESC
@@ -468,10 +468,40 @@ def purchase_status(plan_id: str):
             """,
             (user_id, plan_id)
         )
-        row = cur.fetchone()
-        if not row:
+        purchase = cur.fetchone()
+        if not purchase:
             return jsonify(status="none")
-        return jsonify(status=row['payment_status'], transaction_id=row.get('transaction_id'))
+
+        payment_status = purchase.get('payment_status')
+        if payment_status != 'completed':
+            # pending / failed etc.
+            return jsonify(
+                status=payment_status,
+                transaction_id=purchase.get('transaction_id'),
+            )
+
+        # Paid: determine whether the plan has been downloaded (based on used download tokens)
+        cur.execute(
+            """
+            SELECT MAX(created_at) AS last_downloaded_at
+            FROM download_tokens
+            WHERE user_id = %s AND plan_id = %s AND used = TRUE
+            """,
+            (user_id, plan_id)
+        )
+        dl_row = cur.fetchone() or {}
+        last_downloaded_at = dl_row.get('last_downloaded_at')
+        if last_downloaded_at is not None and hasattr(last_downloaded_at, 'isoformat'):
+            last_downloaded_at = last_downloaded_at.isoformat() + 'Z'
+
+        download_status = 'downloaded' if dl_row.get('last_downloaded_at') else 'pending_download'
+
+        return jsonify(
+            status='completed',
+            transaction_id=purchase.get('transaction_id'),
+            download_status=download_status,
+            last_downloaded_at=last_downloaded_at,
+        )
     except Exception as e:
         conn.rollback()
         return jsonify(message=str(e)), 500
@@ -503,13 +533,31 @@ def generate_download_link():
         if role != 'admin':
             cur.execute(
                 """
-                SELECT id FROM purchases
+                SELECT id, purchased_at
+                FROM purchases
                 WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
+                ORDER BY purchased_at DESC
+                LIMIT 1
                 """,
                 (user_id, plan_id)
             )
-            if not cur.fetchone():
+            purchase = cur.fetchone()
+            if not purchase:
                 return jsonify(message="Purchase required before downloading"), 403
+
+            # Enforce a strict one-time download per paid purchase.
+            # If the user has already used a token for this plan, do not allow issuing another.
+            cur.execute(
+                """
+                SELECT 1
+                FROM download_tokens
+                WHERE user_id = %s AND plan_id = %s AND used = TRUE
+                LIMIT 1
+                """,
+                (user_id, plan_id)
+            )
+            if cur.fetchone():
+                return jsonify(message="This plan has already been downloaded"), 409
 
         # Quota check removed - paying customers get unlimited downloads
 
@@ -555,10 +603,13 @@ def generate_download_link():
 
 
 @customer_bp.route('/plans/download/<string:download_token>', methods=['GET'])
-@jwt_required()
+@jwt_required(optional=True)
 def download_plan_files(download_token: str):
     """Download the plan's technical files as a zip using a one-time token."""
-    user_id, role = get_current_user()
+    identity = get_jwt_identity()
+    claims = get_jwt() or {}
+    user_id = int(identity) if identity is not None else None
+    role = claims.get('role')
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
 
@@ -577,8 +628,9 @@ def download_plan_files(download_token: str):
         if not token_row:
             return jsonify(message="Invalid or expired download token"), 404
 
-        # Only the purchaser (or admin) can use this token.
-        if role != 'admin' and int(token_row['user_id']) != int(user_id):
+        # If the caller is authenticated, enforce token ownership (or admin).
+        # If the caller is unauthenticated, possession of the token is the secret.
+        if user_id is not None and role != 'admin' and int(token_row['user_id']) != int(user_id):
             return jsonify(message="Download token does not belong to you"), 403
 
         if token_row['used']:
@@ -631,8 +683,12 @@ def download_plan_files(download_token: str):
             (plan_id,)
         )
 
-        increment_user_quota(user_id, 'downloads', 1, conn)
-        log_user_activity(user_id, 'plan_download', {
+        # Attribute download tracking to the token owner.
+        # This keeps downloads tied to the paid purchase even if the caller is not authenticated
+        # (e.g., using a copied download link in a fresh browser).
+        token_owner_id = int(token_row['user_id'])
+        increment_user_quota(token_owner_id, 'downloads', 1, conn)
+        log_user_activity(token_owner_id, 'plan_download', {
             'plan_id': plan_id,
             'token': download_token,
             'files_downloaded': files_added
@@ -831,7 +887,33 @@ def get_my_purchases():
             LIMIT %s OFFSET %s
         """, (user_id, limit, offset))
         
-        purchases = [_serialize_purchase_row(row) for row in cur.fetchall()]
+        raw_purchases = [dict(row) for row in cur.fetchall()]
+        purchases = []
+        for row in raw_purchases:
+            purchase = _serialize_purchase_row(row)
+            plan_id = purchase.get('plan_id')
+            payment_status = purchase.get('payment_status')
+
+            download_status = None
+            last_downloaded_at = None
+            if payment_status == 'completed' and plan_id:
+                cur.execute(
+                    """
+                    SELECT MAX(created_at) AS last_downloaded_at
+                    FROM download_tokens
+                    WHERE user_id = %s AND plan_id = %s AND used = TRUE
+                    """,
+                    (user_id, plan_id)
+                )
+                dl_row = cur.fetchone() or {}
+                ts = dl_row.get('last_downloaded_at')
+                if ts is not None and hasattr(ts, 'isoformat'):
+                    last_downloaded_at = ts.isoformat() + 'Z'
+                download_status = 'downloaded' if ts else 'pending_download'
+
+            purchase['download_status'] = download_status
+            purchase['last_downloaded_at'] = last_downloaded_at
+            purchases.append(purchase)
         
         return jsonify({
             "metadata": {

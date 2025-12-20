@@ -5,6 +5,7 @@ import zipfile
 import uuid
 import re
 import textwrap
+import requests
 from datetime import datetime, date
 from decimal import Decimal
 from psycopg.rows import dict_row
@@ -506,15 +507,32 @@ def build_plan_zip(bundle, customer=None):
         organized_files = []
         for plan_file in bundle['files']:
             resolved_path = resolve_plan_file_path(plan_file.get('file_path'))
-            if not resolved_path or not os.path.exists(resolved_path):
+            archive_path = resolve_archive_path(plan_file)
+
+            if resolved_path and os.path.exists(resolved_path):
+                zip_file.write(resolved_path, archive_path)
+                organized_entry = dict(plan_file)
+                organized_entry['archive_path'] = archive_path
+                organized_files.append(organized_entry)
+                files_added += 1
                 continue
 
-            archive_path = resolve_archive_path(plan_file)
-            zip_file.write(resolved_path, archive_path)
-            organized_entry = dict(plan_file)
-            organized_entry['archive_path'] = archive_path
-            organized_files.append(organized_entry)
-            files_added += 1
+            file_url = plan_file.get('file_path')
+            if isinstance(file_url, str) and re.match(r'^https?://', file_url, re.IGNORECASE):
+                try:
+                    resp = requests.get(file_url, timeout=15)
+                    if resp.status_code != 200:
+                        continue
+                    zip_file.writestr(archive_path, resp.content)
+                    organized_entry = dict(plan_file)
+                    organized_entry['archive_path'] = archive_path
+                    organized_files.append(organized_entry)
+                    files_added += 1
+                except Exception:
+                    continue
+                continue
+
+            continue
 
         manifest_pdf = build_manifest_pdf(bundle, organized_files, customer=customer)
         safe_plan_name = re.sub(r"[^A-Za-z0-9]+", "-", (bundle['plan'].get('name') or 'plan')).strip('-') or 'plan'

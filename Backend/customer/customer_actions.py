@@ -15,7 +15,7 @@ import hmac
 import hashlib
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from auth.auth_utils import get_current_user, log_user_activity
+from auth.auth_utils import get_current_user, log_user_activity, increment_user_quota
 from utils.download_helpers import (
     fetch_plan_bundle,
     build_plan_zip,
@@ -1275,14 +1275,14 @@ def get_my_purchases():
         # Get purchases
         cur.execute("""
             SELECT 
-                p.*, 
-                pl.name as plan_name,
-                pl.category,
-                pl.image_url,
-                u.username as designer_name
+                p.id, p.user_id, p.plan_id, p.amount, p.payment_method, p.payment_status,
+                p.transaction_id, p.purchased_at, p.selected_deliverables,
+                p.admin_confirmed_at, p.admin_confirmed_by,
+                pl.name as plan_name, pl.category, pl.image_url,
+                u.username, u.email as user_email
             FROM purchases p
             JOIN plans pl ON p.plan_id = pl.id
-            LEFT JOIN users u ON pl.designer_id = u.id
+            JOIN users u ON p.user_id = u.id
             WHERE p.user_id = %s
             ORDER BY p.purchased_at DESC
             LIMIT %s OFFSET %s

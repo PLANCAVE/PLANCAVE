@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Download, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Download, Copy, ExternalLink, RefreshCw, CreditCard } from 'lucide-react';
 import { generateDownloadLink, getMyPurchases } from '../api';
 import api from '../api';
 
@@ -13,6 +13,8 @@ type PurchaseRow = {
   designer_name?: string | null;
   amount?: number | string | null;
   payment_status?: string | null;
+  transaction_id?: string | null;
+  selected_deliverables?: string[];
 };
 
 const resolveMediaUrl = (path?: string) => {
@@ -24,6 +26,7 @@ const resolveMediaUrl = (path?: string) => {
 
 export default function Purchases() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -98,6 +101,11 @@ export default function Purchases() {
     }
   };
 
+  const handleCompletePayment = (planId: string) => {
+    // Navigate to plan details where the user can retry payment or verify
+    navigate(`/plans/${planId}`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -167,6 +175,16 @@ export default function Purchases() {
 
                   <div className="border-t border-gray-100 p-4 space-y-3">
                     <div className="flex flex-wrap gap-2">
+                      {!canDownload && p.plan_id && (
+                        <button
+                          type="button"
+                          onClick={() => handleCompletePayment(p.plan_id)}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          Complete Payment
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleGenerate(planId)}

@@ -372,9 +372,24 @@ export default function PlanDetailsPage() {
   };
 
   const handleVerifyPayment = async (referenceToVerify?: string) => {
-    const ref = referenceToVerify || pendingReference;
+    let ref = referenceToVerify || pendingReference;
+    
+    // If no reference provided, fetch the latest purchase for this plan
+    if (!ref && id) {
+      try {
+        const resp = await getPurchaseStatus(id);
+        const transactionId = resp.data?.transaction_id as string | undefined;
+        if (transactionId) {
+          ref = transactionId;
+          setPendingReference(transactionId);
+        }
+      } catch (err) {
+        // If we can't get purchase status, continue with error
+      }
+    }
+    
     if (!ref) {
-      setDownloadError('No payment reference to verify.');
+      setDownloadError('No payment reference to verify. Please start a new purchase.');
       return;
     }
     setDownloadError(null);

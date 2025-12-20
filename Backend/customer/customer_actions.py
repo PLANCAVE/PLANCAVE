@@ -96,12 +96,15 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     """Mark a Paystack purchase as completed after verifying all invariants."""
     # Paystack returns many intermediate states; only treat a charge as paid when
     # it is successful AND has a paid timestamp.
-    if (paystack_data.get('status') or '').lower() != 'success':
-        return False, ("Payment not completed yet", 202)
+    status = (paystack_data.get('status') or '').lower()
+    current_app.logger.info(f"Completing purchase {reference}: Paystack status='{status}', paid_at={paystack_data.get('paid_at')}")
+    
+    if status != 'success':
+        return False, (f"Payment not completed yet (status: {status})", 202)
 
     paid_at = paystack_data.get('paid_at') or paystack_data.get('paidAt')
     if not paid_at:
-        return False, ("Payment not completed yet", 202)
+        return False, ("Payment not completed yet (no paid timestamp)", 202)
 
     cur.execute(
         """
@@ -114,9 +117,11 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     )
     purchase = cur.fetchone()
     if not purchase:
+        current_app.logger.error(f"Purchase record not found for reference: {reference}")
         return False, ("Purchase record not found", 404)
 
     if purchase['payment_status'] == 'completed':
+        current_app.logger.info(f"Purchase {reference} already completed")
         return True, ("Payment already completed", 200)
 
     # Validate Paystack metadata matches our pending purchase
@@ -520,10 +525,7 @@ def verify_paystack(reference: str):
     """
     Verify Paystack transaction by reference and mark purchase as completed.
     """
-    identity = get_jwt_identity()
-    claims = get_jwt() or {}
-    user_id = int(identity) if identity is not None else None
-    role = claims.get('role')
+    user_id, role = get_current_user()
 
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
@@ -536,6 +538,13 @@ def verify_paystack(reference: str):
             timeout=10,
         )
         data = resp.json() if resp.content else {}
+        
+        # Debug logging
+        current_app.logger.info(f"Paystack verification for {reference}: status={resp.status_code}, data_keys={list(data.keys()) if data else 'none'}")
+        if data.get('data'):
+            paystack_data = data['data']
+            current_app.logger.info(f"Paystack data: status={paystack_data.get('status')}, paid_at={paystack_data.get('paid_at')}, reference={paystack_data.get('reference')}")
+        
         if resp.status_code != 200 or not data.get("status"):
             return jsonify(message=data.get("message") or "Failed to verify Paystack payment"), 400
 

@@ -83,6 +83,18 @@ export const registerCustomer = (email: string, password: string, firstName?: st
 export const registerDesigner = (email: string, password: string, firstName?: string, middleName?: string, lastName?: string) =>
   api.post('/register/designer', { username: email.toLowerCase(), password, first_name: firstName, middle_name: middleName, last_name: lastName });
 
+export const resendVerificationEmail = (email: string) =>
+  api.post('/auth/resend-verification', { username: email.toLowerCase() });
+
+export const verifyEmail = (token: string) =>
+  api.get('/auth/verify-email', { params: { token } });
+
+export const requestPasswordReset = (email: string) =>
+  api.post('/auth/password-reset/request', { username: email.toLowerCase() });
+
+export const confirmPasswordReset = (token: string, newPassword: string) =>
+  api.post('/auth/password-reset/confirm', { token, new_password: newPassword });
+
 // Profile
 export const getMyProfile = () =>
   api.get('/me');

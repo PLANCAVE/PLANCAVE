@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { resendVerificationEmail } from '../api';
 import { Building2 } from 'lucide-react';
 
 export default function Login() {
@@ -9,6 +10,8 @@ export default function Login() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,6 +28,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setNeedsVerification(false);
     setLoading(true);
 
     try {
@@ -41,7 +45,13 @@ export default function Login() {
         } else if (status === 404) {
           setError('Account not found. Please check your email or register for a new account.');
         } else if (status === 403) {
-          setError('Your account has been deactivated. Please contact admin@ramanicave.com.');
+          const msg = (message || '').toString();
+          if (msg.toLowerCase().includes('verify your email')) {
+            setNeedsVerification(true);
+            setError(msg || 'Please verify your email before login.');
+          } else {
+            setError('Your account has been deactivated. Please contact admin@ramanicave.com.');
+          }
         } else {
           setError(message || 'Login failed. Please try again later.');
         }
@@ -52,6 +62,25 @@ export default function Login() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError('Please enter your email address first.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+    setResendLoading(true);
+    try {
+      const resp = await resendVerificationEmail(email);
+      setSuccess(resp.data?.message || 'Verification email sent. Please check your inbox.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to resend verification email.';
+      setError(msg);
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -112,6 +141,22 @@ export default function Login() {
                 className="input-field"
                 required
               />
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <Link to="/forgot-password" className="text-primary-600 hover:text-primary-700 font-medium">
+                Forgot password?
+              </Link>
+              {needsVerification ? (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendLoading}
+                  className="text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
+                >
+                  {resendLoading ? 'Sending…' : 'Resend verification'}
+                </button>
+              ) : null}
             </div>
 
             <button

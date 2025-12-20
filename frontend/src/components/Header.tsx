@@ -52,7 +52,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-4">
+          <nav className="hidden md:flex items-center gap-5">
             <Link
               to="/plans"
               className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/20 text-white/90 tracking-[0.2em] uppercase text-xs hover:bg-white/10 hover:text-white transition-all"
@@ -62,7 +62,15 @@ export default function Header() {
 
             {isAuthenticated ? (
               <>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-white/80">
+                  <button
+                    type="button"
+                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    onClick={() => navigate('/plans')}
+                    aria-label="Search plans"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
                   <button
                     type="button"
                     className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
@@ -81,31 +89,7 @@ export default function Header() {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 pl-2 pr-4 py-2 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/profile')}
-                    className="flex items-center justify-center w-8 h-8 rounded-full bg-teal-500/20 border border-teal-400/30 hover:bg-teal-500/30 transition-colors"
-                  >
-                    {user?.profile_picture_url ? (
-                      <img
-                        src={resolveAvatarUrl(user.profile_picture_url)}
-                        alt={user.email}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-teal-300 text-xs font-semibold">{getInitials()}</span>
-                    )}
-                  </button>
-                  <div className="hidden lg:block">
-                    <p className="text-sm font-medium text-white truncate max-w-[120px]">
-                      {user?.first_name || user?.email?.split('@')[0]}
-                    </p>
-                    <p className="text-xs text-teal-300 capitalize">{user?.role}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 ml-4">
                   <Link
                     to="/dashboard"
                     className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-2"
@@ -123,9 +107,33 @@ export default function Header() {
                     </Link>
                   ) : null}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/profile')}
+                  className="flex items-center justify-center w-10 h-10 rounded-full border border-teal-400/50 bg-white/5 hover:bg-white/15 transition-all ml-auto"
+                >
+                  {user?.profile_picture_url ? (
+                    <img
+                      src={resolveAvatarUrl(user.profile_picture_url)}
+                      alt={user.email}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-teal-200 text-sm font-semibold">{getInitials()}</span>
+                  )}
+                </button>
               </>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-white/80">
+                <button
+                  type="button"
+                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  onClick={() => navigate('/plans')}
+                  aria-label="Search plans"
+                >
+                  <Search className="w-5 h-5" />
+                </button>
                 <button
                   type="button"
                   className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"

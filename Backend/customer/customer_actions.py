@@ -708,10 +708,7 @@ def generate_download_link():
                     except Exception:
                         pass
 
-                    if purchase:
-                        # Completed via auto-verify; continue.
-                        pass
-                    else:
+                    if not purchase:
                         return jsonify(
                             message="Purchase not completed yet",
                             payment_status=latest_purchase.get('payment_status'),
@@ -722,7 +719,8 @@ def generate_download_link():
                                 else latest_purchase.get('purchased_at')
                             ),
                         ), 409
-                return jsonify(message="Purchase required before downloading"), 403
+                if not purchase:
+                    return jsonify(message="Purchase required before downloading"), 403
 
             # Enforce a strict one-time download per paid purchase.
             # If the user has already used a token for this plan, do not allow issuing another.

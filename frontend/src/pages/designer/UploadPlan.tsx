@@ -443,7 +443,7 @@ export default function UploadPlan() {
       } else {
         // Increase timeout for large file uploads (5 minutes + 30 seconds per MB)
         const estimatedSize = Array.from(formDataToSend.entries())
-          .filter(([, value]) => value instanceof File)
+          .filter(([, value]): value is File => value instanceof File)
           .reduce((total, [, file]) => total + file.size, 0);
         const sizeMB = estimatedSize / (1024 * 1024);
         const timeoutMs = 300000 + (sizeMB * 30000); // 5 min base + 30s per MB

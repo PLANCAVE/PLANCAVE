@@ -667,7 +667,7 @@ def generate_download_link():
                 # "purchase exists but not completed".
                 cur.execute(
                     """
-                    SELECT id, payment_status, transaction_id, purchased_at
+                    SELECT id, payment_status, payment_method, transaction_id, purchased_at
                     FROM purchases
                     WHERE user_id = %s AND plan_id = %s
                     ORDER BY purchased_at DESC NULLS LAST
@@ -677,16 +677,51 @@ def generate_download_link():
                 )
                 latest_purchase = cur.fetchone()
                 if latest_purchase:
-                    return jsonify(
-                        message="Purchase not completed yet",
-                        payment_status=latest_purchase.get('payment_status'),
-                        transaction_id=latest_purchase.get('transaction_id'),
-                        purchased_at=(
-                            latest_purchase.get('purchased_at').isoformat() + 'Z'
-                            if latest_purchase.get('purchased_at') is not None and hasattr(latest_purchase.get('purchased_at'), 'isoformat')
-                            else latest_purchase.get('purchased_at')
-                        ),
-                    ), 409
+                    # If the user paid via Paystack and the purchase is still pending in DB,
+                    # auto-verify with Paystack and complete it before blocking download.
+                    try:
+                        if (
+                            latest_purchase.get('payment_method') == 'paystack'
+                            and latest_purchase.get('transaction_id')
+                            and latest_purchase.get('payment_status') != 'completed'
+                        ):
+                            resp = requests.get(
+                                f"https://api.paystack.co/transaction/verify/{latest_purchase.get('transaction_id')}",
+                                headers=_paystack_headers(),
+                                timeout=10,
+                            )
+                            data = resp.json() if resp.content else {}
+                            if resp.status_code == 200 and data.get('status'):
+                                paystack_data = data.get('data') or {}
+                                if paystack_data.get('status') == 'success':
+                                    ok, (msg, code) = _complete_paystack_purchase(
+                                        str(latest_purchase.get('transaction_id')),
+                                        paystack_data,
+                                        conn,
+                                        cur,
+                                    )
+                                    if ok:
+                                        # Purchase is now completed; continue to issue download token.
+                                        purchase = {'id': latest_purchase.get('id')}
+                                    else:
+                                        return jsonify(message=msg), code
+                    except Exception:
+                        pass
+
+                    if purchase:
+                        # Completed via auto-verify; continue.
+                        pass
+                    else:
+                        return jsonify(
+                            message="Purchase not completed yet",
+                            payment_status=latest_purchase.get('payment_status'),
+                            transaction_id=latest_purchase.get('transaction_id'),
+                            purchased_at=(
+                                latest_purchase.get('purchased_at').isoformat() + 'Z'
+                                if latest_purchase.get('purchased_at') is not None and hasattr(latest_purchase.get('purchased_at'), 'isoformat')
+                                else latest_purchase.get('purchased_at')
+                            ),
+                        ), 409
                 return jsonify(message="Purchase required before downloading"), 403
 
             # Enforce a strict one-time download per paid purchase.

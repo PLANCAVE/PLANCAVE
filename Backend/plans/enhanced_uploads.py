@@ -382,6 +382,28 @@ def get_plan_details(plan_id):
             return jsonify(message="Plan not found"), 404
         
         plan_dict = dict(plan)
+
+        def _json_load_if_str(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except Exception:
+                    return value
+            return value
+
+        # Normalize JSON/JSONB fields so the frontend doesn't receive JSON strings.
+        for key in (
+            'disciplines_included',
+            'certifications',
+            'special_features',
+            'file_paths',
+            'deliverable_prices',
+            'tags',
+        ):
+            if key in plan_dict:
+                plan_dict[key] = _json_load_if_str(plan_dict.get(key))
         
         # Get BOQs
         cur.execute("SELECT * FROM boqs WHERE plan_id = %s", (plan_id,))
@@ -402,9 +424,7 @@ def get_plan_details(plan_id):
         # Also add gallery images from plans.file_paths JSON (used by /plans/upload)
         try:
             raw_file_paths = plan_dict.get('file_paths')
-            if isinstance(raw_file_paths, str):
-                file_paths = json.loads(raw_file_paths)
-            elif isinstance(raw_file_paths, dict):
+            if isinstance(raw_file_paths, dict):
                 file_paths = raw_file_paths
             else:
                 file_paths = None

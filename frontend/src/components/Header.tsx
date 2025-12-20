@@ -52,7 +52,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-4">
             <Link
               to="/plans"
               className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/20 text-white/90 tracking-[0.2em] uppercase text-xs hover:bg-white/10 hover:text-white transition-all"
@@ -60,78 +60,96 @@ export default function Header() {
               Browse More Plans
             </Link>
 
-            <div className="flex items-center gap-3 text-white/80">
-              <button
-                type="button"
-                className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                onClick={() => navigate('/favorites')}
-                aria-label="Saved plans"
-              >
-                <Heart className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                onClick={() => navigate('/plans')}
-                aria-label="Search plans"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                onClick={() => navigate(isAuthenticated ? '/profile' : '/login')}
-                aria-label={isAuthenticated ? 'Profile' : 'Account'}
-              >
-                <UserRound className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
-                onClick={() => navigate('/cart')}
-                aria-label="Cart"
-              >
-                <ShoppingBag className="w-5 h-5" />
-              </button>
-            </div>
-            
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-4 py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm flex items-center gap-2 group">
-                  <LayoutDashboard className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                  Dashboard
-                </Link>
-
-                {canSeePurchases ? (
-                  <Link
-                    to="/purchases"
-                    className="text-gray-200 hover:text-white transition-all font-medium hover:scale-105 px-4 py-2.5 rounded-xl hover:bg-white/10 backdrop-blur-sm"
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    onClick={() => navigate('/favorites')}
+                    aria-label="Saved plans"
                   >
-                    Purchases
-                  </Link>
-                ) : null}
-                
-                <div className="flex items-center gap-4 ml-4 pl-4 border-l border-teal-400/40">
+                    <Heart className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    onClick={() => navigate('/cart')}
+                    aria-label="Cart"
+                  >
+                    <ShoppingBag className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 pl-2 pr-4 py-2 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm">
                   <button
                     type="button"
                     onClick={() => navigate('/profile')}
-                    className="hidden lg:inline-flex items-center justify-center bg-white/5 backdrop-blur-sm px-2 py-2 rounded-full border border-white/10 hover:bg-white/10 transition-colors"
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-teal-500/20 border border-teal-400/30 hover:bg-teal-500/30 transition-colors"
                   >
-                    <div className="relative w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden ring-2 ring-white/30">
-                      {user?.profile_picture_url ? (
-                        <img
-                          src={resolveAvatarUrl(user.profile_picture_url)}
-                          alt={user.email}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span>{getInitials()}</span>
-                      )}
-                    </div>
+                    {user?.profile_picture_url ? (
+                      <img
+                        src={resolveAvatarUrl(user.profile_picture_url)}
+                        alt={user.email}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-teal-300 text-xs font-semibold">{getInitials()}</span>
+                    )}
                   </button>
+                  <div className="hidden lg:block">
+                    <p className="text-sm font-medium text-white truncate max-w-[120px]">
+                      {user?.first_name || user?.email?.split('@')[0]}
+                    </p>
+                    <p className="text-xs text-teal-300 capitalize">{user?.role}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Link
+                    to="/dashboard"
+                    className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span className="hidden lg:inline">Dashboard</span>
+                  </Link>
+
+                  {canSeePurchases ? (
+                    <Link
+                      to="/purchases"
+                      className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    >
+                      <span className="hidden lg:inline">Purchases</span>
+                    </Link>
+                  ) : null}
                 </div>
               </>
-            ) : null}
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  onClick={() => navigate('/favorites')}
+                  aria-label="Saved plans"
+                >
+                  <Heart className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  onClick={() => navigate('/cart')}
+                  aria-label="Cart"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                </button>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all border border-white/20"
+                >
+                  Sign In
+                </Link>
+              </div>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}

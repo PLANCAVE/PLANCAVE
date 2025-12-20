@@ -730,6 +730,88 @@ def retry_paystack_payment(purchase_id: str):
         conn.close()
 
 
+@customer_bp.route('/admin/payments/paystack/confirm/<string:reference>', methods=['POST'])
+@jwt_required()
+def admin_confirm_paystack(reference: str):
+    """
+    Admin-only endpoint to verify a Paystack transaction and mark purchase as admin confirmed.
+    """
+    user_id, role = get_current_user()
+    if role != 'admin':
+        return jsonify(message="Admin access required"), 403
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        # Verify with Paystack
+        resp = requests.get(
+            f"https://api.paystack.co/transaction/verify/{reference}",
+            headers=_paystack_headers(),
+            timeout=10,
+        )
+        data = resp.json() if resp.content else {}
+        
+        # Debug logging
+        current_app.logger.info(f"Admin Paystack confirmation for {reference}: status={resp.status_code}, data_keys={list(data.keys()) if data else 'none'}")
+        if data.get('data'):
+            paystack_data = data['data']
+            current_app.logger.info(f"Paystack data: status={paystack_data.get('status')}, paid_at={paystack_data.get('paid_at')}, reference={paystack_data.get('reference')}")
+        
+        if resp.status_code != 200 or not data.get("status"):
+            return jsonify(message=data.get("message") or "Failed to verify Paystack payment"), 400
+
+        paystack_data = data.get("data") or {}
+        paystack_reference = paystack_data.get('reference')
+        if paystack_reference and str(paystack_reference) != str(reference):
+            return jsonify(message="Payment verification reference mismatch"), 400
+
+        # Get purchase details
+        cur.execute(
+            """
+            SELECT user_id, plan_id, payment_status
+            FROM purchases
+            WHERE transaction_id = %s
+            """,
+            (reference,)
+        )
+        owner = cur.fetchone()
+        if not owner:
+            return jsonify(message="Purchase record not found"), 404
+
+        # Allow admin to confirm even if already completed (for audit marking)
+        ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)
+        if not ok and code != 200:
+            conn.rollback()
+            return jsonify(message=msg), code
+
+        # Mark as admin confirmed
+        cur.execute(
+            """
+            UPDATE purchases
+            SET admin_confirmed_at = NOW(),
+                admin_confirmed_by = %s
+            WHERE transaction_id = %s
+            """,
+            (user_id, reference)
+        )
+
+        conn.commit()
+        return jsonify({
+            "message": f"Payment verified and marked as admin confirmed by user {user_id}",
+            "plan_id": str(owner['plan_id']),
+            "transaction_id": reference,
+            "user_id": owner['user_id']
+        }), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @customer_bp.route('/plans/<string:plan_id>/purchase-status', methods=['GET'])
 @jwt_required()
 def purchase_status(plan_id: str):

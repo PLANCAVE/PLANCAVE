@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getAdminPurchases, adminVerifyPaystackPayment } from '../../api';
+import { getAdminPurchases, adminVerifyPaystackPayment, adminConfirmPaystackPayment } from '../../api';
 import { Loader2, RefreshCw, Filter, DollarSign, Users, FileText, ShoppingCart, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface PurchaseRow {
@@ -74,6 +74,7 @@ export default function PurchasesAdmin() {
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [metadata, setMetadata] = useState<PurchasesResponse['metadata'] | null>(null);
   const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null);
+  const [confirmingPayment, setConfirmingPayment] = useState<string | null>(null);
 
   const totalRevenue = useMemo(() => {
     return purchases.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
@@ -134,6 +135,25 @@ export default function PurchasesAdmin() {
       setError(msg);
     } finally {
       setVerifyingPayment(null);
+    }
+  };
+
+  const handleConfirmPayment = async (reference: string) => {
+    if (!reference) {
+      setError('No transaction reference available for this purchase');
+      return;
+    }
+    setConfirmingPayment(reference);
+    try {
+      await adminConfirmPaystackPayment(reference);
+      // Refresh purchases list to show admin confirmed status
+      await loadPurchases({ reset: true });
+      setError(null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to confirm payment';
+      setError(msg);
+    } finally {
+      setConfirmingPayment(null);
     }
   };
 
@@ -333,6 +353,24 @@ export default function PurchasesAdmin() {
                             <>
                               <CheckCircle className="w-3 h-3" />
                               Complete Payment
+                            </>
+                          )}
+                        </button>
+                      ) : purchase.payment_status === 'completed' && purchase.transaction_id ? (
+                        <button
+                          onClick={() => handleConfirmPayment(purchase.transaction_id!)}
+                          disabled={confirmingPayment === purchase.transaction_id}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                        >
+                          {confirmingPayment === purchase.transaction_id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Confirming...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-3 h-3" />
+                              Confirm Payment
                             </>
                           )}
                         </button>

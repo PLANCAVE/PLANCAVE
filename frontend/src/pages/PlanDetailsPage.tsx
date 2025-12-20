@@ -701,35 +701,157 @@ export default function PlanDetailsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {pricedDeliverables.map(([key, value]) => {
                       const n = value === '' || value === null || value === undefined ? 0 : Number(value);
                       const checked = selectedDeliverables.includes(key);
                       const label = key.replace(/_/g, ' ');
+                      
+                      // Icon mapping for different deliverable types
+                      const getIcon = (deliverableKey: string) => {
+                        switch (deliverableKey) {
+                          case 'architectural':
+                            return (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                              </div>
+                            );
+                          case 'renders':
+                            return (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            );
+                          case 'structural':
+                            return (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </div>
+                            );
+                          case 'mep':
+                            return (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                              </div>
+                            );
+                          case 'civil':
+                            return (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                </svg>
+                              </div>
+                            );
+                          case 'fire_safety':
+                            return (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+                                </svg>
+                              </div>
+                            );
+                          case 'interior':
+                            return (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                </svg>
+                              </div>
+                            );
+                          default:
+                            return (
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </div>
+                            );
+                        }
+                      };
+                      
                       return (
                         <label
                           key={key}
-                          className={`group flex items-center justify-between gap-3 rounded-xl border p-4 cursor-pointer transition-all ${
+                          className={`group relative flex items-start gap-4 rounded-2xl border-2 p-5 cursor-pointer transition-all duration-200 overflow-hidden ${
                             checked
-                              ? 'border-teal-300 bg-white shadow-sm'
-                              : 'border-slate-200 bg-white/60 hover:bg-white'
+                              ? 'border-teal-400 bg-gradient-to-br from-teal-50 via-white to-blue-50 shadow-lg scale-[1.02]'
+                              : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md hover:scale-[1.01]'
                           }`}
                         >
-                          <span className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(e) => {
-                                setSelectedDeliverables((prev) => {
-                                  if (e.target.checked) return Array.from(new Set([...prev, key]));
-                                  return prev.filter((x) => x !== key);
-                                });
-                              }}
-                              className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                            />
-                            <span className="capitalize text-sm font-medium text-slate-900">{label}</span>
-                          </span>
-                          <span className="text-sm font-semibold text-slate-900">$ {Number.isFinite(n) ? n.toLocaleString() : '—'}</span>
+                          {/* Decorative background pattern */}
+                          <div className={`absolute inset-0 opacity-5 transition-opacity ${
+                            checked ? 'opacity-10' : 'opacity-0'
+                          }`}>
+                            <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-blue-500"></div>
+                            <div className="absolute inset-0" style={{
+                              backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(0,0,0,0.1) 1px, transparent 1px)',
+                              backgroundSize: '20px 20px'
+                            }}></div>
+                          </div>
+                          
+                          {/* Hidden checkbox */}
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              setSelectedDeliverables((prev) => {
+                                if (e.target.checked) return Array.from(new Set([...prev, key]));
+                                return prev.filter((x) => x !== key);
+                              });
+                            }}
+                            className="sr-only"
+                          />
+                          
+                          {/* Icon */}
+                          <div className="relative z-10">
+                            {getIcon(key)}
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="flex-1 relative z-10">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <h4 className="text-base font-semibold text-slate-900 capitalize leading-tight">
+                                  {label}
+                                </h4>
+                                <p className="text-xs text-slate-600 mt-1">
+                                  {checked ? 'Selected' : 'Add to your plan'}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-slate-900">
+                                  $ {Number.isFinite(n) ? n.toLocaleString() : '—'}
+                                </div>
+                                {checked && (
+                                  <div className="text-xs text-teal-600 font-medium mt-1">
+                                    ✓ Included
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Check indicator */}
+                          <div className={`absolute top-4 right-4 w-6 h-6 rounded-full transition-all duration-200 z-20 ${
+                            checked
+                              ? 'bg-teal-500 text-white shadow-lg'
+                              : 'bg-white border-2 border-slate-300 text-transparent'
+                          }`}>
+                            {checked && (
+                              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
                         </label>
                       );
                     })}

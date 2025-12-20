@@ -744,12 +744,6 @@ def generate_download_link():
             (user_id, plan_id, token, expires_at, 1)
         )
 
-        log_user_activity(user_id, 'download_link_requested', {
-            'plan_id': plan_id,
-            'plan_name': plan['name'],
-            'expires_at': expires_at.isoformat() + 'Z'
-        }, conn)
-
         conn.commit()
 
         return jsonify({
@@ -870,16 +864,10 @@ def download_plan_files(download_token: str):
         # (e.g., using a copied download link in a fresh browser).
         token_owner_id = int(token_row['user_id'])
         increment_user_quota(token_owner_id, 'downloads', 1, conn)
-        log_user_activity(token_owner_id, 'plan_download', {
-            'plan_id': plan_id,
-            'token': download_token,
-            'files_downloaded': files_added
-        }, conn)
-
         conn.commit()
 
         zip_buffer.seek(0)
-        response = send_file(
+        return send_file(
             zip_buffer,
             mimetype='application/zip',
             as_attachment=True,

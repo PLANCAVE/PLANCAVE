@@ -220,14 +220,14 @@ def list_purchases():
                 p.payment_method,
                 p.payment_status,
                 p.transaction_id,
-                COALESCE(p.purchased_at, p.purchase_date) AS purchased_at,
+                p.purchased_at AS purchased_at,
                 p.selected_deliverables,
                 p.payment_metadata
             FROM purchases p
             JOIN users u ON p.user_id = u.id
             JOIN plans pl ON p.plan_id = pl.id
             WHERE {where_sql}
-            ORDER BY COALESCE(p.purchased_at, p.purchase_date) DESC
+            ORDER BY p.purchased_at DESC
             LIMIT %s OFFSET %s
             """,
             tuple(values + [limit, offset])
@@ -893,14 +893,14 @@ def get_plan_details(plan_id):
             SELECT 
                 u.id as user_id,
                 u.username as email,
-                COALESCE(pu.purchased_at, pu.purchase_date) as purchased_at,
+                pu.purchased_at as purchased_at,
                 pu.payment_status,
                 pl.price
             FROM purchases pu
             JOIN users u ON pu.user_id = u.id
             JOIN plans pl ON pu.plan_id = pl.id
             WHERE pu.plan_id = %s
-            ORDER BY COALESCE(pu.purchased_at, pu.purchase_date) DESC
+            ORDER BY pu.purchased_at DESC
         """, (plan_id,))
         buyers = [dict(row) for row in cur.fetchall()]
         

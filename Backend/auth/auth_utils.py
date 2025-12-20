@@ -1,6 +1,6 @@
 """
 Unified Authentication and Authorization Utilities
-Role-based access control for PlanCave
+Role-based access control for Ramanicave
 """
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity, get_jwt

@@ -49,7 +49,7 @@ def create_admin_user():
     # If not in env, prompt for them
     if not username or not password:
         print("\n" + "="*60)
-        print("  PLANCAVE ADMIN SETUP")
+        print("  RAMANICAVE ADMIN SETUP")
         print("="*60)
         print("\nCreate your first admin account:\n")
         

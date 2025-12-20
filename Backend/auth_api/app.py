@@ -66,8 +66,8 @@ jwt = JWTManager(app)
 swagger_template = {
     "swagger": "2.0",
     "info": {
-        "title": "PlanCave Backend API",
-        "description": "Interactive documentation for PlanCave backend endpoints (auth, plans, uploads, teams, creator tools, admin, customer).",
+        "title": "Ramanicave Backend API",
+        "description": "Interactive documentation for Ramanicave backend endpoints (auth, plans, uploads, teams, creator tools, admin, customer).",
         "version": "1.0.0"
     },
     "basePath": "/",
@@ -113,7 +113,7 @@ def health_check():
     """Health check endpoint for Render and monitoring"""
     return jsonify({
         "status": "healthy",
-        "service": "PlanCave API",
+        "service": "Ramanicave API",
         "version": "1.0.0"
     }), 200
 
@@ -439,7 +439,7 @@ def login():
     
     # Check if account is active
     if not is_active:
-        return jsonify(message="Your account has been deactivated. Please contact admin@plancave.com."), 403
+        return jsonify(message="Your account has been deactivated. Please contact admin@ramanicave.com."), 403
 
     if bcrypt.check_password_hash(hashed_pw, password):
         access_token = create_access_token(

@@ -1,4 +1,4 @@
--- db.sql - Base schema for PlanCave
+-- db.sql - Base schema for Ramanicave
 -- This defines the minimal core tables used by the application.
 
 -- Enable pgcrypto for gen_random_uuid() if available

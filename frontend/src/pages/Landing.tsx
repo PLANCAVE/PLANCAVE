@@ -337,7 +337,7 @@ export default function Landing() {
                     <span>THE</span>
                     <div className="h-px w-20 bg-gradient-to-l from-transparent via-white/30 to-white/70"></div>
                   </div>
-                  <h1 className="text-3xl font-serif tracking-[0.55em] text-white drop-shadow-2xl">PLANCAVE</h1>
+                  <h1 className="text-3xl font-serif tracking-[0.55em] text-white drop-shadow-2xl">RAMANICAVE</h1>
                 </div>
               </div>
 
@@ -411,7 +411,7 @@ export default function Landing() {
                 <div className="h-px w-20 bg-gradient-to-l from-transparent via-white/30 to-white/70"></div>
               </div>
               <h1 className="text-3xl md:text-4xl font-serif tracking-[0.55em] text-white drop-shadow-2xl">
-                PLANCAVE
+                RAMANICAVE
               </h1>
             </div>
 
@@ -578,7 +578,7 @@ export default function Landing() {
               <div className="h-px w-20 bg-gradient-to-l from-transparent via-purple-500/50 to-transparent"></div>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Why Choose The Plancave?
+              Why Choose Ramanicave?
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
               The premier architectural marketplace connecting visionary designers with dream home builders
@@ -646,7 +646,7 @@ export default function Landing() {
                 Ready to Start Building?
               </h2>
               <p className="text-xl md:text-2xl text-gray-100 mb-10 font-light">
-                Join thousands of architects, designers, and builders using The Plancave
+                Join thousands of architects, designers, and builders using Ramanicave
               </p>
               {!isAuthenticated && (
                 <Link
@@ -684,10 +684,10 @@ export default function Landing() {
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3">Email Us</h3>
                 <a 
-                  href="mailto:admin@plancave.com"
+                  href="mailto:admin@ramanicave.com"
                   className="text-teal-300 hover:text-teal-200 transition-colors text-lg break-words"
                 >
-                  admin@plancave.com
+                  admin@ramanicave.com
                 </a>
               </div>
             </div>

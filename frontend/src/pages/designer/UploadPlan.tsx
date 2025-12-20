@@ -1319,7 +1319,7 @@ export default function UploadPlan() {
             <Upload className="w-10 h-10 text-purple-600" />
             Professional Plan Upload
           </h1>
-          <p className="text-gray-600">Complete construction documentation system for The Plancave marketplace</p>
+          <p className="text-gray-600">Complete construction documentation system for Ramanicave marketplace</p>
         </div>
 
         {/* Progress Steps */}

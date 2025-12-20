@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy_app.sh - Automated single-VM deployment for PlanCave
+# deploy_app.sh - Automated single-VM deployment for Ramanicave
 #
 # Responsibilities:
 #   * Install required apt packages (Python, Node, nginx, build tools)
@@ -113,7 +113,7 @@ write_systemd_unit() {
   log "Writing systemd unit $SYSTEMD_UNIT"
   cat >"$SYSTEMD_UNIT" <<EOF
 [Unit]
-Description=PlanCave Backend
+Description=Ramanicave Backend
 After=network.target
 
 [Service]

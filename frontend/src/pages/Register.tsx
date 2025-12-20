@@ -89,7 +89,7 @@ export default function Register() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl mb-4 shadow-lg shadow-teal-500/50">
             <Building2 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Join The Plancave</h1>
+          <h1 className="text-3xl font-bold text-white">Join Ramanicave</h1>
           <p className="text-gray-300 mt-2">Start buying or selling plans today</p>
         </div>
 

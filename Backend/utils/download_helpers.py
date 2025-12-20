@@ -296,15 +296,15 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
         tracking = 6
         title_font = 'Times-Bold'
         title_size = 32
-        base_width = pdfmetrics.stringWidth('PLANCAVE', title_font, title_size)
-        total_width = base_width + tracking * (len('PLANCAVE') - 1)
+        base_width = pdfmetrics.stringWidth('RAMANICAVE', title_font, title_size)
+        total_width = base_width + tracking * (len('RAMANICAVE') - 1)
         start_x = (width - total_width) / 2
         text_obj = c.beginText()
         text_obj.setTextOrigin(start_x, height - header_height + 28)
         text_obj.setFont(title_font, title_size)
         text_obj.setCharSpace(tracking)
         text_obj.setFillColor(logo_color)
-        text_obj.textLine('PLANCAVE')
+        text_obj.textLine('RAMANICAVE')
         c.drawText(text_obj)
 
         underline_y = height - header_height + 20
@@ -492,7 +492,7 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
     c.drawText(text)
     c.setFont('Times-Italic', 10)
     c.setFillColor(colors.HexColor('#4b5563'))
-    c.drawCentredString(width / 2, 40, 'PlanCave · Confidential technical package · Auto-generated manifest')
+    c.drawCentredString(width / 2, 40, 'Ramanicave · Confidential technical package · Auto-generated manifest')
     c.save()
     buffer.seek(0)
     return buffer

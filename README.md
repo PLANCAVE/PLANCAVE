@@ -1,4 +1,4 @@
-# The Plancave - Construction Plans Marketplace
+# Ramanicave - Construction Plans Marketplace
 
 Professional construction plans marketplace platform connecting designers with customers.
 
@@ -137,7 +137,7 @@ Frontend runs on `http://localhost:5173`
 
 ## 📞 Contact Information
 
-- **Email**: admin@plancave.com
+- **Email**: admin@ramanicave.com
 - **Phone**: +254 741 076 621
 - **Address**: Karen Watermark Business Center
 - **Hours**: Monday-Friday, 8AM-6PM EAT

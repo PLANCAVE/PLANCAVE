@@ -101,7 +101,7 @@ export default function PlanDetailsPage() {
 
   const designerLabel = (() => {
     if (!plan) return '';
-    if (plan.designer_role === 'admin') return 'Plancave LTD';
+    if (plan.designer_role === 'admin') return 'Ramanicave LTD';
     return plan.designer_name || '—';
   })();
 

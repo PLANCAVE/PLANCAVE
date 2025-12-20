@@ -1,7 +1,7 @@
-# The Plancave - Frontend Documentation
+# Ramanicave - Frontend Documentation
 
 ## Overview
-Modern React-based frontend for The Plancave professional construction plans marketplace. Built with React 19, TypeScript, TailwindCSS, and Vite.
+Modern React-based frontend for Ramanicave professional construction plans marketplace. Built with React 19, TypeScript, TailwindCSS, and Vite.
 
 ## Technology Stack
 - **Framework**: React 19
@@ -102,7 +102,7 @@ frontend/
 - Responsive navigation
 
 **Contact Information:**
-- Email: admin@plancave.com
+- Email: admin@ramanicave.com
 - Phone: +254 741 076 621
 - Address: Karen Watermark Business Center
 - Business Hours: Monday-Friday, 8AM-6PM EAT
@@ -118,7 +118,7 @@ frontend/
 **Error Messages:**
 - Invalid credentials (401)
 - Account not found (404)
-- Account deactivated (403): "Your account has been deactivated. Please contact admin@plancave.com."
+- Account deactivated (403): "Your account has been deactivated. Please contact admin@ramanicave.com."
 
 #### Register (`/register`)
 **Fields:**

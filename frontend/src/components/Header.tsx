@@ -47,7 +47,7 @@ export default function Header() {
                 <span>THE</span>
                 <div className="h-px w-10 bg-gradient-to-l from-transparent via-white/40 to-white"></div>
               </div>
-              <span className="mt-1 text-2xl font-serif tracking-[0.45em] drop-shadow-lg">PLANCAVE</span>
+              <span className="mt-1 text-2xl font-serif tracking-[0.45em] drop-shadow-lg">RAMANICAVE</span>
               <div className="mt-1 flex items-center gap-2 opacity-70">
                 <div className="h-px w-8 bg-white"></div>
                 <div className="h-px w-6 bg-white/80"></div>

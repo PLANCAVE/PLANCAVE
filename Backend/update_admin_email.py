@@ -12,7 +12,7 @@ bcrypt = Bcrypt(app)
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://plancave_user:bAttB6nAANjTFrCym9h2Q5XZBo0HbTMQ@dpg-d4n5v18gjchc73br4mmg-a.oregon-postgres.render.com/plancave')
 
 # New admin credentials
-admin_email = "admin@plancave.com"
+admin_email = "admin@ramanicave.com"
 password = "Admin@2024"
 
 try:

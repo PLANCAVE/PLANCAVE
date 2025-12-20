@@ -656,7 +656,7 @@ def generate_download_link():
                 SELECT id, purchased_at
                 FROM purchases
                 WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
-                ORDER BY COALESCE(purchased_at, purchase_date) DESC NULLS LAST
+                ORDER BY purchased_at DESC NULLS LAST
                 LIMIT 1
                 """,
                 (user_id, plan_id)

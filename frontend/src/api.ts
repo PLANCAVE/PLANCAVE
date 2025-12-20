@@ -9,10 +9,14 @@ export const setAccessToken = (token: string | null) => {
 export const getAccessToken = () => memoryAccessToken;
 
 const getApiBaseUrl = () => {
+  const configured = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  if (configured) {
+    return configured;
+  }
   if (import.meta.env.PROD) {
     return '/api';
   }
-  return import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  return 'http://localhost:5000';
 };
 
 const api = axios.create({

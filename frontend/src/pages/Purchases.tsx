@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Download, Copy, ExternalLink, RefreshCw } from 'lucide-react';
 import { generateDownloadLink, getMyPurchases } from '../api';
 import api from '../api';
@@ -23,6 +23,7 @@ const resolveMediaUrl = (path?: string) => {
 };
 
 export default function Purchases() {
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -52,6 +53,15 @@ export default function Purchases() {
   useEffect(() => {
     loadPurchases();
   }, []);
+
+  useEffect(() => {
+    const shouldRefresh = Boolean((location.state as any)?.refresh);
+    if (!shouldRefresh) return;
+    loadPurchases();
+    // Clear the refresh flag so back/forward navigation doesn't keep reloading.
+    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
   const handleGenerate = async (planId: string) => {
     setBusyPlanId(planId);

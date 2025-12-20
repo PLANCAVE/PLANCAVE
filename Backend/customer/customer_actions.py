@@ -94,6 +94,15 @@ def _paystack_signature_for(body: bytes) -> str:
 
 def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     """Mark a Paystack purchase as completed after verifying all invariants."""
+    # Paystack returns many intermediate states; only treat a charge as paid when
+    # it is successful AND has a paid timestamp.
+    if (paystack_data.get('status') or '').lower() != 'success':
+        return False, ("Payment not completed yet", 202)
+
+    paid_at = paystack_data.get('paid_at') or paystack_data.get('paidAt')
+    if not paid_at:
+        return False, ("Payment not completed yet", 202)
+
     cur.execute(
         """
         SELECT p.id, p.user_id, p.plan_id, p.amount, p.payment_status, pl.price, pl.sales_count
@@ -487,6 +496,12 @@ def paystack_webhook():
     try:
         ok, (msg, code) = _complete_paystack_purchase(reference, data, conn, cur)
         if not ok and code != 200:
+            # If Paystack says it's not completed yet, acknowledge the webhook to
+            # avoid noisy retries; we'll complete the purchase on a later webhook
+            # or user-triggered verification.
+            if int(code) == 202:
+                conn.rollback()
+                return jsonify(status="ignored"), 200
             conn.rollback()
             return jsonify(message=msg), code
         conn.commit()
@@ -525,8 +540,9 @@ def verify_paystack(reference: str):
             return jsonify(message=data.get("message") or "Failed to verify Paystack payment"), 400
 
         paystack_data = data.get("data") or {}
-        if paystack_data.get("status") != "success":
-            return jsonify(message="Payment not completed yet"), 202
+        paystack_reference = paystack_data.get('reference')
+        if paystack_reference and str(paystack_reference) != str(reference):
+            return jsonify(message="Payment verification reference mismatch"), 400
 
         # Ensure the authenticated user is allowed to verify this reference
         cur.execute(
@@ -677,48 +693,16 @@ def generate_download_link():
                 )
                 latest_purchase = cur.fetchone()
                 if latest_purchase:
-                    # If the user paid via Paystack and the purchase is still pending in DB,
-                    # auto-verify with Paystack and complete it before blocking download.
-                    try:
-                        if (
-                            latest_purchase.get('payment_method') == 'paystack'
-                            and latest_purchase.get('transaction_id')
-                            and latest_purchase.get('payment_status') != 'completed'
-                        ):
-                            resp = requests.get(
-                                f"https://api.paystack.co/transaction/verify/{latest_purchase.get('transaction_id')}",
-                                headers=_paystack_headers(),
-                                timeout=10,
-                            )
-                            data = resp.json() if resp.content else {}
-                            if resp.status_code == 200 and data.get('status'):
-                                paystack_data = data.get('data') or {}
-                                if paystack_data.get('status') == 'success':
-                                    ok, (msg, code) = _complete_paystack_purchase(
-                                        str(latest_purchase.get('transaction_id')),
-                                        paystack_data,
-                                        conn,
-                                        cur,
-                                    )
-                                    if ok:
-                                        # Purchase is now completed; continue to issue download token.
-                                        purchase = {'id': latest_purchase.get('id')}
-                                    else:
-                                        return jsonify(message=msg), code
-                    except Exception:
-                        pass
-
-                    if not purchase:
-                        return jsonify(
-                            message="Purchase not completed yet",
-                            payment_status=latest_purchase.get('payment_status'),
-                            transaction_id=latest_purchase.get('transaction_id'),
-                            purchased_at=(
-                                latest_purchase.get('purchased_at').isoformat() + 'Z'
-                                if latest_purchase.get('purchased_at') is not None and hasattr(latest_purchase.get('purchased_at'), 'isoformat')
-                                else latest_purchase.get('purchased_at')
-                            ),
-                        ), 409
+                    return jsonify(
+                        message="Purchase not completed yet",
+                        payment_status=latest_purchase.get('payment_status'),
+                        transaction_id=latest_purchase.get('transaction_id'),
+                        purchased_at=(
+                            latest_purchase.get('purchased_at').isoformat() + 'Z'
+                            if latest_purchase.get('purchased_at') is not None and hasattr(latest_purchase.get('purchased_at'), 'isoformat')
+                            else latest_purchase.get('purchased_at')
+                        ),
+                    ), 409
                 if not purchase:
                     return jsonify(message="Purchase required before downloading"), 403
 

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api, { getPlanDetails, generateDownloadLink, downloadPlanFile, adminDownloadPlan, purchasePlan, verifyPurchase, verifyPaystackPayment } from '../api';
+import { getPlanDetails, adminDownloadPlan, purchasePlan, verifyPurchase, verifyPaystackPayment } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
 import {
@@ -21,8 +21,6 @@ import {
   CreditCard,
   Heart,
   Plus,
-  Copy,
-  ExternalLink,
 } from 'lucide-react';
 
 interface PlanFile {
@@ -92,10 +90,9 @@ export default function PlanDetailsPage() {
   const [pendingReference, setPendingReference] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
-  const [downloadToken, setDownloadToken] = useState<string | null>(null);
-  const [copiedDownloadLink, setCopiedDownloadLink] = useState(false);
   const [purchaseDownloadStatus, setPurchaseDownloadStatus] = useState<'pending_download' | 'downloaded' | null>(null);
   const [lastDownloadedAt, setLastDownloadedAt] = useState<string | null>(null);
+  const autoVerifyRanRef = useRef(false);
   
   // Cart and favorites states
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -122,6 +119,28 @@ export default function PlanDetailsPage() {
     const cleanedPath = path.replace(/^\/api(?=\/)/, '');
     return cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
   };
+
+  // Auto-verify ONLY when Paystack redirects back with ?reference=...
+  // Runs once and then cleans up the URL to prevent repeated verifies on refresh.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (autoVerifyRanRef.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('reference');
+    if (!ref) return;
+
+    autoVerifyRanRef.current = true;
+
+    // Remove reference from URL immediately to avoid re-triggering.
+    params.delete('reference');
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
+    window.history.replaceState({}, document.title, nextUrl);
+
+    handleVerifyPayment(ref);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   // Helper functions to check cart and favorites status
   const isInCart = cartItems.some(item => item.id === id);
@@ -290,14 +309,6 @@ export default function PlanDetailsPage() {
 
   const isPlanOwnerDesigner = Boolean(isDesigner && user && plan?.designer_id === user.id);
 
-  const buildDownloadUrl = (token: string) => {
-    const base = (api.defaults.baseURL || '').replace(/\/+$/, '') || '/api';
-    const safeBase = base.startsWith('http')
-      ? base
-      : `${window.location.origin}${base.startsWith('/') ? '' : '/'}${base}`;
-    return `${safeBase}/customer/plans/download/${token}`;
-  };
-
   const handleAdminDownload = async () => {
     if (!id || !plan) return;
 
@@ -360,77 +371,6 @@ export default function PlanDetailsPage() {
     }
   };
 
-  const handleGenerateDownload = async () => {
-    if (!id) return;
-
-    setIsDownloading(true);
-    setDownloadError(null);
-
-    try {
-      const linkResponse = await generateDownloadLink(id);
-      const { download_token } = linkResponse.data;
-
-      if (download_token) {
-        setDownloadToken(download_token);
-        setCopiedDownloadLink(false);
-        setPurchaseDownloadStatus('pending_download');
-      }
-
-      setPurchaseSuccess(true);
-    } catch (err: any) {
-      console.error('Generate download token error', err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        'Failed to generate download link. Please try again.';
-      setDownloadError(String(msg));
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const handleDownloadFile = async (tokenOverride?: string | null) => {
-    const token = tokenOverride || downloadToken;
-    if (!plan || !token) {
-      setDownloadError('No download token available. Please generate a new link.');
-      return;
-    }
-
-    setIsDownloading(true);
-    setDownloadError(null);
-
-    try {
-      const response = await downloadPlanFile(token);
-      const blob = new Blob([response.data], { type: 'application/zip' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${plan.name || 'plan'}-technical-files.zip`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      setDownloadToken(null);
-      setPurchaseDownloadStatus('downloaded');
-      setLastDownloadedAt(new Date().toISOString());
-    } catch (err: any) {
-      console.error('Download error', err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        'Download failed. Please try again.';
-      setDownloadError(String(msg));
-      if (err?.response?.status === 404 || err?.response?.status === 410) {
-        setDownloadToken(null);
-      }
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   const handleVerifyPayment = async (referenceToVerify?: string) => {
     const ref = referenceToVerify || pendingReference;
     if (!ref) {
@@ -444,6 +384,7 @@ export default function PlanDetailsPage() {
       setPurchaseStatus('purchased');
       setPurchaseSuccess(true);
       setPendingReference(null);
+      navigate('/purchases', { state: { refresh: true } });
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Payment not completed yet. Please retry after Paystack confirms.';
       setDownloadError(msg);
@@ -485,16 +426,6 @@ export default function PlanDetailsPage() {
       setLastDownloadedAt(null);
     }
   };
-
-  // Auto-verify if a Paystack reference is present in URL (callback flow)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get('reference');
-    if (ref && isAuthenticated) {
-      handleVerifyPayment(ref);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
 
   const getImageUrls = (): string[] => {
     if (!plan) return [];
@@ -1063,7 +994,7 @@ export default function PlanDetailsPage() {
                 {purchaseSuccess && (
                   <div className="p-3 rounded-2xl border border-emerald-400/40 bg-emerald-400/10 flex items-center gap-2 text-sm text-white">
                     <CheckCircle className="w-5 h-5 text-emerald-300" />
-                    Purchase complete — download starting
+                    Purchase complete — go to Purchases to download
                   </div>
                 )}
 
@@ -1095,67 +1026,6 @@ export default function PlanDetailsPage() {
                     {downloadError}
                   </div>
                 )}
-
-                {!isAdmin && purchaseStatus === 'purchased' && downloadToken ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Your download link</div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <input
-                        readOnly
-                        value={buildDownloadUrl(downloadToken)}
-                        className="flex-1 min-w-0 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-xs text-white/90"
-                      />
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(buildDownloadUrl(downloadToken));
-                            setCopiedDownloadLink(true);
-                            window.setTimeout(() => setCopiedDownloadLink(false), 1500);
-                          } catch {
-                            setDownloadError('Failed to copy link. Please copy it manually.');
-                          }
-                        }}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
-                      >
-                        <Copy className="w-4 h-4" />
-                        <span className="text-xs">{copiedDownloadLink ? 'Copied' : 'Copy'}</span>
-                      </button>
-                      <a
-                        href={buildDownloadUrl(downloadToken)}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        <span className="text-xs">Open</span>
-                      </a>
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadFile(downloadToken)}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-300 text-slate-900 hover:bg-teal-200"
-                        disabled={isDownloading}
-                      >
-                        {isDownloading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Downloading...
-                          </>
-                        ) : (
-                          <>
-                            <Download className="w-4 h-4" />
-                            Download File
-                          </>
-                        )}
-                      </button>
-                      <span className="text-[11px] text-slate-300">
-                        This link is single-use. Once downloaded, generate a fresh link if you need another copy.
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
 
                 {isAdmin ? (
                   <button
@@ -1226,21 +1096,11 @@ export default function PlanDetailsPage() {
                   </div>
                 ) : purchaseStatus === 'purchased' ? (
                   <button
-                    onClick={handleGenerateDownload}
-                    disabled={isDownloading}
+                    onClick={() => navigate('/purchases')}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-teal-400 text-slate-900 font-semibold hover:bg-teal-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {isDownloading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Generating link...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4" />
-                        Generate download link
-                      </>
-                    )}
+                    <Download className="w-4 h-4" />
+                    Go to Purchases to download
                   </button>
                 ) : (
                   <button
@@ -1266,11 +1126,7 @@ export default function PlanDetailsPage() {
                   {isAdmin ? (
                     "Admin: instant access to every technical file"
                   ) : purchaseStatus === 'purchased' ? (
-                    downloadToken
-                      ? "Copy or open your link to download. Need a fresh link? Click the button again."
-                      : purchaseDownloadStatus === 'downloaded'
-                        ? "You already downloaded this plan. Generate a new link if you need another copy."
-                        : "Generate a one-time download link when you're ready to download."
+                    "Download links are managed in your Purchases page."
                   ) : (
                     "Secure checkout • access delivered instantly after payment"
                   )}

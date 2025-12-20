@@ -42,11 +42,6 @@ export default function Header() {
           {/* Logo */}
           <Link to="/" className="group text-white hover:text-teal-200 transition-all">
             <div className="flex flex-col items-start leading-tight">
-              <div className="flex items-center gap-2 text-[0.5rem] tracking-[0.75em] text-white/70 group-hover:text-white">
-                <div className="h-px w-10 bg-gradient-to-r from-transparent via-white/40 to-white"></div>
-                <span>THE</span>
-                <div className="h-px w-10 bg-gradient-to-l from-transparent via-white/40 to-white"></div>
-              </div>
               <span className="mt-1 text-2xl font-serif tracking-[0.45em] drop-shadow-lg">RAMANICAVE</span>
               <div className="mt-1 flex items-center gap-2 opacity-70">
                 <div className="h-px w-8 bg-white"></div>

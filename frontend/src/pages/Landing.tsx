@@ -331,12 +331,7 @@ export default function Landing() {
                   />
                 ) : null}
                 <div className="absolute inset-0 bg-black/20" />
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center text-white/80 space-y-3 pointer-events-none z-20">
-                  <div className="flex items-center gap-3 justify-center text-[0.6rem] tracking-[0.8em] text-white/70">
-                    <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/30 to-white/70"></div>
-                    <span>THE</span>
-                    <div className="h-px w-20 bg-gradient-to-l from-transparent via-white/30 to-white/70"></div>
-                  </div>
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center text-white/80 pointer-events-none z-20">
                   <h1 className="text-3xl font-serif tracking-[0.55em] text-white drop-shadow-2xl">RAMANICAVE</h1>
                 </div>
               </div>
@@ -404,12 +399,7 @@ export default function Landing() {
             onTouchEnd={() => setIsHoveringCarousel(false)}
             onTouchCancel={() => setIsHoveringCarousel(false)}
           >
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center text-white/80 space-y-3 pointer-events-none z-20">
-              <div className="flex items-center gap-3 justify-center text-[0.6rem] tracking-[0.8em] text-white/70">
-                <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/30 to-white/70"></div>
-                <span>THE</span>
-                <div className="h-px w-20 bg-gradient-to-l from-transparent via-white/30 to-white/70"></div>
-              </div>
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center text-white/80 pointer-events-none z-20">
               <h1 className="text-3xl md:text-4xl font-serif tracking-[0.55em] text-white drop-shadow-2xl">
                 RAMANICAVE
               </h1>

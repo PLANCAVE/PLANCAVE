@@ -224,17 +224,57 @@ def list_purchases():
                 p.selected_deliverables,
                 p.payment_metadata,
                 p.admin_confirmed_at,
-                p.admin_confirmed_by
+                p.admin_confirmed_by,
+                dt.total_tokens AS download_tokens_generated,
+                dt.used_tokens AS download_tokens_used,
+                dt.last_downloaded_at
             FROM purchases p
             JOIN users u ON p.user_id = u.id
             JOIN plans pl ON p.plan_id = pl.id
+            LEFT JOIN LATERAL (
+                SELECT
+                    COUNT(*) AS total_tokens,
+                    COUNT(*) FILTER (WHERE used) AS used_tokens,
+                    MAX(created_at) FILTER (WHERE used) AS last_downloaded_at
+                FROM download_tokens dt
+                WHERE dt.user_id = p.user_id AND dt.plan_id = p.plan_id
+            ) dt ON TRUE
             WHERE {where_sql}
             ORDER BY p.purchased_at DESC
             LIMIT %s OFFSET %s
             """,
             tuple(values + [limit, offset])
         )
-        purchases = [dict(row) for row in cur.fetchall()]
+        purchases = []
+        for row in cur.fetchall():
+            record = dict(row)
+
+            amount = record.get('amount')
+            if amount is not None:
+                try:
+                    record['amount'] = float(amount)
+                except Exception:
+                    pass
+
+            download_tokens_generated = int(record.get('download_tokens_generated') or 0)
+            download_tokens_used = int(record.get('download_tokens_used') or 0)
+
+            last_downloaded_at = record.get('last_downloaded_at')
+            if last_downloaded_at is not None and hasattr(last_downloaded_at, 'isoformat'):
+                record['last_downloaded_at'] = last_downloaded_at.isoformat()
+
+            if download_tokens_used > 0:
+                download_status = 'downloaded'
+            elif download_tokens_generated > 0:
+                download_status = 'pending_download'
+            else:
+                download_status = 'not_generated'
+
+            record['download_status'] = download_status
+            record['download_tokens_generated'] = download_tokens_generated
+            record['download_tokens_used'] = download_tokens_used
+
+            purchases.append(record)
 
         return jsonify({
             'metadata': {

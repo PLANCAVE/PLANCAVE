@@ -17,6 +17,10 @@ interface PurchaseRow {
   payment_metadata?: any;
   admin_confirmed_at?: string | null;
   admin_confirmed_by?: number | null;
+  download_tokens_generated?: number;
+  download_tokens_used?: number;
+  download_status?: 'not_generated' | 'pending_download' | 'downloaded' | null;
+  last_downloaded_at?: string | null;
 }
 
 interface PurchasesResponse {
@@ -105,10 +109,23 @@ export default function PurchasesAdmin() {
 
       const resp = await getAdminPurchases(params);
       const payload: PurchasesResponse = resp.data;
-      const normalized = (payload.purchases || []).map((row: any) => ({
-        ...row,
-        selected_deliverables: normalizeDeliverables(row.selected_deliverables),
-      })) as PurchaseRow[];
+      const normalized = (payload.purchases || []).map((row: any) => {
+        const amount = Number(row.amount ?? 0);
+        const downloadTokensGenerated = Number(row.download_tokens_generated ?? 0);
+        const downloadTokensUsed = Number(row.download_tokens_used ?? 0);
+        const downloadStatus = (row.download_status ?? null) as PurchaseRow['download_status'];
+        const lastDownloadedAt = row.last_downloaded_at ?? null;
+
+        return {
+          ...row,
+          amount,
+          selected_deliverables: normalizeDeliverables(row.selected_deliverables),
+          download_tokens_generated: downloadTokensGenerated,
+          download_tokens_used: downloadTokensUsed,
+          download_status: downloadStatus,
+          last_downloaded_at: lastDownloadedAt,
+        } as PurchaseRow;
+      });
       setMetadata(payload.metadata);
       setPurchases((prev) => (reset ? normalized : [...prev, ...normalized]));
     } catch (err: any) {
@@ -281,6 +298,7 @@ export default function PurchasesAdmin() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Reference</th>
                   <th className="px-4 py-3">Purchased</th>
+                  <th className="px-4 py-3">Download</th>
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
@@ -338,6 +356,39 @@ export default function PurchasesAdmin() {
                     </td>
                     <td className="px-4 py-3 text-xs text-white/70">
                       {purchase.purchased_at ? new Date(purchase.purchased_at).toLocaleString() : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {purchase.download_status ? (
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              purchase.download_status === 'downloaded'
+                                ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30'
+                                : purchase.download_status === 'pending_download'
+                                  ? 'bg-amber-500/20 text-amber-100 border border-amber-400/30'
+                                  : 'bg-white/10 text-white/70 border border-white/15'
+                            }`}
+                          >
+                            {purchase.download_status === 'downloaded'
+                              ? 'Downloaded'
+                              : purchase.download_status === 'pending_download'
+                                ? 'Download pending'
+                                : 'Not generated'}
+                          </span>
+                          <div className="text-[11px] text-white/60">
+                            <span>{purchase.download_tokens_used ?? 0} used</span>
+                            <span className="mx-1">/</span>
+                            <span>{purchase.download_tokens_generated ?? 0} generated</span>
+                          </div>
+                          {purchase.last_downloaded_at ? (
+                            <div className="text-[11px] text-white/60">
+                              Last: {new Date(purchase.last_downloaded_at).toLocaleString()}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-white/40 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {purchase.payment_status === 'pending' && purchase.transaction_id ? (

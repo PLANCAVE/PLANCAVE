@@ -15,6 +15,8 @@ type PurchaseRow = {
   payment_status?: string | null;
   transaction_id?: string | null;
   selected_deliverables?: string[];
+  download_status?: 'not_generated' | 'pending_download' | 'downloaded' | null;
+  last_downloaded_at?: string | null;
 };
 
 const resolveMediaUrl = (path?: string) => {
@@ -65,7 +67,10 @@ export default function Purchases() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
 
-  const handleGenerate = async (planId: string) => {
+  const handleGenerate = async (planId: string, downloadStatus?: PurchaseRow['download_status']) => {
+    if (downloadStatus === 'downloaded') {
+      return;
+    }
     setBusyPlanId(planId);
     setCopiedPlanId(null);
     try {
@@ -172,6 +177,8 @@ export default function Purchases() {
               const token = tokenByPlanId[planId];
               const canDownload = p.payment_status === 'completed';
               const url = token ? buildDownloadUrl(token) : '';
+              const downloadStatus = p.download_status || null;
+              const lastDownloadedAt = p.last_downloaded_at ? new Date(p.last_downloaded_at).toLocaleString() : null;
 
               return (
                 <div key={p.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -195,6 +202,28 @@ export default function Purchases() {
                           <p className="text-sm font-semibold">{Number(p.amount || 0).toLocaleString()}</p>
                         </div>
                       </div>
+                      {downloadStatus ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
+                              downloadStatus === 'downloaded'
+                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                : downloadStatus === 'pending_download'
+                                  ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+                            }`}
+                          >
+                            {downloadStatus === 'downloaded'
+                              ? 'Downloaded'
+                              : downloadStatus === 'pending_download'
+                                ? 'Download pending'
+                                : 'Download link not generated'}
+                          </span>
+                          {lastDownloadedAt ? (
+                            <span className="text-xs text-gray-500">Last download: {lastDownloadedAt}</span>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
@@ -213,8 +242,8 @@ export default function Purchases() {
                       )}
                       <button
                         type="button"
-                        onClick={() => handleGenerate(planId)}
-                        disabled={!canDownload || busyPlanId === planId}
+                        onClick={() => handleGenerate(planId, downloadStatus)}
+                        disabled={!canDownload || busyPlanId === planId || downloadStatus === 'downloaded'}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white disabled:opacity-50"
                       >
                         <Download className="w-4 h-4" />
@@ -249,7 +278,11 @@ export default function Purchases() {
                             {copiedPlanId === planId ? 'Copied' : 'Copy'}
                           </button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">This link expires automatically. Generate a new one anytime.</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {downloadStatus === 'downloaded'
+                            ? 'Download completed. Contact support if you need help accessing your files.'
+                            : 'This link expires automatically after first use.'}
+                        </p>
                       </div>
                     ) : null}
                   </div>

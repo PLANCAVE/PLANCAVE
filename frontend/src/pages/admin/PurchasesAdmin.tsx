@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getAdminPurchases } from '../../api';
-import { Loader2, RefreshCw, Filter, DollarSign, Users, FileText, ShoppingCart, AlertTriangle } from 'lucide-react';
+import { getAdminPurchases, adminVerifyPaystackPayment } from '../../api';
+import { Loader2, RefreshCw, Filter, DollarSign, Users, FileText, ShoppingCart, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface PurchaseRow {
   id: string;
@@ -73,6 +73,7 @@ export default function PurchasesAdmin() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [metadata, setMetadata] = useState<PurchasesResponse['metadata'] | null>(null);
+  const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null);
 
   const totalRevenue = useMemo(() => {
     return purchases.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
@@ -116,6 +117,26 @@ export default function PurchasesAdmin() {
   };
 
   const hasMore = metadata ? metadata.offset + metadata.returned < metadata.total : false;
+
+  const handleCompletePayment = async (reference: string) => {
+    if (!reference) {
+      setError('No transaction reference available for this purchase');
+      return;
+    }
+    setVerifyingPayment(reference);
+    try {
+      const resp = await adminVerifyPaystackPayment(reference);
+      const message = resp.data?.message || 'Payment verified and completed';
+      // Refresh purchases list to show updated status
+      await loadPurchases({ reset: true });
+      setError(null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to complete payment verification';
+      setError(msg);
+    } finally {
+      setVerifyingPayment(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -239,6 +260,7 @@ export default function PurchasesAdmin() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Reference</th>
                   <th className="px-4 py-3">Purchased</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -295,6 +317,29 @@ export default function PurchasesAdmin() {
                     </td>
                     <td className="px-4 py-3 text-xs text-white/70">
                       {purchase.purchased_at ? new Date(purchase.purchased_at).toLocaleString() : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {purchase.payment_status === 'pending' && purchase.transaction_id ? (
+                        <button
+                          onClick={() => handleCompletePayment(purchase.transaction_id!)}
+                          disabled={verifyingPayment === purchase.transaction_id}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                        >
+                          {verifyingPayment === purchase.transaction_id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Verifying...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-3 h-3" />
+                              Complete Payment
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-white/40 text-xs">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -128,6 +128,9 @@ export const downloadPlanFile = (download_token: string) =>
 export const verifyPaystackPayment = (reference: string) =>
   api.post(`/customer/payments/paystack/verify/${reference}`);
 
+export const adminVerifyPaystackPayment = (reference: string) =>
+  api.post(`/customer/admin/payments/paystack/verify/${reference}`);
+
 export const adminDownloadPlan = (plan_id: string) =>
   api.get(`/admin/plans/${plan_id}/download`, { responseType: 'blob' });
 

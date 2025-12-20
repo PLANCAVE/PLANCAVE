@@ -638,12 +638,18 @@ def generate_download_link():
     cur = conn.cursor(row_factory=dict_row)
 
     try:
-        cur.execute("SELECT id, name FROM plans WHERE id = %s", (plan_id,))
+        cur.execute("SELECT id, name, designer_id FROM plans WHERE id = %s", (plan_id,))
         plan = cur.fetchone()
         if not plan:
             return jsonify(message="Plan not found"), 404
 
-        if role != 'admin':
+        is_plan_owner = False
+        try:
+            is_plan_owner = plan.get('designer_id') is not None and int(plan.get('designer_id')) == int(user_id)
+        except Exception:
+            is_plan_owner = False
+
+        if role != 'admin' and not is_plan_owner:
             cur.execute(
                 """
                 SELECT id, purchased_at

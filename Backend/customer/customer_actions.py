@@ -663,6 +663,30 @@ def generate_download_link():
             )
             purchase = cur.fetchone()
             if not purchase:
+                # Helpful diagnostics: distinguish between "no purchase record" and
+                # "purchase exists but not completed".
+                cur.execute(
+                    """
+                    SELECT id, payment_status, transaction_id, purchased_at
+                    FROM purchases
+                    WHERE user_id = %s AND plan_id = %s
+                    ORDER BY purchased_at DESC NULLS LAST
+                    LIMIT 1
+                    """,
+                    (user_id, plan_id)
+                )
+                latest_purchase = cur.fetchone()
+                if latest_purchase:
+                    return jsonify(
+                        message="Purchase not completed yet",
+                        payment_status=latest_purchase.get('payment_status'),
+                        transaction_id=latest_purchase.get('transaction_id'),
+                        purchased_at=(
+                            latest_purchase.get('purchased_at').isoformat() + 'Z'
+                            if latest_purchase.get('purchased_at') is not None and hasattr(latest_purchase.get('purchased_at'), 'isoformat')
+                            else latest_purchase.get('purchased_at')
+                        ),
+                    ), 409
                 return jsonify(message="Purchase required before downloading"), 403
 
             # Enforce a strict one-time download per paid purchase.

@@ -32,6 +32,10 @@ ALTER TABLE purchases ADD COLUMN IF NOT EXISTS selected_deliverables JSONB;
 
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_metadata JSONB;
 
+-- Admin confirmation columns
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS admin_confirmed_at TIMESTAMP NULL;
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS admin_confirmed_by INTEGER NULL REFERENCES users(id);
+
 -- Ensure uniqueness of user/plan purchases
 DO $$
 BEGIN

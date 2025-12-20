@@ -20,6 +20,7 @@ from utils.download_helpers import (
     fetch_plan_bundle,
     build_plan_zip,
     fetch_user_contact,
+    build_manifest_pdf_html,
 )
 
 customer_bp = Blueprint('customer', __name__, url_prefix='/customer')
@@ -339,6 +340,91 @@ def purchase_plan():
     except Exception as e:
         conn.rollback()
         return jsonify(message=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@customer_bp.route('/plans/manifest/<string:download_token>', methods=['GET'])
+@jwt_required(optional=True)
+def download_plan_manifest(download_token: str):
+    """Download the plan's manifest as a PDF using a one-time token."""
+    identity = get_jwt_identity()
+    claims = get_jwt() or {}
+    user_id = int(identity) if identity is not None else None
+    role = claims.get('role')
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            """
+            SELECT dt.*, p.name AS plan_name
+            FROM download_tokens dt
+            JOIN plans p ON dt.plan_id = p.id
+            WHERE dt.token = %s
+            """,
+            (download_token,)
+        )
+        token_row = cur.fetchone()
+        if not token_row:
+            return jsonify(message="Invalid or expired download token"), 404
+
+        if user_id is not None and role != 'admin' and int(token_row['user_id']) != int(user_id):
+            return jsonify(message="Download token does not belong to you"), 403
+
+        if token_row['used']:
+            return jsonify(message="Download token already used"), 410
+
+        plan_id = token_row['plan_id']
+        bundle = fetch_plan_bundle(plan_id, conn)
+        if not bundle:
+            return jsonify(message="Plan not found"), 404
+
+        customer_info = fetch_user_contact(token_row['user_id'], conn)
+        bundle['customer'] = customer_info or {}
+
+        # Build a light organized file list for the manifest
+        cur.execute(
+            """
+            SELECT file_name, file_type, file_path, file_size, uploaded_at
+            FROM plan_files
+            WHERE plan_id = %s
+            ORDER BY uploaded_at ASC
+            """,
+            (plan_id,)
+        )
+        organized_files = [dict(row) for row in cur.fetchall()]
+
+        manifest_pdf = build_manifest_pdf_html(bundle, organized_files, customer=customer_info)
+        manifest_pdf.seek(0)
+
+        # Consume the token (same one-time rule as ZIP download)
+        cur.execute(
+            """
+            UPDATE download_tokens
+            SET download_count = download_count + 1, used = TRUE
+            WHERE token = %s
+            """,
+            (download_token,)
+        )
+        conn.commit()
+
+        safe_name = (token_row.get('plan_name') or 'plan')
+        download_name = f"{safe_name}-manifest.pdf"
+
+        response = send_file(
+            manifest_pdf,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=download_name,
+        )
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify(error=str(e)), 500
     finally:
         cur.close()
         conn.close()

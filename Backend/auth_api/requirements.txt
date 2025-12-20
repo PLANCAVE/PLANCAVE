@@ -7,3 +7,4 @@ psycopg[binary]==3.3.0
 python-dotenv==1.0.0
 Werkzeug==2.3.7
 requests>=2.31.0
+weasyprint==61.2

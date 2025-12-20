@@ -111,7 +111,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => navigate('/profile')}
-                  className="flex items-center justify-center w-10 h-10 rounded-full border border-teal-400/50 bg-white/5 hover:bg-white/15 transition-all ml-auto"
+                  className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border border-teal-400/50 bg-white/5 hover:bg-white/15 transition-all ml-auto"
                 >
                   {user?.profile_picture_url ? (
                     <img
@@ -120,7 +120,7 @@ export default function Header() {
                       className="w-full h-full rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-teal-200 text-sm font-semibold">{getInitials()}</span>
+                    <span className="text-teal-200 text-sm font-semibold tracking-wide">{getInitials()}</span>
                   )}
                 </button>
               </>

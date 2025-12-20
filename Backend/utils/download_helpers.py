@@ -555,8 +555,12 @@ def build_manifest_pdf_html(bundle, organized_files, customer=None):
     </html>
     """
 
-    pdf_bytes = HTML(string=html).write_pdf()
-    return io.BytesIO(pdf_bytes)
+    try:
+        html_obj = HTML(string=html)
+        pdf_bytes = html_obj.write_pdf()
+        return io.BytesIO(pdf_bytes)
+    except Exception as e:
+        raise RuntimeError(f"Failed to generate PDF: {str(e)}")
 
 
 def build_plan_zip(bundle, customer=None):

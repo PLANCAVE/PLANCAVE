@@ -144,7 +144,8 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     cur.execute(
         """
         UPDATE purchases
-        SET payment_status = 'completed'
+        SET payment_status = 'completed',
+            purchased_at = COALESCE(purchased_at, NOW())
         WHERE id = %s
         """,
         (purchase['id'],)
@@ -655,7 +656,7 @@ def generate_download_link():
                 SELECT id, purchased_at
                 FROM purchases
                 WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
-                ORDER BY purchased_at DESC
+                ORDER BY COALESCE(purchased_at, purchase_date) DESC NULLS LAST
                 LIMIT 1
                 """,
                 (user_id, plan_id)

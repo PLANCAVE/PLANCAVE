@@ -524,7 +524,7 @@ def login():
     if not is_active:
         return jsonify(message="Your account has been deactivated. Please contact admin@ramanicave.com."), 403
 
-    if not email_verified:
+    if not email_verified and (role or "").lower() != "admin":
         return jsonify(message="Please verify your email before login."), 403
 
     if bcrypt.check_password_hash(hashed_pw, password):

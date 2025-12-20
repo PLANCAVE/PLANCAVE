@@ -131,6 +131,9 @@ export const verifyPaystackPayment = (reference: string) =>
 export const adminVerifyPaystackPayment = (reference: string) =>
   api.post(`/customer/admin/payments/paystack/verify/${reference}`);
 
+export const retryPaystackPayment = (purchaseId: string) =>
+  api.post(`/customer/payments/paystack/retry/${purchaseId}`);
+
 export const adminDownloadPlan = (plan_id: string) =>
   api.get(`/admin/plans/${plan_id}/download`, { responseType: 'blob' });
 

@@ -650,6 +650,86 @@ def admin_verify_paystack(reference: str):
         conn.close()
 
 
+@customer_bp.route('/payments/paystack/retry/<string:purchase_id>', methods=['POST'])
+@jwt_required()
+def retry_paystack_payment(purchase_id: str):
+    """Reinitialize a pending Paystack payment so the buyer can complete checkout."""
+    user_id, role = get_current_user()
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        cur.execute(
+            """
+            SELECT p.id, p.user_id, p.plan_id, p.payment_status, p.payment_method,
+                   p.amount, p.transaction_id, p.selected_deliverables, u.email
+            FROM purchases p
+            JOIN users u ON p.user_id = u.id
+            WHERE p.id = %s
+            """,
+            (purchase_id,)
+        )
+        purchase = cur.fetchone()
+
+        if not purchase:
+            return jsonify(message="Purchase not found"), 404
+
+        if role != 'admin' and int(purchase['user_id']) != int(user_id):
+            return jsonify(message="Not authorized to retry this payment"), 403
+
+        if purchase['payment_method'] != 'paystack':
+            return jsonify(message="Retry is only available for Paystack purchases"), 400
+
+        if (purchase.get('payment_status') or '').lower() == 'completed':
+            return jsonify(message="Payment already completed"), 409
+
+        # Fetch contact email (fallback to stored user email)
+        contact = fetch_user_contact(purchase['user_id'], conn) or {}
+        payer_email = contact.get('email') or purchase.get('email') or f"user-{purchase['user_id']}@example.com"
+
+        try:
+            authorization_url, new_reference = _init_paystack_transaction(
+                payer_email,
+                float(purchase['amount'] or 0),
+                purchase['plan_id'],
+                purchase['user_id'],
+            )
+        except Exception as e:
+            conn.rollback()
+            return jsonify(message=f"Failed to initialize Paystack transaction: {e}"), 502
+
+        cur.execute(
+            """
+            UPDATE purchases
+            SET transaction_id = %s,
+                payment_status = 'pending',
+                payment_metadata = NULL
+            WHERE id = %s
+            RETURNING plan_id
+            """,
+            (new_reference, purchase_id)
+        )
+        update_row = cur.fetchone()
+        if not update_row:
+            conn.rollback()
+            return jsonify(message="Failed to update purchase with new Paystack reference"), 500
+
+        conn.commit()
+        return jsonify({
+            "message": "Paystack payment reinitialized",
+            "authorization_url": authorization_url,
+            "reference": new_reference,
+        }), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @customer_bp.route('/plans/<string:plan_id>/purchase-status', methods=['GET'])
 @jwt_required()
 def purchase_status(plan_id: str):

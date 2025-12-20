@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Download, Copy, ExternalLink, RefreshCw, CreditCard } from 'lucide-react';
-import { generateDownloadLink, getMyPurchases } from '../api';
+import { generateDownloadLink, getMyPurchases, retryPaystackPayment } from '../api';
 import api from '../api';
 
 type PurchaseRow = {
@@ -26,7 +26,6 @@ const resolveMediaUrl = (path?: string) => {
 
 export default function Purchases() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -101,9 +100,35 @@ export default function Purchases() {
     }
   };
 
-  const handleCompletePayment = (planId: string) => {
-    // Navigate to plan details where the user can retry payment or verify
-    navigate(`/plans/${planId}`);
+  const handleCompletePayment = async (purchase: PurchaseRow) => {
+    if (!purchase.id) return;
+    if (!purchase.plan_id) {
+      setError('Unknown plan for this purchase');
+      return;
+    }
+
+    // Only show spinner/disable if still pending
+    const willDisable = (purchase.payment_status || '').toLowerCase() !== 'completed';
+    if (willDisable) {
+      setBusyPlanId(purchase.plan_id);
+    }
+    setError(null);
+    try {
+      const resp = await retryPaystackPayment(purchase.id);
+      const authUrl = resp.data?.authorization_url;
+      if (authUrl) {
+        window.open(authUrl, '_blank', 'noopener');
+      }
+      // After reinitialization, refresh purchases to get latest reference and status
+      await loadPurchases();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to reinitialize payment';
+      setError(msg);
+    } finally {
+      if (willDisable) {
+        setBusyPlanId(null);
+      }
+    }
   };
 
   if (loading) {
@@ -178,8 +203,9 @@ export default function Purchases() {
                       {!canDownload && p.plan_id && (
                         <button
                           type="button"
-                          onClick={() => handleCompletePayment(p.plan_id)}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700"
+                          onClick={() => handleCompletePayment(p)}
+                          disabled={busyPlanId === planId}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
                         >
                           <CreditCard className="w-4 h-4" />
                           Complete Payment

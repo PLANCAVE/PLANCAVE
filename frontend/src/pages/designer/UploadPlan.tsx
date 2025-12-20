@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api, { updatePlan, getPlanDetails } from '../../api';
-import { Upload, FileText, Check, Building2, Hammer, Zap, Shield, Palette, DollarSign, Award } from 'lucide-react';
+import { Upload, FileText, Building2, Hammer, Zap, Shield, Palette, DollarSign, Award } from 'lucide-react';
 
 export default function UploadPlan() {
   const navigate = useNavigate();
@@ -59,6 +60,8 @@ export default function UploadPlan() {
     interior: false
   });
 
+  const [disciplinesInteracted, setDisciplinesInteracted] = useState(false);
+
   // Section 4: File Uploads
   const [files, setFiles] = useState({
     architectural: [] as File[],
@@ -101,6 +104,8 @@ export default function UploadPlan() {
     customization_available: false,
     support_duration: '0'
   });
+
+  const [pricingInteracted, setPricingInteracted] = useState(false);
 
   const [deliverablePrices, setDeliverablePrices] = useState({
     architectural: '',
@@ -146,12 +151,14 @@ export default function UploadPlan() {
   };
 
   const isStep3Complete = () => {
-    return disciplines.architectural || 
-           disciplines.structural || 
-           disciplines.civil || 
-           disciplines.fire_safety || 
-           disciplines.interior || 
-           Object.values(disciplines.mep).some(v => v);
+    return disciplinesInteracted && (
+      disciplines.architectural || 
+      disciplines.structural || 
+      disciplines.civil || 
+      disciplines.fire_safety || 
+      disciplines.interior || 
+      Object.values(disciplines.mep).some(v => v)
+    );
   };
 
   const isStep4Complete = () => {
@@ -172,7 +179,8 @@ export default function UploadPlan() {
   };
 
   const isStep6Complete = () => {
-    return pricing.license_type !== '' && 
+    return pricingInteracted && 
+           pricing.license_type !== '' && 
            pricing.support_duration !== '';
   };
 
@@ -640,7 +648,10 @@ export default function UploadPlan() {
           <input
             type="checkbox"
             checked={disciplines.architectural}
-            onChange={(e) => setDisciplines({...disciplines, architectural: e.target.checked})}
+            onChange={(e) => {
+              setDisciplines({...disciplines, architectural: e.target.checked});
+              setDisciplinesInteracted(true);
+            }}
             className="w-5 h-5 text-blue-600"
           />
           <div className="flex-1">
@@ -658,7 +669,10 @@ export default function UploadPlan() {
           <input
             type="checkbox"
             checked={disciplines.structural}
-            onChange={(e) => setDisciplines({...disciplines, structural: e.target.checked})}
+            onChange={(e) => {
+              setDisciplines({...disciplines, structural: e.target.checked});
+              setDisciplinesInteracted(true);
+            }}
             className="w-5 h-5 text-green-600"
           />
           <div className="flex-1">
@@ -686,7 +700,10 @@ export default function UploadPlan() {
               <input
                 type="checkbox"
                 checked={disciplines.mep.mechanical}
-                onChange={(e) => setDisciplines({...disciplines, mep: {...disciplines.mep, mechanical: e.target.checked}})}
+                onChange={(e) => {
+                  setDisciplines({...disciplines, mep: {...disciplines.mep, mechanical: e.target.checked}});
+                  setDisciplinesInteracted(true);
+                }}
                 className="rounded text-amber-600"
               />
               <span className="text-sm text-gray-700">Mechanical (HVAC, Ventilation)</span>
@@ -695,7 +712,10 @@ export default function UploadPlan() {
               <input
                 type="checkbox"
                 checked={disciplines.mep.electrical}
-                onChange={(e) => setDisciplines({...disciplines, mep: {...disciplines.mep, electrical: e.target.checked}})}
+                onChange={(e) => {
+                  setDisciplines({...disciplines, mep: {...disciplines.mep, electrical: e.target.checked}});
+                  setDisciplinesInteracted(true);
+                }}
                 className="rounded text-amber-600"
               />
               <span className="text-sm text-gray-700">Electrical (Power, Lighting, Low Voltage)</span>
@@ -704,7 +724,10 @@ export default function UploadPlan() {
               <input
                 type="checkbox"
                 checked={disciplines.mep.plumbing}
-                onChange={(e) => setDisciplines({...disciplines, mep: {...disciplines.mep, plumbing: e.target.checked}})}
+                onChange={(e) => {
+                  setDisciplines({...disciplines, mep: {...disciplines.mep, plumbing: e.target.checked}});
+                  setDisciplinesInteracted(true);
+                }}
                 className="rounded text-amber-600"
               />
               <span className="text-sm text-gray-700">Plumbing (Water, Drainage, Sewerage)</span>
@@ -717,7 +740,10 @@ export default function UploadPlan() {
           <input
             type="checkbox"
             checked={disciplines.civil}
-            onChange={(e) => setDisciplines({...disciplines, civil: e.target.checked})}
+            onChange={(e) => {
+              setDisciplines({...disciplines, civil: e.target.checked});
+              setDisciplinesInteracted(true);
+            }}
             className="w-5 h-5 text-gray-600"
           />
           <div className="flex-1">
@@ -731,7 +757,10 @@ export default function UploadPlan() {
           <input
             type="checkbox"
             checked={disciplines.fire_safety}
-            onChange={(e) => setDisciplines({...disciplines, fire_safety: e.target.checked})}
+            onChange={(e) => {
+              setDisciplines({...disciplines, fire_safety: e.target.checked});
+              setDisciplinesInteracted(true);
+            }}
             className="w-5 h-5 text-red-600"
           />
           <div className="flex-1">
@@ -748,7 +777,10 @@ export default function UploadPlan() {
           <input
             type="checkbox"
             checked={disciplines.interior}
-            onChange={(e) => setDisciplines({...disciplines, interior: e.target.checked})}
+            onChange={(e) => {
+              setDisciplines({...disciplines, interior: e.target.checked});
+              setDisciplinesInteracted(true);
+            }}
             className="w-5 h-5 text-pink-600"
           />
           <div className="flex-1">
@@ -1300,7 +1332,10 @@ export default function UploadPlan() {
                 name="license"
                 value={lic.value}
                 checked={pricing.license_type === lic.value}
-                onChange={(e) => setPricing({...pricing, license_type: e.target.value})}
+                onChange={(e) => {
+                  setPricing({...pricing, license_type: e.target.value});
+                  setPricingInteracted(true);
+                }}
                 className="w-4 h-4 text-green-600"
               />
               <div className="flex-1">
@@ -1330,7 +1365,10 @@ export default function UploadPlan() {
           <input
             type="number"
             value={pricing.support_duration}
-            onChange={(e) => setPricing({...pricing, support_duration: e.target.value})}
+            onChange={(e) => {
+              setPricing({...pricing, support_duration: e.target.value});
+              setPricingInteracted(true);
+            }}
             className="input-field"
             placeholder="e.g., 3"
           />
@@ -1410,33 +1448,49 @@ export default function UploadPlan() {
         </div>
 
         {/* Progress Steps */}
-        <div className="mb-8 bg-white rounded-xl p-6 shadow-md">
-          <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="mb-8 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
             {steps.map((step, idx) => (
-              <div key={step.num} className="flex items-center">
-                <div className="flex flex-col items-center">
+              <React.Fragment key={step.num}>
+                <div className="flex flex-col items-center flex-1">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(step.num)}
-                    className="flex flex-col items-center focus:outline-none"
+                    className="group relative focus:outline-none transition-all duration-200"
                     title={`Go to step ${step.num}: ${step.title}`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 ${
                       currentStep === step.num 
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white scale-110 shadow-lg' 
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg scale-105 ring-4 ring-purple-100' 
                         : getStepCompletion(step.num)
-                        ? 'bg-green-500 text-white hover:opacity-90'
-                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        ? 'bg-emerald-500 text-white shadow-md hover:bg-emerald-600 hover:scale-105'
+                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                     }`}>
-                      {getStepCompletion(step.num) ? <Check className="w-3 h-3" /> : step.num}
+                      {getStepCompletion(step.num) ? (
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <span className="text-sm font-medium">{step.num}</span>
+                      )}
                     </div>
-                    <span className={`text-xs font-medium mt-1 ${currentStep === step.num ? 'text-gray-900' : 'text-gray-600'}`}>{step.title}</span>
+                    <span className={`mt-2 text-xs font-medium transition-colors ${
+                      currentStep === step.num 
+                        ? 'text-purple-700 font-semibold' 
+                        : getStepCompletion(step.num)
+                        ? 'text-emerald-700'
+                        : 'text-gray-500'
+                    }`}>
+                      {step.title}
+                    </span>
                   </button>
                 </div>
                 {idx < steps.length - 1 && (
-                  <div className={`w-6 h-0.5 mx-1 ${getStepCompletion(step.num) ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  <div className={`flex-1 h-0.5 mx-2 transition-colors duration-300 ${
+                    getStepCompletion(step.num) ? 'bg-gradient-to-r from-emerald-400 to-emerald-300' : 'bg-gray-200'
+                  }`} />
                 )}
-              </div>
+              </React.Fragment>
             ))}
           </div>
         </div>

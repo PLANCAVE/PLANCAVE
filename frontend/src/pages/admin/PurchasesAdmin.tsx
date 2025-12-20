@@ -125,8 +125,7 @@ export default function PurchasesAdmin() {
     }
     setVerifyingPayment(reference);
     try {
-      const resp = await adminVerifyPaystackPayment(reference);
-      const message = resp.data?.message || 'Payment verified and completed';
+      await adminVerifyPaystackPayment(reference);
       // Refresh purchases list to show updated status
       await loadPurchases({ reset: true });
       setError(null);

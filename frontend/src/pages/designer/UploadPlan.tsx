@@ -289,6 +289,31 @@ export default function UploadPlan() {
     setError('');
     setLoading(true);
 
+    // Client-side validation
+    const validationErrors = [];
+
+    // Check required fields
+    if (!basicInfo.name.trim()) validationErrors.push('Plan name is required');
+    if (!basicInfo.category) validationErrors.push('Plan category is required');
+    if (!basicInfo.description.trim()) validationErrors.push('Plan description is required');
+    if (!techSpecs.area.trim()) validationErrors.push('Building area is required');
+    if (!techSpecs.floors.trim()) validationErrors.push('Number of floors is required');
+    if (!pricing.price && !Object.values(deliverablePrices).some(v => v !== '')) {
+      validationErrors.push('Plan price or deliverable pricing is required');
+    }
+    if (!packageLevel) validationErrors.push('Package level is required');
+
+    // Check required files
+    if (!files.thumbnail) validationErrors.push('Thumbnail image is required');
+    if (files.architectural.length === 0) validationErrors.push('Architectural files are required');
+    if (files.renders.length === 0) validationErrors.push('3D renders are required');
+
+    if (validationErrors.length > 0) {
+      setError(`Validation failed: ${validationErrors.join(', ')}`);
+      setLoading(false);
+      return;
+    }
+
     try {
       const formDataToSend = new FormData();
 
@@ -416,19 +441,43 @@ export default function UploadPlan() {
         await updatePlan(editingPlanId, formDataToSend);
         alert('Plan updated successfully!');
       } else {
+        // Increase timeout for large file uploads (5 minutes + 30 seconds per MB)
+        const estimatedSize = Array.from(formDataToSend.entries())
+          .filter(([, value]) => value instanceof File)
+          .reduce((total, [, file]) => total + file.size, 0);
+        const sizeMB = estimatedSize / (1024 * 1024);
+        const timeoutMs = 300000 + (sizeMB * 30000); // 5 min base + 30s per MB
+        
         await api.post('/plans/upload', formDataToSend, {
           headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: timeoutMs,
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / (progressEvent.total || progressEvent.loaded)
+            );
+            console.log(`Upload progress: ${percentCompleted}%`);
+          }
         });
 
         alert('Professional plan uploaded successfully!');
       }
       navigate('/designer/my-plans');
     } catch (err: any) {
-      const apiError = err.response?.data;
-      const parts = [apiError?.message || 'Failed to upload plan'];
-      if (apiError?.detail) parts.push(apiError.detail);
-      if (apiError?.hint) parts.push(apiError.hint);
-      setError(parts.filter(Boolean).join(' — '));
+      console.error('Upload error details:', err);
+      console.error('Response data:', err.response?.data);
+      console.error('Response status:', err.response?.status);
+      
+      // Handle specific timeout errors
+      if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+        setError('Upload timed out. The files may be too large. Try uploading smaller files or check your internet connection.');
+      } else if (err.response?.status === 413) {
+        setError('Files too large. Please reduce file sizes and try again.');
+      } else {
+        const apiError = err.response?.data;
+        const parts = [apiError?.message || 'Failed to upload plan'];
+        if (apiError?.detail) parts.push(apiError.detail);
+        setError(parts.join(' - '));
+      }
     } finally {
       setLoading(false);
     }

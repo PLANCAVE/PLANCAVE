@@ -14,4 +14,8 @@ class Config:
     JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "None" if os.getenv("ENV") == "production" else "Lax")
     JWT_COOKIE_CSRF_PROTECT = False
 
+    # Large file upload settings
+    MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB max file size
+    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
+
 

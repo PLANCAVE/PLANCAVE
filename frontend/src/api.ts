@@ -14,7 +14,7 @@ const getApiBaseUrl = () => {
     return configured;
   }
   if (import.meta.env.PROD) {
-    return '/api';
+    return 'http://34.135.248.249/api';
   }
   return 'http://localhost:5000';
 };

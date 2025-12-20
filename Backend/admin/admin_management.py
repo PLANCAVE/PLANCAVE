@@ -801,34 +801,65 @@ def get_platform_analytics():
 def get_designer_analytics():
     """Get detailed analytics for all designers including revenue and sales"""
     conn = get_db()
-    cur = conn.cursor()
-    
+    cur = conn.cursor(row_factory=dict_row)
+
     try:
-        # Get designer revenue and sales stats (simplified - no purchases table yet)
         cur.execute("""
+            WITH plan_stats AS (
+                SELECT 
+                    designer_id,
+                    COUNT(*)::INT AS total_plans,
+                    COALESCE(AVG(NULLIF(price, 0)), 0) AS avg_plan_price
+                FROM plans
+                GROUP BY designer_id
+            ),
+            purchase_stats AS (
+                SELECT 
+                    pl.designer_id,
+                    COUNT(*) FILTER (WHERE pu.payment_status = 'completed')::INT AS total_sales,
+                    COALESCE(SUM(pu.amount) FILTER (WHERE pu.payment_status = 'completed'), 0) AS total_revenue
+                FROM purchases pu
+                JOIN plans pl ON pu.plan_id = pl.id
+                GROUP BY pl.designer_id
+            )
             SELECT 
-                u.id as designer_id,
-                u.username as designer_email,
-                COUNT(pl.id) as total_plans,
-                0 as total_sales,
-                0 as total_revenue,
-                COALESCE(AVG(pl.price), 0) as avg_plan_price,
-                u.created_at as joined_date
+                u.id AS designer_id,
+                COALESCE(u.email, u.username) AS designer_email,
+                u.first_name,
+                u.middle_name,
+                u.last_name,
+                COALESCE(ps.total_plans, 0) AS total_plans,
+                COALESCE(pu_stats.total_sales, 0) AS total_sales,
+                COALESCE(pu_stats.total_revenue, 0) AS total_revenue,
+                COALESCE(ps.avg_plan_price, 0) AS avg_plan_price,
+                u.created_at AS joined_date
             FROM users u
-            LEFT JOIN plans pl ON u.id = pl.designer_id
+            LEFT JOIN plan_stats ps ON ps.designer_id = u.id
+            LEFT JOIN purchase_stats pu_stats ON pu_stats.designer_id = u.id
             WHERE u.role = 'designer'
-            GROUP BY u.id, u.username, u.created_at
-            ORDER BY total_plans DESC
+            ORDER BY COALESCE(pu_stats.total_revenue, 0) DESC, COALESCE(ps.total_plans, 0) DESC, u.created_at DESC
         """)
-        columns = [desc[0] for desc in cur.description]
-        designers = [dict(zip(columns, row)) for row in cur.fetchall()]
-        
+
+        designers = []
+        total_revenue = 0.0
+        for row in cur.fetchall():
+            record = dict(row)
+            record['total_plans'] = int(record.get('total_plans') or 0)
+            record['total_sales'] = int(record.get('total_sales') or 0)
+            record['total_revenue'] = float(record.get('total_revenue') or 0)
+            record['avg_plan_price'] = float(record.get('avg_plan_price') or 0)
+            joined = record.get('joined_date')
+            if joined and hasattr(joined, 'isoformat'):
+                record['joined_date'] = joined.isoformat()
+            total_revenue += record['total_revenue']
+            designers.append(record)
+
         return jsonify({
             "designers": designers,
             "total_designers": len(designers),
-            "total_revenue": 0
+            "total_revenue": total_revenue
         }), 200
-        
+
     except Exception as e:
         print(f"Designer analytics error: {e}")
         import traceback
@@ -845,32 +876,66 @@ def get_designer_analytics():
 def get_customer_analytics():
     """Get detailed analytics for all customers including purchase history"""
     conn = get_db()
-    cur = conn.cursor()
-    
+    cur = conn.cursor(row_factory=dict_row)
+
     try:
-        # Get customer purchase history (simplified - no purchases/likes tables yet)
         cur.execute("""
+            WITH purchase_stats AS (
+                SELECT 
+                    user_id,
+                    COUNT(*) FILTER (WHERE payment_status = 'completed')::INT AS total_purchases,
+                    COALESCE(SUM(amount) FILTER (WHERE payment_status = 'completed'), 0) AS total_spent,
+                    MAX(purchased_at) FILTER (WHERE payment_status = 'completed') AS last_purchase_date
+                FROM purchases
+                GROUP BY user_id
+            ),
+            favorites_stats AS (
+                SELECT 
+                    user_id,
+                    COUNT(*)::INT AS plans_liked
+                FROM favorites
+                GROUP BY user_id
+            )
             SELECT 
-                u.id as customer_id,
-                u.username as customer_email,
-                0 as total_purchases,
-                0 as total_spent,
-                0 as plans_liked,
-                u.created_at as joined_date,
-                NULL as last_purchase_date
+                u.id AS customer_id,
+                COALESCE(u.email, u.username) AS customer_email,
+                u.first_name,
+                u.middle_name,
+                u.last_name,
+                COALESCE(p.total_purchases, 0) AS total_purchases,
+                COALESCE(p.total_spent, 0) AS total_spent,
+                COALESCE(f.plans_liked, 0) AS plans_liked,
+                u.created_at AS joined_date,
+                p.last_purchase_date
             FROM users u
+            LEFT JOIN purchase_stats p ON p.user_id = u.id
+            LEFT JOIN favorites_stats f ON f.user_id = u.id
             WHERE u.role = 'customer'
-            ORDER BY u.created_at DESC
+            ORDER BY COALESCE(p.total_spent, 0) DESC, u.created_at DESC
         """)
-        columns = [desc[0] for desc in cur.description]
-        customers = [dict(zip(columns, row)) for row in cur.fetchall()]
-        
+
+        customers = []
+        total_spent = 0.0
+        for row in cur.fetchall():
+            record = dict(row)
+            record['total_purchases'] = int(record.get('total_purchases') or 0)
+            record['total_spent'] = float(record.get('total_spent') or 0)
+            record['plans_liked'] = int(record.get('plans_liked') or 0)
+            joined = record.get('joined_date')
+            if joined and hasattr(joined, 'isoformat'):
+                record['joined_date'] = joined.isoformat()
+            last_purchase = record.get('last_purchase_date')
+            if last_purchase and hasattr(last_purchase, 'isoformat'):
+                record['last_purchase_date'] = last_purchase.isoformat()
+            total_spent += record['total_spent']
+            customers.append(record)
+
         return jsonify({
             "customers": customers,
             "total_customers": len(customers),
-            "total_revenue": 0
+            "total_revenue": total_spent
         }), 200
-        
+
     except Exception as e:
         print(f"Customer analytics error: {e}")
         import traceback

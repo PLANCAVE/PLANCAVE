@@ -512,6 +512,7 @@ export default function PlanDetailsPage() {
       return sum + (Number.isFinite(n) ? n : 0);
     }, 0);
   })();
+  const purchaseDisplayPrice = deliverablePrices ? selectedTotal || 0 : priceNumber || 0;
   const imageUrls = getImageUrls();
   const mainImageUrl = imageUrls[currentImageIndex] || '';
   const structuralSpecs = plan.structural_specs || [];
@@ -1131,7 +1132,7 @@ export default function PlanDetailsPage() {
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4" />
-                        Purchase plan · $ {Number(plan.price).toLocaleString()}
+                        Purchase plan · $ {Number(purchaseDisplayPrice).toLocaleString()}
                       </>
                     )}
                   </button>

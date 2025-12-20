@@ -161,9 +161,14 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
         SET payment_status = 'completed',
             purchased_at = COALESCE(purchased_at, NOW())
         WHERE id = %s
+        RETURNING payment_status, purchased_at
         """,
         (purchase['id'],)
     )
+    updated_row = cur.fetchone()
+    if not updated_row or (updated_row.get('payment_status') if isinstance(updated_row, dict) else updated_row[0]) != 'completed':
+        current_app.logger.error(f"Purchase {reference} failed to update to completed; row={updated_row}")
+        return False, ("Failed to update purchase status", 500)
 
     try:
         cur.execute(
@@ -184,18 +189,6 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
         WHERE id = %s
         """,
         (purchase['plan_id'],)
-    )
-
-    log_user_activity(
-        purchase['user_id'],
-        'purchase',
-        {
-            'plan_id': str(purchase['plan_id']),
-            'transaction_id': reference,
-            'payment_provider': 'paystack',
-            'amount': expected_amount_major,
-        },
-        conn,
     )
 
     return True, ("Payment verified and purchase activated", 200)

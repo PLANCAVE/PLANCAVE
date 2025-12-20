@@ -195,7 +195,11 @@ export default function PlanDetailsPage() {
       return;
     }
 
-    const keys = Object.keys(prices);
+    const keys = Object.keys(prices).filter((k) => {
+      const raw = (prices as any)[k];
+      const n = raw === '' || raw === null || raw === undefined ? 0 : Number(raw);
+      return Number.isFinite(n) && n > 0;
+    });
     setSelectedDeliverables(keys);
   }, [plan]);
 
@@ -454,6 +458,12 @@ export default function PlanDetailsPage() {
 
   const priceNumber = typeof plan.price === 'string' ? Number(plan.price) : plan.price;
   const deliverablePrices = plan.deliverable_prices && typeof plan.deliverable_prices === 'object' ? plan.deliverable_prices : null;
+  const pricedDeliverables = deliverablePrices
+    ? Object.entries(deliverablePrices).filter(([, value]) => {
+        const n = value === '' || value === null || value === undefined ? 0 : Number(value);
+        return Number.isFinite(n) && n > 0;
+      })
+    : [];
   const selectedTotal = (() => {
     if (!deliverablePrices) return priceNumber || 0;
     return selectedDeliverables.reduce((sum, key) => {
@@ -569,44 +579,6 @@ export default function PlanDetailsPage() {
               </div>
             </div>
 
-            {deliverablePrices && (
-              <div className="mb-6">
-                <div className="text-sm font-medium text-gray-700 mb-3">Choose what to buy</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {Object.entries(deliverablePrices).map(([key, value]) => {
-                    const n = value === '' || value === null || value === undefined ? 0 : Number(value);
-                    const checked = selectedDeliverables.includes(key);
-                    return (
-                      <label
-                        key={key}
-                        className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                      >
-                        <span className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) => {
-                              setSelectedDeliverables((prev) => {
-                                if (e.target.checked) return Array.from(new Set([...prev, key]));
-                                return prev.filter((x) => x !== key);
-                              });
-                            }}
-                            className="rounded text-teal-600"
-                          />
-                          <span className="text-sm text-gray-900 capitalize">{key.replace(/_/g, ' ')}</span>
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">$ {Number.isFinite(n) ? n.toLocaleString() : '—'}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex items-center justify-between p-3 rounded-lg border border-teal-200 bg-teal-50">
-                  <span className="text-sm text-teal-900 font-medium">Total</span>
-                  <span className="text-lg font-bold text-teal-900">$ {Number(selectedTotal || 0).toLocaleString()}</span>
-                </div>
-              </div>
-            )}
-
             {/* Quick Actions */}
             {isAuthenticated && !isAdmin && (
               <div className="flex items-center gap-2 mb-6">
@@ -703,6 +675,58 @@ export default function PlanDetailsPage() {
                   {plan.disciplines_included.interior && (
                     <span className="px-3 py-1 bg-pink-100 text-pink-800 text-sm rounded-full">Interior</span>
                   )}
+                </div>
+              </div>
+            )}
+
+            {deliverablePrices && pricedDeliverables.length > 0 && (
+              <div className="mt-10">
+                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-4 mb-4">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Optional purchase</div>
+                      <div className="text-lg font-semibold text-slate-900">Choose what to buy</div>
+                      <div className="text-sm text-slate-600 mt-1">Pick only the disciplines you need — total updates instantly.</div>
+                    </div>
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-2 text-right">
+                      <div className="text-[11px] uppercase tracking-wide text-teal-700">Total</div>
+                      <div className="text-xl font-bold text-teal-900">$ {Number(selectedTotal || 0).toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {pricedDeliverables.map(([key, value]) => {
+                      const n = value === '' || value === null || value === undefined ? 0 : Number(value);
+                      const checked = selectedDeliverables.includes(key);
+                      const label = key.replace(/_/g, ' ');
+                      return (
+                        <label
+                          key={key}
+                          className={`group flex items-center justify-between gap-3 rounded-xl border p-4 cursor-pointer transition-all ${
+                            checked
+                              ? 'border-teal-300 bg-white shadow-sm'
+                              : 'border-slate-200 bg-white/60 hover:bg-white'
+                          }`}
+                        >
+                          <span className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                setSelectedDeliverables((prev) => {
+                                  if (e.target.checked) return Array.from(new Set([...prev, key]));
+                                  return prev.filter((x) => x !== key);
+                                });
+                              }}
+                              className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                            />
+                            <span className="capitalize text-sm font-medium text-slate-900">{label}</span>
+                          </span>
+                          <span className="text-sm font-semibold text-slate-900">$ {Number.isFinite(n) ? n.toLocaleString() : '—'}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

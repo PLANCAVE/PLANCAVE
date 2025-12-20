@@ -1328,16 +1328,23 @@ export default function UploadPlan() {
             {steps.map((step, idx) => (
               <div key={step.num} className="flex items-center">
                 <div className="flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
-                    currentStep === step.num 
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white scale-110 shadow-lg' 
-                      : currentStep > step.num
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {currentStep > step.num ? <Check className="w-5 h-5" /> : step.num}
-                  </div>
-                  <span className="text-xs font-medium text-gray-600 mt-2">{step.title}</span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(step.num)}
+                    className="flex flex-col items-center focus:outline-none"
+                    title={`Go to step ${step.num}: ${step.title}`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                      currentStep === step.num 
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white scale-110 shadow-lg' 
+                        : currentStep > step.num
+                        ? 'bg-green-500 text-white hover:opacity-90'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}>
+                      {currentStep > step.num ? <Check className="w-5 h-5" /> : step.num}
+                    </div>
+                    <span className={`text-xs font-medium mt-2 ${currentStep === step.num ? 'text-gray-900' : 'text-gray-600'}`}>{step.title}</span>
+                  </button>
                 </div>
                 {idx < steps.length - 1 && (
                   <div className={`w-12 h-1 mx-2 ${currentStep > step.num ? 'bg-green-500' : 'bg-gray-200'}`} />
@@ -1356,7 +1363,15 @@ export default function UploadPlan() {
 
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form
-            onSubmit={handleSubmit}
+            onSubmit={(e) => {
+              // Guard against accidental submits before the final step.
+              if (currentStep < steps.length) {
+                e.preventDefault();
+                setCurrentStep((s) => Math.min(steps.length, s + 1));
+                return;
+              }
+              handleSubmit(e);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && currentStep < steps.length) {
                 e.preventDefault();

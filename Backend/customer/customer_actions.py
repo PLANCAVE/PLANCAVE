@@ -1190,7 +1190,8 @@ def get_cart_items():
             FROM cart_items c
             JOIN plans p ON c.plan_id = p.id
             LEFT JOIN users u ON p.designer_id = u.id
-            WHERE c.user_id = %s AND p.status = 'Available'
+            WHERE c.user_id = %s
+              AND (p.status IS NULL OR LOWER(p.status) = 'available')
             ORDER BY c.added_at DESC
             """,
             (user_id,)

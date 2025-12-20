@@ -298,6 +298,7 @@ export default function PlanDetailsPage() {
       } else {
         setPurchaseStatus('purchased');
         setPurchaseSuccess(true);
+        navigate('/purchases', { state: { refresh: true } });
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Purchase failed. Please try again.';

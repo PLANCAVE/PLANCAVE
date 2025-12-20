@@ -679,14 +679,21 @@ export default function PlanDetailsPage() {
               </div>
             )}
 
-            {deliverablePrices && pricedDeliverables.length > 0 && (
+            {!isAdmin && deliverablePrices && pricedDeliverables.length > 0 && (
               <div className="mt-10">
-                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-5 shadow-sm">
+                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-6 shadow-sm">
                   <div className="flex items-center justify-between gap-4 mb-4">
                     <div>
-                      <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Optional purchase</div>
-                      <div className="text-lg font-semibold text-slate-900">Choose what to buy</div>
-                      <div className="text-sm text-slate-600 mt-1">Pick only the disciplines you need — total updates instantly.</div>
+                      <div className="inline-flex items-center gap-2 mb-2">
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-600">
+                          Optional purchase
+                        </span>
+                        <span className="text-xs text-slate-500">Select deliverables</span>
+                      </div>
+                      <div className="text-xl font-semibold text-slate-900 leading-tight">Choose what to buy</div>
+                      <div className="text-sm text-slate-600 mt-1 max-w-xl">
+                        Select only the disciplines you need. Your total updates as you make changes.
+                      </div>
                     </div>
                     <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-2 text-right">
                       <div className="text-[11px] uppercase tracking-wide text-teal-700">Total</div>

@@ -377,7 +377,7 @@ export default function PlanDetailsPage() {
     // If no reference provided, fetch the latest purchase for this plan
     if (!ref && id) {
       try {
-        const resp = await getPurchaseStatus(id);
+        const resp = await verifyPurchase(id);
         const transactionId = resp.data?.transaction_id as string | undefined;
         if (transactionId) {
           ref = transactionId;

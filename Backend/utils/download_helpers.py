@@ -11,6 +11,60 @@ from decimal import Decimal
 from psycopg.rows import dict_row
 
 
+def _normalize_selected_deliverables(selected_deliverables) -> set[str] | None:
+    if selected_deliverables is None:
+        return None
+    if isinstance(selected_deliverables, (list, tuple, set)):
+        return {str(x) for x in selected_deliverables if str(x).strip()}
+    if isinstance(selected_deliverables, str):
+        try:
+            parsed = json.loads(selected_deliverables)
+            if isinstance(parsed, list):
+                return {str(x) for x in parsed if str(x).strip()}
+        except Exception:
+            return {selected_deliverables} if selected_deliverables.strip() else None
+        return None
+    return None
+
+
+def _deliverable_key_for_file_type(file_type: str | None) -> str | None:
+    if not file_type:
+        return None
+    ft = str(file_type).upper()
+    if ft.startswith('ARCH'):
+        return 'architectural'
+    if ft.startswith('STRUCT'):
+        return 'structural'
+    if ft.startswith('MEP'):
+        return 'mep'
+    if ft.startswith('CIVIL'):
+        return 'civil'
+    if ft.startswith('FIRE'):
+        return 'fire_safety'
+    if ft.startswith('INTERIOR'):
+        return 'interior'
+    if ft.startswith('BOQ'):
+        return 'boq'
+    if ft.startswith('RENDER'):
+        return 'renders'
+    return None
+
+
+def _filter_files_by_selected_deliverables(files: list[dict], selected_deliverables) -> list[dict]:
+    allowed = _normalize_selected_deliverables(selected_deliverables)
+    if not allowed:
+        return files
+
+    filtered: list[dict] = []
+    for f in files or []:
+        key = _deliverable_key_for_file_type((f or {}).get('file_type'))
+        if key is None:
+            continue
+        if key in allowed:
+            filtered.append(f)
+    return filtered
+
+
 def resolve_plan_file_path(file_path: str) -> str | None:
     """Resolve stored relative file paths to absolute disk locations."""
     if not file_path:
@@ -563,13 +617,14 @@ def build_manifest_pdf_html(bundle, organized_files, customer=None):
         raise RuntimeError(f"Failed to generate PDF: {str(e)}")
 
 
-def build_plan_zip(bundle, customer=None):
+def build_plan_zip(bundle, customer=None, selected_deliverables=None):
     zip_buffer = io.BytesIO()
     files_added = 0
 
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         organized_files = []
-        for plan_file in bundle['files']:
+        files_to_package = _filter_files_by_selected_deliverables(bundle.get('files') or [], selected_deliverables)
+        for plan_file in files_to_package:
             resolved_path = resolve_plan_file_path(plan_file.get('file_path'))
             archive_path = resolve_archive_path(plan_file)
 

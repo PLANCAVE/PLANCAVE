@@ -109,7 +109,8 @@ export default function UploadPlan() {
     mep: '',
     civil: '',
     fire_safety: '',
-    interior: ''
+    interior: '',
+    boq: ''
   });
 
   // Section 9: Additional Information
@@ -252,7 +253,7 @@ export default function UploadPlan() {
 
       const pricingToSend = {
         ...pricing,
-        price: String(cumulativePrice || pricing.price || '')
+        price: String(pricing.price || cumulativePrice || '')
       };
 
       Object.entries(pricingToSend).forEach(([key, value]) => {
@@ -1174,6 +1175,22 @@ export default function UploadPlan() {
               />
             </div>
           )}
+
+          {boq.includes_boq && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                BOQ Price ($)
+              </label>
+              <input
+                type="number"
+                value={deliverablePrices.boq}
+                onChange={(e) => setDeliverablePrices({ ...deliverablePrices, boq: e.target.value })}
+                className="input-field"
+                placeholder="e.g., 25"
+                min={0}
+              />
+            </div>
+          )}
         </div>
 
         <div className="p-4 rounded-lg border bg-green-50">
@@ -1323,8 +1340,8 @@ export default function UploadPlan() {
         </div>
 
         {/* Progress Steps */}
-        <div className="mb-8 bg-white rounded-xl p-6 shadow-md">
-          <div className="flex items-center justify-between">
+        <div className="mb-8 bg-white rounded-xl p-6 shadow-md overflow-x-auto">
+          <div className="flex items-center justify-between min-w-[760px]">
             {steps.map((step, idx) => (
               <div key={step.num} className="flex items-center">
                 <div className="flex flex-col items-center">

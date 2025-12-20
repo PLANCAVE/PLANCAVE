@@ -87,6 +87,13 @@ CREATE TABLE IF NOT EXISTS purchases (
     UNIQUE (user_id, plan_id)
 );
 
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount DECIMAL(10, 2);
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50);
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50);
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(255);
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS purchased_at TIMESTAMP;
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_metadata JSONB;
+
 -- Basic indexes for core tables
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_plans_category ON plans(category);

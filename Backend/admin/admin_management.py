@@ -173,6 +173,83 @@ def admin_download_plan(plan_id):
         conn.close()
 
 
+@admin_bp.route('/purchases', methods=['GET'])
+@jwt_required()
+@require_admin
+def list_purchases():
+    payment_status = request.args.get('payment_status')
+    payment_method = request.args.get('payment_method')
+    plan_id = request.args.get('plan_id')
+    user_id = request.args.get('user_id', type=int)
+    limit = request.args.get('limit', default=50, type=int)
+    offset = request.args.get('offset', default=0, type=int)
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        where_clauses = []
+        values = []
+
+        if payment_status:
+            where_clauses.append('p.payment_status = %s')
+            values.append(payment_status)
+        if payment_method:
+            where_clauses.append('p.payment_method = %s')
+            values.append(payment_method)
+        if plan_id:
+            where_clauses.append('p.plan_id = %s')
+            values.append(plan_id)
+        if user_id is not None:
+            where_clauses.append('p.user_id = %s')
+            values.append(user_id)
+
+        where_sql = ' AND '.join(where_clauses) if where_clauses else 'TRUE'
+
+        cur.execute(f"SELECT COUNT(*) AS count FROM purchases p WHERE {where_sql}", tuple(values))
+        total = int((cur.fetchone() or {}).get('count') or 0)
+
+        cur.execute(
+            f"""
+            SELECT
+                p.id,
+                p.user_id,
+                u.username AS user_email,
+                p.plan_id,
+                pl.name AS plan_name,
+                p.amount,
+                p.payment_method,
+                p.payment_status,
+                p.transaction_id,
+                COALESCE(p.purchased_at, p.purchase_date) AS purchased_at,
+                p.selected_deliverables,
+                p.payment_metadata
+            FROM purchases p
+            JOIN users u ON p.user_id = u.id
+            JOIN plans pl ON p.plan_id = pl.id
+            WHERE {where_sql}
+            ORDER BY COALESCE(p.purchased_at, p.purchase_date) DESC
+            LIMIT %s OFFSET %s
+            """,
+            tuple(values + [limit, offset])
+        )
+        purchases = [dict(row) for row in cur.fetchall()]
+
+        return jsonify({
+            'metadata': {
+                'total': total,
+                'limit': limit,
+                'offset': offset,
+                'returned': len(purchases),
+            },
+            'purchases': purchases,
+        }), 200
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @admin_bp.route('/users', methods=['GET'])
 @jwt_required()
 @require_admin
@@ -816,14 +893,14 @@ def get_plan_details(plan_id):
             SELECT 
                 u.id as user_id,
                 u.username as email,
-                pu.purchase_date,
+                COALESCE(pu.purchased_at, pu.purchase_date) as purchased_at,
                 pu.payment_status,
                 pl.price
             FROM purchases pu
             JOIN users u ON pu.user_id = u.id
             JOIN plans pl ON pu.plan_id = pl.id
             WHERE pu.plan_id = %s
-            ORDER BY pu.purchase_date DESC
+            ORDER BY COALESCE(pu.purchased_at, pu.purchase_date) DESC
         """, (plan_id,))
         buyers = [dict(row) for row in cur.fetchall()]
         

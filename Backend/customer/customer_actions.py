@@ -112,8 +112,23 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
 
     # Validate Paystack metadata matches our pending purchase
     metadata = (paystack_data.get('metadata') or {})
-    if str(metadata.get('plan_id')) != str(purchase['plan_id']) or int(metadata.get('user_id')) != int(purchase['user_id']):
-        return False, ("Payment metadata mismatch", 400)
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except Exception:
+            metadata = {}
+
+    if isinstance(metadata, dict):
+        meta_plan_id = metadata.get('plan_id')
+        meta_user_id = metadata.get('user_id')
+        if meta_plan_id is not None or meta_user_id is not None:
+            try:
+                if meta_plan_id is not None and str(meta_plan_id) != str(purchase['plan_id']):
+                    return False, ("Payment metadata mismatch", 400)
+                if meta_user_id is not None and int(meta_user_id) != int(purchase['user_id']):
+                    return False, ("Payment metadata mismatch", 400)
+            except Exception:
+                return False, ("Payment metadata mismatch", 400)
 
     # Validate currency and amount
     currency = paystack_data.get('currency')
@@ -134,6 +149,18 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
         """,
         (purchase['id'],)
     )
+
+    try:
+        cur.execute(
+            """
+            UPDATE purchases
+            SET payment_metadata = %s
+            WHERE id = %s
+            """,
+            (json.dumps(paystack_data), purchase['id'])
+        )
+    except Exception:
+        pass
 
     cur.execute(
         """
@@ -736,10 +763,29 @@ def download_plan_files(download_token: str):
         if not bundle['files']:
             return jsonify(message="No technical files available for this plan"), 404
 
+        selected_deliverables = None
+        if role != 'admin':
+            cur.execute(
+                """
+                SELECT selected_deliverables
+                FROM purchases
+                WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
+                ORDER BY purchased_at DESC
+                LIMIT 1
+                """,
+                (int(token_row['user_id']), plan_id)
+            )
+            purchase_row = cur.fetchone() or {}
+            selected_deliverables = purchase_row.get('selected_deliverables')
+
         customer_info = fetch_user_contact(token_row['user_id'], conn)
         bundle['customer'] = customer_info or {}
 
-        zip_buffer, download_name, files_added = build_plan_zip(bundle, customer=customer_info)
+        zip_buffer, download_name, files_added = build_plan_zip(
+            bundle,
+            customer=customer_info,
+            selected_deliverables=selected_deliverables,
+        )
 
         if files_added == 0:
             return jsonify(message="Plan files could not be located on the server"), 404

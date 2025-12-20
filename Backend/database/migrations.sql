@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS purchases (
 -- Selected deliverables for partial purchases
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS selected_deliverables JSONB;
 
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_metadata JSONB;
+
 -- Ensure uniqueness of user/plan purchases
 DO $$
 BEGIN

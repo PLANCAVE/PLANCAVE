@@ -8,3 +8,4 @@ python-dotenv==1.0.0
 Werkzeug==2.3.7
 requests>=2.31.0
 weasyprint==61.2
+pydyf<0.11

@@ -12,6 +12,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name VARCHAR(100);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(500);
 
+-- Email verification
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;
+
 -- Ensure existing users are active
 UPDATE users SET is_active = TRUE WHERE is_active IS NULL;
 

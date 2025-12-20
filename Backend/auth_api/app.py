@@ -16,6 +16,9 @@ import psycopg
 from psycopg.rows import dict_row
 import os
 import sys
+import smtplib
+from email.message import EmailMessage
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from dotenv import load_dotenv
 from config import Config
 
@@ -34,6 +37,66 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+
+def _get_env_bool(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _get_email_serializer() -> URLSafeTimedSerializer:
+    secret = os.getenv("EMAIL_TOKEN_SECRET") or app.config.get("SECRET_KEY")
+    if not secret:
+        raise RuntimeError("EMAIL_TOKEN_SECRET (or SECRET_KEY fallback) is not configured")
+    return URLSafeTimedSerializer(secret_key=secret, salt="ramanicave-email")
+
+
+def _build_app_url(path: str) -> str:
+    base = (os.getenv("APP_BASE_URL") or os.getenv("FRONTEND_URL") or "").rstrip("/")
+    if not base:
+        # Fallback: relative URL (still useful in local dev)
+        return path
+    if not path.startswith("/"):
+        path = "/" + path
+    return base + path
+
+
+def _send_email(to_email: str, subject: str, html_body: str) -> None:
+    mail_server = os.getenv("MAIL_SERVER")
+    mail_port = int(os.getenv("MAIL_PORT", "587"))
+    mail_username = os.getenv("MAIL_USERNAME")
+    mail_password = os.getenv("MAIL_PASSWORD")
+    default_sender = os.getenv("MAIL_DEFAULT_SENDER") or mail_username
+    use_tls = _get_env_bool("MAIL_USE_TLS", True)
+    use_ssl = _get_env_bool("MAIL_USE_SSL", False)
+
+    if not mail_server or not mail_username or not mail_password or not default_sender:
+        raise RuntimeError("SMTP env vars not configured (MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER)")
+
+    msg = EmailMessage()
+    msg["From"] = default_sender
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content("This email requires an HTML-capable client.")
+    msg.add_alternative(html_body, subtype="html")
+
+    if use_ssl:
+        server = smtplib.SMTP_SSL(mail_server, mail_port, timeout=20)
+    else:
+        server = smtplib.SMTP(mail_server, mail_port, timeout=20)
+
+    try:
+        if use_tls and not use_ssl:
+            server.starttls()
+        server.login(mail_username, mail_password)
+        server.send_message(msg)
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            pass
 
 # Enable CORS for frontend
 # CORS configuration - allows frontend from any origin in production
@@ -186,6 +249,8 @@ def register_user(data, role):
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name VARCHAR(100);")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;")
             conn.commit()
         except Exception:
             conn.rollback()
@@ -195,19 +260,37 @@ def register_user(data, role):
         if cur.fetchone():
             return jsonify(message="This email/username is already registered"), 409
 
-        # Insert user
+        # Insert user (unverified by default)
         cur.execute(
-            "INSERT INTO users (username, password, role, first_name, middle_name, last_name, is_active) VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING id;",
+            "INSERT INTO users (username, password, role, first_name, middle_name, last_name, is_active, email_verified) VALUES (%s, %s, %s, %s, %s, %s, TRUE, FALSE) RETURNING id;",
             (username_lc, hashed_pw, role, first_name, middle_name, last_name)
         )
         row = cur.fetchone()
         conn.commit()
         user_id = row['id'] if row else None
+
+        # Send verification email (best-effort; do not block registration if SMTP is down)
+        try:
+            serializer = _get_email_serializer()
+            token = serializer.dumps({"user_id": int(user_id), "email": username_lc, "purpose": "verify_email"})
+            verify_url = _build_app_url(f"/verify-email?token={token}")
+            html = (
+                "<div style='font-family:Arial,sans-serif'>"
+                "<h2>Verify your email</h2>"
+                "<p>Please confirm your email address to activate your Ramanicave account.</p>"
+                f"<p><a href='{verify_url}' style='display:inline-block;padding:10px 14px;background:#0f766e;color:#fff;text-decoration:none;border-radius:8px'>Verify Email</a></p>"
+                "<p>If you did not create this account, you can ignore this email.</p>"
+                "</div>"
+            )
+            _send_email(username_lc, "Verify your Ramanicave email", html)
+        except Exception as e:
+            app.logger.error(f"Failed to send verification email to {username_lc}: {e}")
+
         return jsonify({
             "id": user_id,
             "email": username_lc,
             "role": role,
-            "message": f"{role.capitalize()} registered successfully"
+            "message": f"{role.capitalize()} registered successfully. Please verify your email before login."
         }), 201
     except Exception as e:
         conn.rollback()
@@ -427,7 +510,7 @@ def login():
     conn = get_db()
     cur = conn.cursor()
     # Make username lookup case-insensitive so existing mixed-case usernames still work
-    cur.execute("SELECT id, password, role, is_active FROM users WHERE LOWER(username) = LOWER(%s);", (username,))
+    cur.execute("SELECT id, password, role, is_active, COALESCE(email_verified, FALSE) FROM users WHERE LOWER(username) = LOWER(%s);", (username,))
     result = cur.fetchone()
     cur.close()
     conn.close()
@@ -435,11 +518,14 @@ def login():
     if not result:
         return jsonify(message="Invalid credentials"), 401
 
-    user_id, hashed_pw, role, is_active = result
+    user_id, hashed_pw, role, is_active, email_verified = result
     
     # Check if account is active
     if not is_active:
         return jsonify(message="Your account has been deactivated. Please contact admin@ramanicave.com."), 403
+
+    if not email_verified:
+        return jsonify(message="Please verify your email before login."), 403
 
     if bcrypt.check_password_hash(hashed_pw, password):
         access_token = create_access_token(
@@ -457,6 +543,179 @@ def login():
         return resp
     else:
         return jsonify(message="Invalid credentials"), 401
+
+
+@app.route('/auth/resend-verification', methods=['POST'])
+def resend_verification_email():
+    data = request.get_json() or {}
+    username = (data.get('username') or '').strip()
+    if not username:
+        return jsonify(message="username is required"), 400
+
+    username_lc = username.lower()
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            "SELECT id, COALESCE(email_verified, FALSE) AS email_verified FROM users WHERE LOWER(username) = LOWER(%s)",
+            (username_lc,),
+        )
+        row = cur.fetchone()
+        # Always return 200 to avoid account enumeration
+        if not row:
+            return jsonify(message="If the account exists, a verification email has been sent."), 200
+        if bool(row.get('email_verified')):
+            return jsonify(message="Email already verified."), 200
+
+        try:
+            serializer = _get_email_serializer()
+            token = serializer.dumps({"user_id": int(row['id']), "email": username_lc, "purpose": "verify_email"})
+            verify_url = _build_app_url(f"/verify-email?token={token}")
+            html = (
+                "<div style='font-family:Arial,sans-serif'>"
+                "<h2>Verify your email</h2>"
+                "<p>Click the button below to verify your email.</p>"
+                f"<p><a href='{verify_url}' style='display:inline-block;padding:10px 14px;background:#0f766e;color:#fff;text-decoration:none;border-radius:8px'>Verify Email</a></p>"
+                "</div>"
+            )
+            _send_email(username_lc, "Verify your Ramanicave email", html)
+        except Exception as e:
+            app.logger.error(f"Failed to resend verification email to {username_lc}: {e}")
+
+        return jsonify(message="If the account exists, a verification email has been sent."), 200
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route('/auth/verify-email', methods=['GET'])
+def verify_email():
+    token = request.args.get('token')
+    if not token:
+        return jsonify(message="token is required"), 400
+
+    serializer = _get_email_serializer()
+    try:
+        payload = serializer.loads(token, max_age=int(os.getenv("EMAIL_VERIFY_TOKEN_TTL_SECONDS", "86400")))
+    except SignatureExpired:
+        return jsonify(message="Verification link expired"), 400
+    except BadSignature:
+        return jsonify(message="Invalid verification token"), 400
+
+    if not isinstance(payload, dict) or payload.get("purpose") != "verify_email":
+        return jsonify(message="Invalid verification token"), 400
+
+    user_id = payload.get("user_id")
+    email = (payload.get("email") or "").lower()
+    if not user_id or not email:
+        return jsonify(message="Invalid verification token"), 400
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            "UPDATE users SET email_verified = TRUE, email_verified_at = NOW() WHERE id = %s AND LOWER(username) = LOWER(%s) RETURNING id",
+            (int(user_id), email),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        if not row:
+            return jsonify(message="User not found"), 404
+        return jsonify(message="Email verified successfully"), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message="Failed to verify email", error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route('/auth/password-reset/request', methods=['POST'])
+def request_password_reset():
+    data = request.get_json() or {}
+    username = (data.get('username') or '').strip()
+    if not username:
+        return jsonify(message="username is required"), 400
+
+    username_lc = username.lower()
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(%s)", (username_lc,))
+        row = cur.fetchone()
+
+        # Always return 200 (avoid enumeration)
+        if not row:
+            return jsonify(message="If the account exists, a password reset email has been sent."), 200
+
+        try:
+            serializer = _get_email_serializer()
+            token = serializer.dumps({"user_id": int(row['id']), "email": username_lc, "purpose": "reset_password"})
+            reset_url = _build_app_url(f"/reset-password?token={token}")
+            html = (
+                "<div style='font-family:Arial,sans-serif'>"
+                "<h2>Reset your password</h2>"
+                "<p>Click the button below to set a new password.</p>"
+                f"<p><a href='{reset_url}' style='display:inline-block;padding:10px 14px;background:#111827;color:#fff;text-decoration:none;border-radius:8px'>Reset Password</a></p>"
+                "<p>If you didn't request this, you can ignore this email.</p>"
+                "</div>"
+            )
+            _send_email(username_lc, "Reset your Ramanicave password", html)
+        except Exception as e:
+            app.logger.error(f"Failed to send password reset email to {username_lc}: {e}")
+
+        return jsonify(message="If the account exists, a password reset email has been sent."), 200
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route('/auth/password-reset/confirm', methods=['POST'])
+def confirm_password_reset():
+    data = request.get_json() or {}
+    token = data.get('token')
+    new_password = data.get('new_password')
+    if not token or not new_password:
+        return jsonify(message="token and new_password are required"), 400
+
+    serializer = _get_email_serializer()
+    try:
+        payload = serializer.loads(token, max_age=int(os.getenv("PASSWORD_RESET_TOKEN_TTL_SECONDS", "1800")))
+    except SignatureExpired:
+        return jsonify(message="Reset link expired"), 400
+    except BadSignature:
+        return jsonify(message="Invalid reset token"), 400
+
+    if not isinstance(payload, dict) or payload.get("purpose") != "reset_password":
+        return jsonify(message="Invalid reset token"), 400
+
+    user_id = payload.get("user_id")
+    email = (payload.get("email") or "").lower()
+    if not user_id or not email:
+        return jsonify(message="Invalid reset token"), 400
+
+    hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            "UPDATE users SET password = %s WHERE id = %s AND LOWER(username) = LOWER(%s) RETURNING id",
+            (hashed_pw, int(user_id), email),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        if not row:
+            return jsonify(message="User not found"), 404
+        return jsonify(message="Password updated successfully"), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message="Failed to reset password", error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
 
 
 @app.route('/auth/refresh', methods=['POST'])

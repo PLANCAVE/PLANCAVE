@@ -222,7 +222,9 @@ def list_purchases():
                 p.transaction_id,
                 p.purchased_at AS purchased_at,
                 p.selected_deliverables,
-                p.payment_metadata
+                p.payment_metadata,
+                p.admin_confirmed_at,
+                p.admin_confirmed_by
             FROM purchases p
             JOIN users u ON p.user_id = u.id
             JOIN plans pl ON p.plan_id = pl.id

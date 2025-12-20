@@ -10,11 +10,13 @@ interface PurchaseRow {
   plan_name: string;
   amount: number;
   payment_method: string | null;
-  payment_status: string;
+  payment_status: string | null;
   transaction_id: string | null;
   purchased_at: string | null;
-  selected_deliverables?: string[];
-  payment_metadata?: Record<string, any> | null;
+  selected_deliverables?: string[] | null;
+  payment_metadata?: any;
+  admin_confirmed_at?: string | null;
+  admin_confirmed_by?: number | null;
 }
 
 interface PurchasesResponse {
@@ -356,7 +358,7 @@ export default function PurchasesAdmin() {
                             </>
                           )}
                         </button>
-                      ) : purchase.payment_status === 'completed' && purchase.transaction_id ? (
+                      ) : purchase.payment_status === 'completed' && purchase.transaction_id && !purchase.admin_confirmed_at ? (
                         <button
                           onClick={() => handleConfirmPayment(purchase.transaction_id!)}
                           disabled={confirmingPayment === purchase.transaction_id}
@@ -374,6 +376,11 @@ export default function PurchasesAdmin() {
                             </>
                           )}
                         </button>
+                      ) : purchase.admin_confirmed_at ? (
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-100 text-green-800 text-xs font-medium">
+                          <CheckCircle className="w-3 h-3" />
+                          Confirmed
+                        </span>
                       ) : (
                         <span className="text-white/40 text-xs">—</span>
                       )}
@@ -408,7 +415,15 @@ export default function PurchasesAdmin() {
   );
 }
 
-function StatusDot({ status }: { status: string }) {
-  const color = status === 'completed' ? 'bg-emerald-300' : 'bg-amber-300';
-  return <span className={`inline-block h-2 w-2 rounded-full ${color}`} />;
+function StatusDot({ status }: { status: string | null }) {
+  if (!status) return null;
+  
+  const colors = {
+    completed: 'bg-green-500',
+    pending: 'bg-amber-500',
+    failed: 'bg-red-500',
+    refunded: 'bg-gray-500',
+  };
+  const color = colors[status as keyof typeof colors] || 'bg-gray-400';
+  return <div className={`w-2 h-2 rounded-full ${color}`} />;
 }

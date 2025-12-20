@@ -131,6 +131,76 @@ export default function UploadPlan() {
     'Accessibility Compliant', 'Fire Safety Certified', 'Seismic Resistant'
   ];
 
+  // Validation functions for each step
+  const isStep1Complete = () => {
+    return basicInfo.name.trim() !== '' && 
+           basicInfo.category !== '' && 
+           basicInfo.description.trim() !== '';
+  };
+
+  const isStep2Complete = () => {
+    return techSpecs.area.trim() !== '' && 
+           techSpecs.bedrooms.trim() !== '' && 
+           techSpecs.bathrooms.trim() !== '' && 
+           techSpecs.floors.trim() !== '';
+  };
+
+  const isStep3Complete = () => {
+    return disciplines.architectural || 
+           disciplines.structural || 
+           disciplines.civil || 
+           disciplines.fire_safety || 
+           disciplines.interior || 
+           Object.values(disciplines.mep).some(v => v);
+  };
+
+  const isStep4Complete = () => {
+    if (disciplines.architectural && files.architectural.length === 0) return false;
+    if (disciplines.structural && files.structural.length === 0) return false;
+    if (disciplines.civil && files.civil.length === 0) return false;
+    if (disciplines.fire_safety && files.fire_safety.length === 0) return false;
+    if (disciplines.interior && files.interior.length === 0) return false;
+    if (disciplines.mep.mechanical && files.mep_mechanical.length === 0) return false;
+    if (disciplines.mep.electrical && files.mep_electrical.length === 0) return false;
+    if (disciplines.mep.plumbing && files.mep_plumbing.length === 0) return false;
+    return true;
+  };
+
+  const isStep5Complete = () => {
+    return boq.includes_boq || 
+           Object.values(deliverablePrices).some(v => v !== '');
+  };
+
+  const isStep6Complete = () => {
+    return pricing.license_type !== '' && 
+           pricing.support_duration !== '';
+  };
+
+  const isStep7Complete = () => {
+    return pricing.price !== '' || 
+           Object.values(deliverablePrices).some(v => v !== '');
+  };
+
+  const isStep8Complete = () => {
+    return additional.project_timeline_ref.trim() !== '' || 
+           additional.material_specifications.trim() !== '' || 
+           additional.construction_notes.trim() !== '';
+  };
+
+  const getStepCompletion = (stepNum: number) => {
+    switch(stepNum) {
+      case 1: return isStep1Complete();
+      case 2: return isStep2Complete();
+      case 3: return isStep3Complete();
+      case 4: return isStep4Complete();
+      case 5: return isStep5Complete();
+      case 6: return isStep6Complete();
+      case 7: return isStep7Complete();
+      case 8: return isStep8Complete();
+      default: return false;
+    }
+  };
+
   const handleFileChange = (category: string, fileList: FileList | null) => {
     if (!fileList) return;
     const fileArray = Array.from(fileList);
@@ -1340,8 +1410,8 @@ export default function UploadPlan() {
         </div>
 
         {/* Progress Steps */}
-        <div className="mb-8 bg-white rounded-xl p-6 shadow-md overflow-x-auto">
-          <div className="flex items-center justify-between min-w-[760px]">
+        <div className="mb-8 bg-white rounded-xl p-6 shadow-md">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             {steps.map((step, idx) => (
               <div key={step.num} className="flex items-center">
                 <div className="flex flex-col items-center">
@@ -1351,20 +1421,20 @@ export default function UploadPlan() {
                     className="flex flex-col items-center focus:outline-none"
                     title={`Go to step ${step.num}: ${step.title}`}
                   >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
                       currentStep === step.num 
                         ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white scale-110 shadow-lg' 
-                        : currentStep > step.num
+                        : getStepCompletion(step.num)
                         ? 'bg-green-500 text-white hover:opacity-90'
                         : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     }`}>
-                      {currentStep > step.num ? <Check className="w-5 h-5" /> : step.num}
+                      {getStepCompletion(step.num) ? <Check className="w-3 h-3" /> : step.num}
                     </div>
-                    <span className={`text-xs font-medium mt-2 ${currentStep === step.num ? 'text-gray-900' : 'text-gray-600'}`}>{step.title}</span>
+                    <span className={`text-xs font-medium mt-1 ${currentStep === step.num ? 'text-gray-900' : 'text-gray-600'}`}>{step.title}</span>
                   </button>
                 </div>
                 {idx < steps.length - 1 && (
-                  <div className={`w-12 h-1 mx-2 ${currentStep > step.num ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  <div className={`w-6 h-0.5 mx-1 ${getStepCompletion(step.num) ? 'bg-green-500' : 'bg-gray-200'}`} />
                 )}
               </div>
             ))}

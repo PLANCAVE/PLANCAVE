@@ -6,7 +6,6 @@ import uuid
 import re
 import textwrap
 import requests
-from weasyprint import HTML
 from datetime import datetime, date
 from decimal import Decimal
 from psycopg.rows import dict_row
@@ -502,6 +501,13 @@ def build_manifest_pdf(bundle, organized_files, customer=None):
 
 def build_manifest_pdf_html(bundle, organized_files, customer=None):
     """Generate a premium manifest PDF using HTML+CSS (WeasyPrint)."""
+
+    try:
+        from weasyprint import HTML  # type: ignore
+    except Exception:
+        # WeasyPrint requires native libraries (Pango/Cairo). If they're missing on the host,
+        # avoid crashing the whole application and fall back to the simpler ReportLab PDF.
+        return build_manifest_pdf(bundle, organized_files, customer=customer)
 
     def format_value(value, default="N/A"):
         if value is None:

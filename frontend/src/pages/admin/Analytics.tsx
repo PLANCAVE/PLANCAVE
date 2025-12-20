@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getDesignerAnalytics, getCustomerAnalytics } from '../../api';
-import { Users, DollarSign, TrendingUp, ShoppingCart, FileText } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, ShoppingCart, FileText, Receipt } from 'lucide-react';
 
 interface Designer {
   designer_id: number;
@@ -33,6 +34,7 @@ export default function Analytics() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'designers' | 'customers'>('designers');
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadAnalytics();
@@ -143,6 +145,13 @@ export default function Analytics() {
             }`}
           >
             Customer Analytics
+          </button>
+          <button
+            onClick={() => navigate('/admin/purchases')}
+            className="px-6 py-3 rounded-lg font-semibold bg-white text-gray-700 hover:bg-gray-100 transition-all flex items-center gap-2"
+          >
+            <Receipt className="w-5 h-5" />
+            Purchase Details
           </button>
         </div>
 

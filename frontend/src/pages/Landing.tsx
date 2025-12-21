@@ -20,11 +20,12 @@ interface Plan {
   disciplines_included: any;
   image_url: string;
   sales_count: number;
+  total_views?: number;
   certifications?: string[];
   created_at: string;
 }
 
-const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge }: PlanShowcaseProps) => {
+const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge, metric }: PlanShowcaseProps) => {
   if (!plans.length) return null;
 
   const resolveMediaUrl = (path?: string) => {
@@ -84,7 +85,15 @@ const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge }: PlanShowc
                 <div className="flex justify-between items-start mb-3">
                   <h4 className="text-xl font-bold text-white line-clamp-1">{plan.name}</h4>
                   <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400">
-                    {plan.sales_count || 0} sold
+                    {(() => {
+                      const kind = metric?.kind || 'sales';
+                      const value =
+                        kind === 'views'
+                          ? Number((plan as any).total_views || (plan as any).views_count || 0)
+                          : Number((plan as any).sales_count || 0);
+                      const label = metric?.label || (kind === 'views' ? 'views' : 'sold');
+                      return `${value} ${label}`;
+                    })()}
                   </span>
                 </div>
                 
@@ -118,6 +127,10 @@ interface PlanShowcaseProps {
   cta: string;
   ctaLink?: string;
   badge?: string;
+  metric?: {
+    kind: 'sales' | 'views';
+    label: string;
+  };
 }
 
 
@@ -251,8 +264,13 @@ export default function Landing() {
       return topType ? (groupByType[topType] || []).slice(0, 4) : randomized.slice(12, 16);
     })();
 
+    const cheapestPlans = [...featuredPlans]
+      .filter((p) => p && p.price != null)
+      .sort((a, b) => Number(a.price || 0) - Number(b.price || 0))
+      .slice(0, 4);
+
     return {
-      budgetPlans: chunk(0, 4),
+      budgetPlans: cheapestPlans,
       newPlans: chunk(8, 12),
       popularCategoryPlans: popular,
     };
@@ -559,9 +577,24 @@ export default function Landing() {
 
       {/* Plan Collections - redesigned order and logic */}
       <PlanShowcase title="This month’s new releases" subtitle="Fresh arrivals published this month by our designers." plans={newPlans} cta="See new arrivals" ctaLink="/plans?quick=new" />
-      <PlanShowcase title="Top-selling plans" subtitle="Proven choices customers keep choosing." plans={topSellingPlans} cta="Shop bestsellers" ctaLink="/plans?quick=top" badge="Best Seller" />
+      <PlanShowcase
+        title="Top-selling plans"
+        subtitle="Proven choices customers keep choosing."
+        plans={topSellingPlans}
+        cta="Shop bestsellers"
+        ctaLink="/plans?quick=top"
+        badge="Best Seller"
+        metric={{ kind: 'sales', label: 'sold' }}
+      />
       <PlanShowcase title="Best value plans" subtitle="Quality designs at accessible prices." plans={budgetPlans} cta="Browse best value" ctaLink="/plans?quick=budget" />
-      <PlanShowcase title="Trending categories" subtitle="Explore the plan types customers are choosing right now." plans={popularCategoryPlans} cta="Browse all categories" ctaLink="/plans" />
+      <PlanShowcase
+        title="Trending categories"
+        subtitle="Explore the plan types customers are viewing right now."
+        plans={popularCategoryPlans}
+        cta="Browse all categories"
+        ctaLink="/plans"
+        metric={{ kind: 'views', label: 'views' }}
+      />
 
       {/* Replace 'Browse by Size' with intent-based quick picks */}
       <section className="py-16 bg-gradient-to-b from-slate-900/20 to-transparent">

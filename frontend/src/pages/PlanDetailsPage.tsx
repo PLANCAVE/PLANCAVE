@@ -242,6 +242,26 @@ export default function PlanDetailsPage() {
       return;
     }
 
+    const deliverableKeyForFileType = (fileType?: string | null): string | null => {
+      if (!fileType) return null;
+      const ft = String(fileType).toUpperCase();
+      if (ft.startsWith('ARCH')) return 'architectural';
+      if (ft.startsWith('STRUCT')) return 'structural';
+      if (ft.startsWith('MEP')) return 'mep';
+      if (ft.startsWith('CIVIL')) return 'civil';
+      if (ft.startsWith('FIRE')) return 'fire_safety';
+      if (ft.startsWith('INTERIOR')) return 'interior';
+      if (ft.startsWith('BOQ')) return 'boq';
+      if (ft.startsWith('RENDER')) return 'renders';
+      return null;
+    };
+
+    const includedDeliverableKeys = new Set(
+      (plan.files || [])
+        .map((f) => deliverableKeyForFileType((f as any)?.file_type))
+        .filter(Boolean) as string[]
+    );
+
     const availableKeys = Object.entries(rawPrices)
       .filter(([, value]) => {
         const numeric = value === '' || value === null || value === undefined ? 0 : Number(value);
@@ -249,7 +269,9 @@ export default function PlanDetailsPage() {
       })
       .map(([key]) => key);
 
-    if (availableKeys.length === 0) {
+    const availableIncludedKeys = availableKeys.filter((key) => includedDeliverableKeys.has(key));
+
+    if (availableIncludedKeys.length === 0) {
       if (selectedDeliverables.length > 0) {
         selectionTouchedRef.current = false;
         setSelectedDeliverables([]);
@@ -284,10 +306,10 @@ export default function PlanDetailsPage() {
       hadPriorPurchasesRef.current = false;
     }
     const sanitizedSelection = selectedDeliverables.filter(
-      (key) => availableKeys.includes(key) && !purchasedSet.has(key)
+      (key) => availableIncludedKeys.includes(key) && !purchasedSet.has(key)
     );
 
-    const remainingKeys = availableKeys.filter((key) => !purchasedSet.has(key));
+    const remainingKeys = availableIncludedKeys.filter((key) => !purchasedSet.has(key));
 
     let nextSelection = sanitizedSelection;
 
@@ -591,6 +613,27 @@ export default function PlanDetailsPage() {
 
   const priceNumber = typeof plan.price === 'string' ? Number(plan.price) : plan.price;
   const deliverablePrices = plan.deliverable_prices && typeof plan.deliverable_prices === 'object' ? plan.deliverable_prices : null;
+
+  const deliverableKeyForFileType = (fileType?: string | null): string | null => {
+    if (!fileType) return null;
+    const ft = String(fileType).toUpperCase();
+    if (ft.startsWith('ARCH')) return 'architectural';
+    if (ft.startsWith('STRUCT')) return 'structural';
+    if (ft.startsWith('MEP')) return 'mep';
+    if (ft.startsWith('CIVIL')) return 'civil';
+    if (ft.startsWith('FIRE')) return 'fire_safety';
+    if (ft.startsWith('INTERIOR')) return 'interior';
+    if (ft.startsWith('BOQ')) return 'boq';
+    if (ft.startsWith('RENDER')) return 'renders';
+    return null;
+  };
+
+  const includedDeliverableKeys = new Set(
+    (plan.files || [])
+      .map((f) => deliverableKeyForFileType((f as any)?.file_type))
+      .filter(Boolean) as string[]
+  );
+
   const pricedDeliverables = deliverablePrices
     ? Object.entries(deliverablePrices).filter(([, value]) => {
         const n = value === '' || value === null || value === undefined ? 0 : Number(value);
@@ -603,12 +646,16 @@ export default function PlanDetailsPage() {
         return Number.isFinite(n) && n === 0;
       })
     : [];
-  const hasAnyDeliverables = Boolean(deliverablePrices && pricedDeliverables.length > 0);
+
+  const filteredPricedDeliverables = pricedDeliverables.filter(([key]) => includedDeliverableKeys.has(key));
+  const filteredFreeDeliverables = freeDeliverables.filter(([key]) => includedDeliverableKeys.has(key));
+
+  const hasAnyDeliverables = Boolean(deliverablePrices && filteredPricedDeliverables.length > 0);
   const remainingDeliverablesCount = (() => {
     if (!hasAnyDeliverables) return 0;
     if (fullPurchase) return 0;
     const purchasedSet = new Set(purchasedDeliverables);
-    return pricedDeliverables.reduce((count, [key]) => count + (purchasedSet.has(key) ? 0 : 1), 0);
+    return filteredPricedDeliverables.reduce((count, [key]) => count + (purchasedSet.has(key) ? 0 : 1), 0);
   })();
   const selectedTotal = (() => {
     if (!deliverablePrices) return priceNumber || 0;
@@ -837,7 +884,7 @@ export default function PlanDetailsPage() {
               </div>
             )}
 
-            {!isAdmin && deliverablePrices && (pricedDeliverables.length > 0 || freeDeliverables.length > 0) && (
+            {!isAdmin && deliverablePrices && (filteredPricedDeliverables.length > 0 || filteredFreeDeliverables.length > 0) && (
               <div className="mt-10">
                 <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-6 shadow-sm">
                   <div className="flex items-center justify-between gap-4 mb-4">
@@ -852,7 +899,7 @@ export default function PlanDetailsPage() {
                       <div className="text-sm text-slate-600 mt-1 max-w-xl">
                         Select only the disciplines you need. Your total updates as you make changes.
                       </div>
-                      {freeDeliverables.length > 0 ? (
+                      {filteredFreeDeliverables.length > 0 ? (
                         <div className="mt-2 text-xs text-slate-600">
                           Free items are included automatically in your download.
                         </div>
@@ -874,7 +921,7 @@ export default function PlanDetailsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {freeDeliverables.map(([key]) => {
+                    {filteredFreeDeliverables.map(([key]) => {
                       const label = key.replace(/_/g, ' ');
                       const isActuallyPurchased = purchasedDeliverables.includes(key);
                       const shouldShowAsPurchased = Boolean(fullPurchase || isActuallyPurchased);
@@ -925,7 +972,7 @@ export default function PlanDetailsPage() {
                       );
                     })}
 
-                    {pricedDeliverables.map(([key, value]) => {
+                    {filteredPricedDeliverables.map(([key, value]) => {
                       const n = value === '' || value === null || value === undefined ? 0 : Number(value);
                       const isPurchased = Boolean(fullPurchase || purchasedDeliverables.includes(key));
                       const checked = isPurchased || selectedDeliverables.includes(key);

@@ -1235,13 +1235,33 @@ export default function PlanDetailsPage() {
                     </p>
                   </div>
                 ) : purchaseStatus === 'purchased' ? (
-                  <button
-                    onClick={() => navigate('/purchases')}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-teal-400 text-slate-900 font-semibold hover:bg-teal-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    Go to Purchases to download
-                  </button>
+                  !fullPurchase && selectedDeliverables.length > 0 ? (
+                    <button
+                      onClick={handlePurchase}
+                      disabled={isPurchasing}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-purple-500 to-indigo-500 font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isPurchasing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4" />
+                          Upgrade plan · $ {Number(purchaseDisplayPrice).toLocaleString()}
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => navigate('/purchases')}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-teal-400 text-slate-900 font-semibold hover:bg-teal-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Go to Purchases to download
+                    </button>
+                  )
                 ) : (
                   <button
                     onClick={handlePurchase}
@@ -1266,7 +1286,9 @@ export default function PlanDetailsPage() {
                   {isAdmin ? (
                     "Admin: instant access to every technical file"
                   ) : purchaseStatus === 'purchased' ? (
-                    "Download links are managed in your Purchases page."
+                    !fullPurchase && selectedDeliverables.length > 0
+                      ? "You're upgrading — complete payment to unlock newly selected deliverables."
+                      : "Download links are managed in your Purchases page."
                   ) : (
                     "Secure checkout • access delivered instantly after payment"
                   )}

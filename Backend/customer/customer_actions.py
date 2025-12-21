@@ -1255,6 +1255,17 @@ def generate_download_link():
                     except Exception:
                         return str(val)
 
+                currency = PAYSTACK_CURRENCY
+                try:
+                    if isinstance(purchase_row.get('payment_metadata'), dict):
+                        currency = purchase_row.get('payment_metadata', {}).get('currency') or currency
+                except Exception:
+                    pass
+
+                def _format_money(val):
+                    formatted = _format_amount(val)
+                    return f"{currency} {formatted}".strip() if formatted else ''
+
                 def _label_for_key(key: str) -> str:
                     mapping = {
                         '__FULL__': 'Full Plan (All deliverables)',
@@ -1273,7 +1284,7 @@ def generate_download_link():
                 total_from_breakdown = 0.0
                 if selected_deliverables is None:
                     # Legacy/full purchase
-                    deliverable_rows = [('__FULL__', None)]
+                    deliverable_rows = [('__FULL__', purchase_row.get('amount'))]
                 elif isinstance(selected_deliverables, list):
                     deliverable_rows = [(k, None) for k in selected_deliverables if isinstance(k, str)]
 
@@ -1281,8 +1292,9 @@ def generate_download_link():
                     computed = []
                     for k, _ in deliverable_rows:
                         if k == '__FULL__':
-                            # For full purchases, list all known deliverable prices if present
-                            for dk, dv in deliverable_prices.items():
+                            # Keep the clear full-purchase line item first, then optionally list all deliverables.
+                            computed.append((k, purchase_row.get('amount')))
+                            for dk, dv in sorted(deliverable_prices.items(), key=lambda x: str(x[0])):
                                 computed.append((dk, dv))
                                 try:
                                     total_from_breakdown += float(dv or 0)
@@ -1307,7 +1319,7 @@ def generate_download_link():
                     row_lines = []
                     for k, price_val in deliverable_rows:
                         label = _label_for_key(k)
-                        price_html = _format_amount(price_val) if price_val is not None else '—'
+                        price_html = _format_money(price_val) if price_val is not None else '—'
                         row_lines.append(
                             "<tr>"
                             f"<td style='padding:6px 8px;border-bottom:1px solid #e2e8f0'>{label}</td>"
@@ -1328,7 +1340,7 @@ def generate_download_link():
                     )
 
                 email_total_amount = purchase_row.get('amount')
-                total_display = _format_amount(email_total_amount)
+                total_display = _format_money(email_total_amount)
                 breakdown_total_display = _format_amount(total_from_breakdown) if total_from_breakdown > 0 else ''
                 subject = f"Your download link {order_id_display}".strip()
                 html_parts = [
@@ -1337,7 +1349,7 @@ def generate_download_link():
                     f"<p style='margin:0 0 8px'>Order ID: <strong>{order_id_display}</strong></p>",
                     f"<p style='margin:0 0 8px'>Plan: <strong>{purchase_row.get('plan_name') or plan_id}</strong></p>",
                     f"<p style='margin:0 0 6px'>Amount paid: <strong>{total_display}</strong></p>",
-                    (f"<p style='margin:0 0 12px;color:#475569'>Deliverables total: <strong>{breakdown_total_display}</strong></p>" if breakdown_total_display else "<div style='margin:0 0 12px'></div>"),
+                    (f"<p style='margin:0 0 12px;color:#475569'>Deliverables total (estimate): <strong>{currency} {breakdown_total_display}</strong></p>" if breakdown_total_display else "<div style='margin:0 0 12px'></div>"),
                     rows_html,
                     (f"<p style='margin:12px 0 0;color:#475569;font-size:12px'>Purchase ID: {purchase_id_for_email}</p>" if purchase_id_for_email else ""),
                     (f"<p style='margin:4px 0 0;color:#475569;font-size:12px'>Transaction ID: {transaction_id}</p>" if transaction_id else ""),

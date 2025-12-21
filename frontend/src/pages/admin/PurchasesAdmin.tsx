@@ -342,17 +342,21 @@ export default function PurchasesAdmin() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Reference</th>
                   <th className="px-4 py-3">Purchased</th>
-                  <th className="px-4 py-3">Download</th>
+                  <th className="px-4 py-3">Download Status</th>
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {purchases.map((purchase) => (
-                  <tr key={purchase.id} className="hover:bg-white/10">
+                  <tr
+                    key={purchase.id}
+                    onClick={() => setSelectedPurchase(purchase)}
+                    className="border-b border-white/10 last:border-b-0 cursor-pointer transition-colors hover:bg-white/10"
+                  >
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-white">{purchase.user_email}</span>
-                        <span className="text-xs text-white/60">#{purchase.user_id}</span>
+                        <span className="font-medium text-white">{purchase.user_email}</span>
+                        <span className="text-xs text-white/60">User #{purchase.user_id}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -438,7 +442,10 @@ export default function PurchasesAdmin() {
                       <div className="flex flex-col gap-2">
                         {purchase.payment_status === 'pending' && purchase.transaction_id ? (
                           <button
-                            onClick={() => handleCompletePayment(purchase.transaction_id!)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleCompletePayment(purchase.transaction_id!);
+                            }}
                             disabled={verifyingPayment === purchase.transaction_id}
                             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
                           >
@@ -456,7 +463,10 @@ export default function PurchasesAdmin() {
                           </button>
                         ) : purchase.payment_status === 'completed' && purchase.transaction_id && !purchase.admin_confirmed_at ? (
                           <button
-                            onClick={() => handleConfirmPayment(purchase.transaction_id!)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleConfirmPayment(purchase.transaction_id!);
+                            }}
                             disabled={confirmingPayment === purchase.transaction_id}
                             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
                           >
@@ -482,7 +492,10 @@ export default function PurchasesAdmin() {
                         )}
                         <button
                           type="button"
-                          onClick={() => setSelectedPurchase(purchase)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedPurchase(purchase);
+                          }}
                           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/15 bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors"
                         >
                           <Eye className="w-3 h-3" />

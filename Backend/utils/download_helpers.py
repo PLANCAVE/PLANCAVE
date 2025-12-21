@@ -50,8 +50,42 @@ def _deliverable_key_for_file_type(file_type: str | None) -> str | None:
     return None
 
 
-def _filter_files_by_selected_deliverables(files: list[dict], selected_deliverables) -> list[dict]:
+def _free_deliverables_from_prices(deliverable_prices) -> set[str]:
+    prices = deliverable_prices
+    if prices is None:
+        return set()
+    if isinstance(prices, str):
+        try:
+            prices = json.loads(prices)
+        except Exception:
+            prices = None
+    if not isinstance(prices, dict):
+        return set()
+
+    free: set[str] = set()
+    for k, v in prices.items():
+        if not isinstance(k, str):
+            continue
+        if v is None or v == '':
+            continue
+        try:
+            if float(v) == 0.0:
+                free.add(k)
+        except Exception:
+            continue
+    return free
+
+
+def _filter_files_by_selected_deliverables(files: list[dict], selected_deliverables, deliverable_prices=None) -> list[dict]:
     allowed = _normalize_selected_deliverables(selected_deliverables)
+    if allowed is None:
+        # Full plan purchase / admin / designer downloads
+        return files
+
+    # Option A: always include deliverables priced at 0 (free add-ons)
+    allowed = set(allowed)
+    allowed |= _free_deliverables_from_prices(deliverable_prices)
+
     if not allowed:
         return files
 
@@ -627,7 +661,12 @@ def build_plan_zip(bundle, customer=None, selected_deliverables=None):
 
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         organized_files = []
-        files_to_package = _filter_files_by_selected_deliverables(bundle.get('files') or [], selected_deliverables)
+        deliverable_prices = (bundle.get('plan') or {}).get('deliverable_prices')
+        files_to_package = _filter_files_by_selected_deliverables(
+            bundle.get('files') or [],
+            selected_deliverables,
+            deliverable_prices=deliverable_prices,
+        )
         for plan_file in files_to_package:
             resolved_path = resolve_plan_file_path(plan_file.get('file_path'))
             archive_path = resolve_archive_path(plan_file)

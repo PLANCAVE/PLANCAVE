@@ -200,10 +200,10 @@ def _search_plans(conn, message: str, limit: int = 8) -> list[dict]:
                 p.package_level, p.area, p.bedrooms, p.bathrooms, p.floors,
                 p.includes_boq, p.deliverable_prices,
                 COALESCE(p.sales_count, 0) AS sales_count,
-                COALESCE(p.total_views, 0) AS total_views
+                0 AS total_views
             FROM plans p
             WHERE {where_sql}
-            ORDER BY COALESCE(p.sales_count, 0) DESC, COALESCE(p.total_views, 0) DESC, p.created_at DESC NULLS LAST
+            ORDER BY COALESCE(p.sales_count, 0) DESC, p.created_at DESC NULLS LAST
             LIMIT %s
             """,
             tuple(params + [max_limit]),

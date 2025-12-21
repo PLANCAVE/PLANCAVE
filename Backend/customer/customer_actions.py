@@ -452,17 +452,48 @@ def purchase_plan():
 
             purchase_id = str(uuid.uuid4())
             order_id = _generate_order_id()
-            cur.execute("""
+            insert_sql = """
                 INSERT INTO purchases (
                     id, user_id, plan_id, amount, payment_method,
                     payment_status, transaction_id, selected_deliverables,
                     payment_metadata
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
+            """
+            insert_params = (
                 purchase_id, user_id, plan_id, amount,
                 payment_method, 'pending', reference, json.dumps(normalized_selection) if normalized_selection is not None else None,
                 json.dumps({"order_id": order_id})
-            ))
+            )
+
+            try:
+                cur.execute(insert_sql, insert_params)
+            except Exception as e:
+                # Backward-compat: some DBs still have a unique constraint preventing multiple
+                # purchases per (user_id, plan_id). Upgrades require allowing multiple rows.
+                msg = str(e)
+                if 'uniq_purchases_user_plan' in msg or 'duplicate key value violates unique constraint' in msg:
+                    try:
+                        conn.rollback()
+                        cur.execute(
+                            """
+                            DO $$
+                            BEGIN
+                                IF EXISTS (
+                                    SELECT 1 FROM pg_constraint
+                                    WHERE conname = 'uniq_purchases_user_plan'
+                                ) THEN
+                                    ALTER TABLE purchases DROP CONSTRAINT uniq_purchases_user_plan;
+                                END IF;
+                            END$$;
+                            """
+                        )
+                        conn.commit()
+                        cur.execute(insert_sql, insert_params)
+                    except Exception:
+                        conn.rollback()
+                        raise
+                else:
+                    raise
 
             conn.commit()
             return jsonify({
@@ -1540,7 +1571,7 @@ def get_my_purchases():
                 p.transaction_id, p.purchased_at, p.selected_deliverables,
                 p.admin_confirmed_at, p.admin_confirmed_by,
                 pl.name as plan_name, pl.category, pl.image_url,
-                pl.designer_id, pl.designer_name,
+                pl.designer_id,
                 pl.project_type, pl.package_level,
                 pl.price as plan_price
             FROM purchases p

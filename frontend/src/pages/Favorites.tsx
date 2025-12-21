@@ -136,7 +136,6 @@ export default function Favorites() {
                   {plan.area && <span>{plan.area} m²</span>}
                   {plan.bedrooms && <span>{plan.bedrooms} Bedrooms</span>}
                   {plan.bathrooms && <span>{plan.bathrooms} Baths</span>}
-                  {plan.package_level && <span className="uppercase tracking-wide">{plan.package_level}</span>}
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t border-white/10">
                   <div>

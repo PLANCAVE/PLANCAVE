@@ -141,7 +141,6 @@ export default function Cart() {
                   </div>
                   <p className="text-sm text-white/70 line-clamp-2">{plan.description}</p>
                   <div className="flex flex-wrap gap-2 text-xs text-white/80">
-                    {plan.package_level && <span className="uppercase tracking-wide">{plan.package_level}</span>}
                     {plan.includes_boq && <span>Includes BOQ</span>}
                     {plan.area && <span>{plan.area} m²</span>}
                     {plan.bedrooms && <span>{plan.bedrooms} Beds</span>}

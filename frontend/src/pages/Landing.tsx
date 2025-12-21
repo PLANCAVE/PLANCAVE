@@ -204,16 +204,6 @@ export default function Landing() {
     };
   }, []);
 
-  const getPackageBadgeColor = (level: string) => {
-    switch(level) {
-      case 'basic': return 'bg-gray-100 text-gray-700';
-      case 'standard': return 'bg-blue-100 text-blue-700';
-      case 'premium': return 'bg-purple-100 text-purple-700';
-      case 'complete': return 'bg-gradient-to-r from-purple-600 to-pink-600 text-white';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
   const resolveMediaUrl = (path?: string) => {
     if (!path) return '';
     // If it's a full URL (like from Cloudinary), use it directly.
@@ -397,9 +387,6 @@ export default function Landing() {
                   <span className="px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
                     $ {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
                   </span>
-                  <span className={`px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
-                    {currentPlan?.package_level?.toUpperCase()}
-                  </span>
                 </div>
                 <button
                   className="mt-4 w-full inline-flex items-center justify-center gap-3 px-5 py-3 rounded-full border border-white/30 bg-white/20 backdrop-blur-md text-[0.6rem] uppercase tracking-[0.4em] text-white hover:bg-white/30 shadow-xl transition-all"
@@ -491,9 +478,6 @@ export default function Landing() {
                   <div className="flex flex-wrap gap-2 text-[0.5rem] uppercase tracking-[0.35em] text-white/90">
                     <span className="px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
                       $ {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
-                    </span>
-                    <span className={`px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
-                      {currentPlan?.package_level?.toUpperCase()}
                     </span>
                     {currentPlan?.area && (
                       <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">

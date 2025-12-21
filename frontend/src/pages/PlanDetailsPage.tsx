@@ -788,9 +788,6 @@ export default function PlanDetailsPage() {
                     ? `$${Number(priceNumber).toLocaleString()}`
                     : 'Contact for price'}
               </div>
-              <div className="inline-block px-3 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
-                {plan.package_level?.toUpperCase()}
-              </div>
             </div>
 
             {/* Quick Actions */}

@@ -379,16 +379,6 @@ export default function BrowsePlans() {
     }
   };
 
-  const getPackageBadgeColor = (level: string) => {
-    switch(level) {
-      case 'basic': return 'bg-gray-100 text-gray-700';
-      case 'standard': return 'bg-blue-100 text-blue-700';
-      case 'premium': return 'bg-purple-100 text-purple-700';
-      case 'complete': return 'bg-gradient-to-r from-purple-600 to-pink-600 text-white';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
   const resolveMediaUrl = (path?: string) => {
     if (!path) return '';
     // If it's a full URL (like from Cloudinary), use it directly.
@@ -686,16 +676,11 @@ export default function BrowsePlans() {
                     />
                     <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                     <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-white leading-snug line-clamp-2">
+                      <h3 className="text-lg font-semibold text-white drop-shadow-lg line-clamp-2">
                         {plan.name.trim()}
                       </h3>
                       <span className="text-sm font-bold text-teal-300 bg-black/40 px-2 py-1 rounded-md whitespace-nowrap">
                         $ {Number(plan.price).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="absolute top-3 right-3 flex gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold shadow-sm ${getPackageBadgeColor(plan.package_level)}`}>
-                        {plan.package_level?.toUpperCase()}
                       </span>
                     </div>
                     {plan.includes_boq && (

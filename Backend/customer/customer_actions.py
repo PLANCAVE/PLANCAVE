@@ -790,11 +790,22 @@ def verify_paystack(reference: str):
         # Record the reference attempt even if payment isn't completed yet.
         _append_paystack_reference_to_purchase(cur, purchase['id'], reference)
 
-        ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)
-        if not ok and code != 200:
+        # Use a savepoint to isolate _complete_paystack_purchase
+        cur.execute("SAVEPOINT complete_purchase")
+        try:
+            ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)
+            if not ok and code != 200:
+                cur.execute("ROLLBACK TO SAVEPOINT complete_purchase")
+                conn.rollback()
+                return jsonify(message=msg), code
+        except Exception as inner_e:
+            cur.execute("ROLLBACK TO SAVEPOINT complete_purchase")
             conn.rollback()
-            return jsonify(message=msg), code
+            current_app.logger.error(f"Error in _complete_paystack_purchase: {inner_e}")
+            return jsonify(message="Failed to complete purchase"), 500
 
+        # Release savepoint and commit
+        cur.execute("RELEASE SAVEPOINT complete_purchase")
         conn.commit()
         return jsonify({
             "message": msg,
@@ -804,6 +815,7 @@ def verify_paystack(reference: str):
 
     except Exception as e:
         conn.rollback()
+        current_app.logger.error(f"Paystack verification error for {reference}: {e}")
         return jsonify(message=str(e)), 500
     finally:
         cur.close()

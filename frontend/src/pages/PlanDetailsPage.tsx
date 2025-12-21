@@ -265,6 +265,7 @@ export default function PlanDetailsPage() {
     }
 
     const purchasedSet = new Set(purchasedDeliverables);
+    const hasPriorPurchases = purchasedSet.size > 0;
     const sanitizedSelection = selectedDeliverables.filter(
       (key) => availableKeys.includes(key) && !purchasedSet.has(key)
     );
@@ -277,7 +278,7 @@ export default function PlanDetailsPage() {
       planChanged || (!selectionTouchedRef.current && sanitizedSelection.length === 0 && remainingKeys.length > 0);
 
     if (shouldDefaultSelection) {
-      nextSelection = remainingKeys;
+      nextSelection = hasPriorPurchases ? [] : remainingKeys;
     }
 
     const hasSameItems =
@@ -693,9 +694,11 @@ export default function PlanDetailsPage() {
             <div className="mb-6">
               <div className="text-sm text-gray-600 mb-1">Price</div>
               <div className="text-3xl font-bold text-teal-600 mb-2">
-                {(deliverablePrices ? selectedTotal : priceNumber)
-                  ? `$${Number(deliverablePrices ? selectedTotal : priceNumber).toLocaleString()}`
-                  : 'Contact for price'}
+                {deliverablePrices
+                  ? `$${Number(selectedTotal || 0).toLocaleString()}`
+                  : priceNumber
+                    ? `$${Number(priceNumber).toLocaleString()}`
+                    : 'Contact for price'}
               </div>
               <div className="inline-block px-3 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
                 {plan.package_level?.toUpperCase()}

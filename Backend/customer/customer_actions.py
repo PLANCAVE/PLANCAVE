@@ -770,6 +770,14 @@ def verify_paystack(reference: str):
         if user_id is not None and int(purchase['user_id']) != int(user_id) and role != 'admin':
             return jsonify(message="Not authorized to verify this purchase"), 403
 
+        # Idempotency: if already completed, return success without re-running DB updates
+        if purchase.get('payment_status') == 'completed':
+            return jsonify({
+                "message": "Payment already completed",
+                "plan_id": str(purchase['plan_id']),
+                "transaction_id": reference
+            }), 200
+
         # Record the reference attempt even if payment isn't completed yet.
         _append_paystack_reference_to_purchase(cur, purchase['id'], reference)
 
@@ -833,6 +841,14 @@ def admin_verify_paystack(reference: str):
         if not purchase:
             return jsonify(message="Purchase record not found"), 404
 
+        # Idempotency: if already completed, return success without re-running DB updates
+        if purchase.get('payment_status') == 'completed':
+            return jsonify({
+                "message": "Payment already verified and completed",
+                "plan_id": str(purchase['plan_id']),
+                "transaction_id": reference
+            }), 200
+
         # Record the reference attempt even if payment isn't completed yet.
         _append_paystack_reference_to_purchase(cur, purchase['id'], reference)
 
@@ -845,8 +861,7 @@ def admin_verify_paystack(reference: str):
         return jsonify({
             "message": msg,
             "plan_id": str(purchase['plan_id']),
-            "transaction_id": reference,
-            "user_id": purchase['user_id']
+            "transaction_id": reference
         }), 200
 
     except Exception as e:
@@ -1016,6 +1031,34 @@ def admin_confirm_paystack(reference: str):
         purchase = _purchase_for_paystack_reference(cur, reference)
         if not purchase:
             return jsonify(message="Purchase record not found"), 404
+
+        # Idempotency: if already completed, just mark admin confirmation if needed
+        if purchase.get('payment_status') == 'completed':
+            # Still allow admin to set confirmation audit fields if not already set
+            if not purchase.get('admin_confirmed_at'):
+                cur.execute(
+                    """
+                    UPDATE purchases
+                    SET admin_confirmed_at = NOW(),
+                        admin_confirmed_by = %s
+                    WHERE id = %s
+                    """,
+                    (user_id, purchase['id'])
+                )
+                conn.commit()
+                return jsonify({
+                    "message": f"Payment already completed; admin confirmation recorded by user {user_id}",
+                    "plan_id": str(purchase['plan_id']),
+                    "transaction_id": reference,
+                    "user_id": purchase['user_id']
+                }), 200
+            else:
+                return jsonify({
+                    "message": "Payment already completed and admin confirmed",
+                    "plan_id": str(purchase['plan_id']),
+                    "transaction_id": reference,
+                    "user_id": purchase['user_id']
+                }), 200
 
         # Record the reference attempt even if payment isn't completed yet.
         _append_paystack_reference_to_purchase(cur, purchase['id'], reference)

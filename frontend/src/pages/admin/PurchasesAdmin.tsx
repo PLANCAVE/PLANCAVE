@@ -4,6 +4,7 @@ import { Loader2, RefreshCw, Filter, DollarSign, Users, FileText, ShoppingCart, 
 
 interface PurchaseRow {
   id: string;
+  order_id?: string | null;
   user_id: number;
   user_email: string;
   plan_id: string;
@@ -400,7 +401,10 @@ export default function PurchasesAdmin() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-white/70">
-                      {purchase.transaction_id || '—'}
+                      <div className="flex flex-col">
+                        <span className="text-white/80">{purchase.order_id || '—'}</span>
+                        <span className="text-white/40">{purchase.transaction_id || '—'}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-white/70">
                       {purchase.purchased_at ? new Date(purchase.purchased_at).toLocaleString() : '—'}
@@ -633,6 +637,7 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
               <p className="text-xs uppercase tracking-[0.3em] text-white/60">Transaction</p>
+              <p className="text-xs text-white/60">Order ID: {purchase.order_id ?? '—'}</p>
               <p className="text-xs text-white/60">Reference: {purchase.transaction_id ?? '—'}</p>
               <p className="text-xs text-white/60">Tokens Generated: {purchase.download_tokens_generated ?? 0}</p>
               <p className="text-xs text-white/60">Tokens Used: {purchase.download_tokens_used ?? 0}</p>

@@ -6,6 +6,7 @@ import api from '../api';
 
 type PurchaseRow = {
   id: string;
+  order_id?: string | null;
   plan_id: string;
   plan_name: string;
   category?: string | null;

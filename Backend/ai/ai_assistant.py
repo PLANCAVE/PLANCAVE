@@ -27,6 +27,14 @@ def _llm_url() -> str:
     return (os.getenv('LLAMA_SERVER_URL') or 'http://127.0.0.1:8080/v1/chat/completions').strip()
 
 
+def _llm_model() -> str:
+    model = (os.getenv('LLAMA_MODEL') or '').strip()
+    if model:
+        return model
+    # llama.cpp server typically exposes the loaded gguf filename as the model id
+    return 'llama-2-7b-chat.Q2_K.gguf'
+
+
 def _call_local_llm(messages: list[dict], temperature: float = 0.4, max_tokens: int = 350) -> str | None:
     """Best-effort call to a local llama.cpp OpenAI-compatible server.
 
@@ -34,13 +42,13 @@ def _call_local_llm(messages: list[dict], temperature: float = 0.4, max_tokens: 
     """
     url = _llm_url()
     payload = {
-        "model": os.getenv('LLAMA_MODEL', 'local'),
+        "model": _llm_model(),
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
     try:
-        resp = requests.post(url, json=payload, timeout=8)
+        resp = requests.post(url, json=payload, timeout=30)
         if resp.status_code != 200:
             return None
         data = resp.json() if resp.content else {}
@@ -160,7 +168,7 @@ def _search_plans(conn, message: str, limit: int = 8) -> list[dict]:
     tokens = [t for t in re.split(r"\s+", (message or '').strip()) if len(t) >= 3]
     tokens = tokens[:6]
 
-    where = ["p.status = 'Available'"]
+    where = ["(p.status IS NULL OR p.status ILIKE 'available' OR p.status ILIKE 'published' OR p.status ILIKE 'active')"]
     params: list = []
 
     if budget_min is not None:
@@ -230,16 +238,13 @@ def _fallback_response(message: str, plans: list[dict]) -> dict:
     ]
     suggested = []
     for p in plans[:5]:
+        pid = p.get('id')
+        pid_str = str(pid) if pid is not None else None
         suggested.append({
-            "id": str(p.get('id')) if p.get('id') is not None else None,
+            "id": pid_str,
             "name": p.get('name'),
             "price": p.get('price'),
-            "category": p.get('category'),
-            "project_type": p.get('project_type'),
-            "package_level": p.get('package_level'),
-            "bedrooms": p.get('bedrooms'),
-            "floors": p.get('floors'),
-            "includes_boq": p.get('includes_boq'),
+            "url": f"/plans/{pid_str}" if pid_str else None,
         })
         bits = []
         if p.get('bedrooms') is not None:
@@ -282,20 +287,13 @@ def chat():
                 if _plan_has_deliverable(p, k) or (k == 'boq' and p.get('includes_boq')):
                     deliverable_keys.append(_deliverable_label(k))
 
+            pid = p.get('id')
+            pid_str = str(pid) if pid is not None else None
             plan_facts.append({
-                "id": str(p.get('id')) if p.get('id') is not None else None,
+                "id": pid_str,
                 "name": p.get('name'),
                 "price": p.get('price'),
-                "category": p.get('category'),
-                "project_type": p.get('project_type'),
-                "package_level": p.get('package_level'),
-                "area": p.get('area'),
-                "bedrooms": p.get('bedrooms'),
-                "floors": p.get('floors'),
-                "includes_boq": bool(p.get('includes_boq')),
-                "deliverables": deliverable_keys,
-                "sales_count": int(p.get('sales_count') or 0),
-                "total_views": int(p.get('total_views') or 0),
+                "url": f"/plans/{pid_str}" if pid_str else None,
             })
 
         system = (

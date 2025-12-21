@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPlanDetails, adminDownloadPlan, purchasePlan, verifyPurchase, verifyPaystackPayment } from '../api';
+import { getPlanDetails, adminDownloadPlan, designerDownloadPlan, purchasePlan, verifyPurchase, verifyPaystackPayment } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
 import {
@@ -337,8 +337,8 @@ export default function PlanDetailsPage() {
   };
 
   const handleDesignerDownload = async () => {
-    if (!plan || !plan.files || plan.files.length === 0) {
-      setDownloadError('No files available for this plan.');
+    if (!id || !plan) {
+      setDownloadError('Unable to locate this plan for download.');
       return;
     }
 
@@ -346,26 +346,19 @@ export default function PlanDetailsPage() {
     setDownloadError(null);
 
     try {
-      for (const file of plan.files) {
-        const fileUrl = resolveMediaUrl(file.file_path);
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch ${fileUrl}`);
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${plan.name || 'plan'}-${file.file_path.split('/').pop()}`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
+      const response = await designerDownloadPlan(id);
+      const blob = new Blob([response.data], { type: 'application/zip' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${plan.name || 'plan'}-technical-files.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (err: any) {
       console.error('Designer download error', err);
-      const msg = err?.message || 'Failed to download files. Please try again.';
+      const msg = err?.response?.data?.message || err?.message || 'Failed to download files. Please try again.';
       setDownloadError(String(msg));
     } finally {
       setIsDownloading(false);

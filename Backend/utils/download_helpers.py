@@ -103,7 +103,7 @@ def fetch_user_contact(user_id: int | None, conn):
     try:
         cur.execute(
             """
-            SELECT first_name, last_name, username AS email
+            SELECT first_name, last_name, username, email
             FROM users
             WHERE id = %s
             """,
@@ -112,10 +112,14 @@ def fetch_user_contact(user_id: int | None, conn):
         row = cur.fetchone()
         if not row:
             return None
+
+        primary_email = (row.get('email') or '').strip()
+        fallback_email = (row.get('username') or '').strip()
+
         return {
             "first_name": row.get('first_name'),
             "last_name": row.get('last_name'),
-            "email": row.get('email'),
+            "email": primary_email or fallback_email,
         }
     finally:
         cur.close()

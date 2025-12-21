@@ -137,6 +137,9 @@ export const generateDownloadLink = (plan_id: string) =>
 export const downloadPlanFile = (download_token: string) =>
   api.get(`/customer/plans/download/${download_token}`, { responseType: 'blob' });
 
+export const designerDownloadPlan = (plan_id: string) =>
+  api.get(`/creator/plans/${plan_id}/download`, { responseType: 'blob' });
+
 export const verifyPaystackPayment = (reference: string) =>
   api.post(`/customer/payments/paystack/verify/${reference}`);
 

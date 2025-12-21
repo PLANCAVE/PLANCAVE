@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import psycopg
 from psycopg.rows import dict_row
@@ -9,6 +9,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.auth_utils import get_current_user, require_designer, check_plan_ownership
+from utils.download_helpers import fetch_plan_bundle, build_plan_zip
 
 creator_tools_bp = Blueprint('creator_tools', __name__, url_prefix='/creator')
 
@@ -284,6 +285,48 @@ def get_my_plans():
         return jsonify(error=str(e)), 500
     finally:
         cur.close()
+        conn.close()
+
+
+@creator_tools_bp.route('/plans/<plan_id>/download', methods=['GET'])
+@jwt_required()
+@require_designer
+def designer_download_plan(plan_id):
+    """Allow designers to download their own plan bundle as a ZIP."""
+    user_id, _ = get_current_user()
+
+    conn = get_db()
+
+    try:
+        if not check_plan_ownership(plan_id, user_id, conn):
+            return jsonify(message="Plan not found or access denied"), 403
+
+        bundle = fetch_plan_bundle(plan_id, conn)
+        if not bundle:
+            return jsonify(message="Plan not found"), 404
+
+        if not bundle.get('files'):
+            return jsonify(message="No technical files available for this plan"), 404
+
+        zip_buffer, download_name, files_added = build_plan_zip(bundle)
+
+        if files_added == 0:
+            return jsonify(message="Plan files could not be located on the server"), 404
+
+        zip_buffer.seek(0)
+        response = send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=download_name or f"{bundle['plan'].get('name') or 'plan'}-technical-files.zip"
+        )
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    except Exception as e:
+        current_app.logger.error(f"Designer download failed for plan {plan_id}: {e}")
+        return jsonify(error=str(e)), 500
+    finally:
         conn.close()
 
 

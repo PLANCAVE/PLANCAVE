@@ -120,6 +120,9 @@ export const browsePlans = (params?: Record<string, any>) =>
 export const getPlanDetails = (id: string) =>
   api.get(`/plans/${id}/details`);
 
+export const trackPlanView = (plan_id: string, user_id?: number | null) =>
+  api.post(`/creator/plans/${plan_id}/track-view`, { user_id: user_id ?? null });
+
 // Customer
 export const purchasePlan = (
   plan_id: string,

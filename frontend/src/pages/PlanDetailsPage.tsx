@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPlanDetails, adminDownloadPlan, designerDownloadPlan, purchasePlan, verifyPurchase, verifyPaystackPayment } from '../api';
+import { getPlanDetails, adminDownloadPlan, designerDownloadPlan, purchasePlan, verifyPurchase, verifyPaystackPayment, trackPlanView } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
 import {
@@ -314,6 +314,15 @@ export default function PlanDetailsPage() {
       checkPurchaseStatus();
     }
   }, [plan, isAuthenticated]);
+
+  // Track a view whenever the plan details page is opened.
+  // Without this, analytics can show 0 views even when sales/downloads exist.
+  useEffect(() => {
+    if (!id) return;
+    trackPlanView(id, user?.id ?? null).catch(() => {
+      // best-effort only
+    });
+  }, [id]);
 
   // Handle keyboard navigation in fullscreen
   useEffect(() => {

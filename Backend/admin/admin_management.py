@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 import psycopg
 from psycopg.rows import dict_row
 from datetime import datetime, timedelta
+import json
 import sys
 import os
 
@@ -208,15 +209,15 @@ def list_purchases():
         cur.execute(f"SELECT COUNT(*) AS count FROM purchases p WHERE {where_sql}", tuple(values))
         total = int((cur.fetchone() or {}).get('count') or 0)
 
-        cur.execute(
-            f"""
+        select_sql = f"""
             SELECT
                 p.id,
-                p.order_id,
+                COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id,
                 p.user_id,
                 u.username AS user_email,
                 p.plan_id,
                 pl.name AS plan_name,
+                pl.deliverable_prices,
                 p.amount,
                 p.payment_method,
                 p.payment_status,
@@ -243,12 +244,99 @@ def list_purchases():
             WHERE {where_sql}
             ORDER BY p.purchased_at DESC
             LIMIT %s OFFSET %s
-            """,
-            tuple(values + [limit, offset])
-        )
+        """
+
+        try:
+            cur.execute(select_sql, tuple(values + [limit, offset]))
+        except Exception as e:
+            # Backward-compat: older DBs may not have download_tokens.purchase_id.
+            if 'purchase_id' in str(e) and 'does not exist' in str(e):
+                select_sql = f"""
+                    SELECT
+                        p.id,
+                        COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id,
+                        p.user_id,
+                        u.username AS user_email,
+                        p.plan_id,
+                        pl.name AS plan_name,
+                        pl.deliverable_prices,
+                        p.amount,
+                        p.payment_method,
+                        p.payment_status,
+                        p.transaction_id,
+                        p.purchased_at AS purchased_at,
+                        p.selected_deliverables,
+                        p.payment_metadata,
+                        p.admin_confirmed_at,
+                        p.admin_confirmed_by,
+                        dt.total_tokens AS download_tokens_generated,
+                        dt.used_tokens AS download_tokens_used,
+                        dt.last_downloaded_at
+                    FROM purchases p
+                    JOIN users u ON p.user_id = u.id
+                    JOIN plans pl ON p.plan_id = pl.id
+                    LEFT JOIN LATERAL (
+                        SELECT
+                            COUNT(*) AS total_tokens,
+                            COUNT(*) FILTER (WHERE used) AS used_tokens,
+                            MAX(created_at) FILTER (WHERE used) AS last_downloaded_at
+                        FROM download_tokens dt
+                        WHERE dt.user_id = p.user_id AND dt.plan_id = p.plan_id
+                    ) dt ON TRUE
+                    WHERE {where_sql}
+                    ORDER BY p.purchased_at DESC
+                    LIMIT %s OFFSET %s
+                """
+                cur.execute(select_sql, tuple(values + [limit, offset]))
+            else:
+                raise
         purchases = []
         for row in cur.fetchall():
             record = dict(row)
+
+            # Normalize deliverable_prices + selected_deliverables and compute full/partial purchase.
+            deliverable_prices = record.get('deliverable_prices')
+            if isinstance(deliverable_prices, str):
+                try:
+                    deliverable_prices = json.loads(deliverable_prices)
+                except Exception:
+                    deliverable_prices = None
+
+            priced_keys = set()
+            if isinstance(deliverable_prices, dict):
+                for k, v in deliverable_prices.items():
+                    try:
+                        n = 0 if v is None or v == '' else float(v)
+                    except Exception:
+                        n = 0
+                    if isinstance(k, str) and n > 0:
+                        priced_keys.add(k)
+
+            raw_sel = record.get('selected_deliverables')
+            if isinstance(raw_sel, str):
+                try:
+                    raw_sel = json.loads(raw_sel)
+                except Exception:
+                    raw_sel = raw_sel
+
+            selected_list = []
+            if raw_sel is None:
+                selected_list = None
+            elif isinstance(raw_sel, list):
+                selected_list = [str(x) for x in raw_sel if isinstance(x, (str, int, float))]
+            else:
+                selected_list = raw_sel
+
+            full_purchase = False
+            if selected_list is None:
+                full_purchase = True
+            elif selected_list == []:
+                full_purchase = True
+            elif priced_keys and isinstance(selected_list, list) and priced_keys.issubset(set(selected_list)):
+                full_purchase = True
+
+            record['full_purchase'] = bool(full_purchase)
+            record['purchase_type'] = 'full' if full_purchase else 'partial'
 
             amount = record.get('amount')
             if amount is not None:

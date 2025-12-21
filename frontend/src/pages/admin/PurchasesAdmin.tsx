@@ -15,6 +15,8 @@ interface PurchaseRow {
   transaction_id: string | null;
   purchased_at: string | null;
   selected_deliverables?: string[] | null;
+  purchase_type?: 'full' | 'partial' | null;
+  full_purchase?: boolean | null;
   payment_metadata?: any;
   admin_confirmed_at?: string | null;
   admin_confirmed_by?: number | null;
@@ -337,6 +339,7 @@ export default function PurchasesAdmin() {
                 <tr>
                   <th className="px-4 py-3">Buyer</th>
                   <th className="px-4 py-3">Plan</th>
+                  <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">Deliverables</th>
                   <th className="px-4 py-3">Amount</th>
                   <th className="px-4 py-3">Payment</th>
@@ -367,6 +370,21 @@ export default function PurchasesAdmin() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold border ${
+                        purchase.purchase_type === 'full'
+                          ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30'
+                          : purchase.purchase_type === 'partial'
+                            ? 'bg-amber-500/15 text-amber-100 border-amber-400/30'
+                            : 'bg-white/10 text-white/70 border-white/15'
+                      }`}>
+                        {purchase.purchase_type === 'full'
+                          ? 'Full'
+                          : purchase.purchase_type === 'partial'
+                            ? 'Partial'
+                            : '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
                       {purchase.selected_deliverables && purchase.selected_deliverables.length ? (
                         <div className="flex flex-wrap gap-2">
                           {purchase.selected_deliverables.map((item) => (
@@ -379,7 +397,9 @@ export default function PurchasesAdmin() {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-white/40">—</span>
+                        <span className="text-white/70 text-xs">
+                          {purchase.purchase_type === 'full' || purchase.full_purchase ? 'Full plan' : '—'}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 font-semibold text-emerald-300">
@@ -642,6 +662,9 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
               <p className="text-xs text-white/60">Tokens Generated: {purchase.download_tokens_generated ?? 0}</p>
               <p className="text-xs text-white/60">Tokens Used: {purchase.download_tokens_used ?? 0}</p>
               <p className="text-xs text-white/60">Download Status: {purchase.download_status ?? 'unknown'}</p>
+              <p className="text-xs text-white/60">
+                Purchase Type: {purchase.purchase_type ? purchase.purchase_type.toUpperCase() : (purchase.full_purchase ? 'FULL' : '—')}
+              </p>
             </div>
           </section>
 
@@ -659,7 +682,9 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
                 ))}
               </div>
             ) : (
-              <p className="mt-2 text-xs text-white/50">No deliverables were selected.</p>
+              <p className="mt-2 text-xs text-white/50">
+                {purchase.purchase_type === 'full' || purchase.full_purchase ? 'Full plan purchase (all deliverables).' : 'No deliverables were selected.'}
+              </p>
             )}
           </section>
 

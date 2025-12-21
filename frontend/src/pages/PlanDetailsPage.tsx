@@ -597,6 +597,12 @@ export default function PlanDetailsPage() {
         return Number.isFinite(n) && n > 0;
       })
     : [];
+  const freeDeliverables = deliverablePrices
+    ? Object.entries(deliverablePrices).filter(([, value]) => {
+        const n = value === '' || value === null || value === undefined ? 0 : Number(value);
+        return Number.isFinite(n) && n === 0;
+      })
+    : [];
   const hasAnyDeliverables = Boolean(deliverablePrices && pricedDeliverables.length > 0);
   const remainingDeliverablesCount = (() => {
     if (!hasAnyDeliverables) return 0;
@@ -831,7 +837,7 @@ export default function PlanDetailsPage() {
               </div>
             )}
 
-            {!isAdmin && deliverablePrices && pricedDeliverables.length > 0 && (
+            {!isAdmin && deliverablePrices && (pricedDeliverables.length > 0 || freeDeliverables.length > 0) && (
               <div className="mt-10">
                 <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-6 shadow-sm">
                   <div className="flex items-center justify-between gap-4 mb-4">
@@ -846,6 +852,11 @@ export default function PlanDetailsPage() {
                       <div className="text-sm text-slate-600 mt-1 max-w-xl">
                         Select only the disciplines you need. Your total updates as you make changes.
                       </div>
+                      {freeDeliverables.length > 0 ? (
+                        <div className="mt-2 text-xs text-slate-600">
+                          Free items are included automatically in your download.
+                        </div>
+                      ) : null}
                       {purchaseStatus === 'purchased' ? (
                         <div className="text-xs text-slate-500 mt-2">
                           {fullPurchase
@@ -863,6 +874,57 @@ export default function PlanDetailsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {freeDeliverables.map(([key]) => {
+                      const label = key.replace(/_/g, ' ');
+                      const isActuallyPurchased = purchasedDeliverables.includes(key);
+                      const shouldShowAsPurchased = Boolean(fullPurchase || isActuallyPurchased);
+                      return (
+                        <div
+                          key={key}
+                          className="relative flex items-start gap-4 rounded-2xl border-2 p-5 transition-all duration-200 overflow-hidden border-slate-200 bg-white"
+                        >
+                          <div className="absolute inset-0 opacity-5">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-teal-500"></div>
+                          </div>
+
+                          <div className="relative z-10">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 relative z-10 pr-8">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <h4 className="text-base font-semibold text-slate-900 capitalize leading-tight">
+                                  {label}
+                                </h4>
+                                <p className="text-xs text-slate-600 mt-1">
+                                  {shouldShowAsPurchased ? 'Purchased (included)' : 'Included for free'}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-emerald-700">Free</div>
+                                {shouldShowAsPurchased ? (
+                                  <div className="text-xs text-emerald-700 font-medium mt-1">✓ Owned</div>
+                                ) : (
+                                  <div className="text-xs text-emerald-700 font-medium mt-1">✓ Included</div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="absolute top-5 right-5 w-6 h-6 rounded-full bg-emerald-600 text-white shadow-lg z-20">
+                            <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      );
+                    })}
+
                     {pricedDeliverables.map(([key, value]) => {
                       const n = value === '' || value === null || value === undefined ? 0 : Number(value);
                       const isPurchased = Boolean(fullPurchase || purchasedDeliverables.includes(key));

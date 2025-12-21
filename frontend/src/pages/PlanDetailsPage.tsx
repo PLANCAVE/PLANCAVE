@@ -681,7 +681,7 @@ export default function PlanDetailsPage() {
               <div className="mb-4">
                 <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
                   <CheckCircle className="w-4 h-4" />
-                  Purchased
+                  {fullPurchase ? 'Purchased' : 'Partially Purchased'}
                 </span>
               </div>
             ) : null}
@@ -840,6 +840,11 @@ export default function PlanDetailsPage() {
                       const checked = isPurchased || selectedDeliverables.includes(key);
                       const label = key.replace(/_/g, ' ');
                       
+                      // For partial owners: only purchased items are marked purchased; remaining items are selectable
+                      const isActuallyPurchased = purchasedDeliverables.includes(key);
+                      const shouldShowAsPurchased = isActuallyPurchased;
+                      const shouldBeChecked = isActuallyPurchased || selectedDeliverables.includes(key);
+                      
                       // Icon mapping for different deliverable types
                       const getIcon = (deliverableKey: string) => {
                         switch (deliverableKey) {
@@ -915,9 +920,9 @@ export default function PlanDetailsPage() {
                         <label
                           key={key}
                           className={`group relative flex items-start gap-4 rounded-2xl border-2 p-5 transition-all duration-200 overflow-hidden ${
-                            isPurchased
+                            shouldShowAsPurchased
                               ? 'border-emerald-200 bg-emerald-50/50 opacity-90 cursor-not-allowed'
-                              : checked
+                              : shouldBeChecked
                                 ? 'border-teal-400 bg-gradient-to-br from-teal-50 via-white to-blue-50 shadow-lg scale-[1.02] cursor-pointer'
                                 : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md hover:scale-[1.01] cursor-pointer'
                           }`}
@@ -936,10 +941,10 @@ export default function PlanDetailsPage() {
                           {/* Hidden checkbox */}
                           <input
                             type="checkbox"
-                            checked={checked}
-                            disabled={isPurchased}
+                            checked={shouldBeChecked}
+                            disabled={shouldShowAsPurchased}
                             onChange={(e) => {
-                              if (isPurchased) return;
+                              if (shouldShowAsPurchased) return;
                               selectionTouchedRef.current = true;
                               setSelectedDeliverables((prev) => {
                                 if (e.target.checked) return Array.from(new Set([...prev, key]));
@@ -962,16 +967,16 @@ export default function PlanDetailsPage() {
                                   {label}
                                 </h4>
                                 <p className="text-xs text-slate-600 mt-1">
-                                  {isPurchased ? 'Purchased' : checked ? 'Selected' : 'Add to your plan'}
+                                  {shouldShowAsPurchased ? 'Purchased' : shouldBeChecked ? 'Selected' : 'Add to your plan'}
                                 </p>
                               </div>
                               <div className="text-right">
                                 <div className="text-lg font-bold text-slate-900">
                                   $ {Number.isFinite(n) ? n.toLocaleString() : '—'}
                                 </div>
-                                {isPurchased ? (
+                                {shouldShowAsPurchased ? (
                                   <div className="text-xs text-emerald-700 font-medium mt-1">✓ Purchased</div>
-                                ) : checked ? (
+                                ) : shouldBeChecked ? (
                                   <div className="text-xs text-teal-600 font-medium mt-1">✓ Selected</div>
                                 ) : null}
                               </div>
@@ -980,13 +985,13 @@ export default function PlanDetailsPage() {
                           
                           {/* Check indicator */}
                           <div className={`absolute top-5 right-5 w-6 h-6 rounded-full transition-all duration-200 z-20 ${
-                            isPurchased
+                            shouldShowAsPurchased
                               ? 'bg-emerald-600 text-white shadow-lg'
-                              : checked
+                              : shouldBeChecked
                                 ? 'bg-teal-500 text-white shadow-lg'
                                 : 'bg-white border-2 border-slate-300 text-transparent'
                           }`}>
-                            {checked && (
+                            {shouldBeChecked && (
                               <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                               </svg>

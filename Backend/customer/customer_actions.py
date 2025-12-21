@@ -13,6 +13,8 @@ import json
 import requests
 import hmac
 import hashlib
+import smtplib
+from email.message import EmailMessage
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.auth_utils import get_current_user, log_user_activity, increment_user_quota
@@ -41,6 +43,55 @@ PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
 PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL')
 PAYSTACK_WEBHOOK_SECRET = os.environ.get('PAYSTACK_SECRET_KEY')
 PAYSTACK_CURRENCY = os.environ.get('PAYSTACK_CURRENCY', 'USD')
+
+
+def _build_app_url(path: str) -> str:
+    base = (os.getenv("APP_BASE_URL") or os.getenv("FRONTEND_URL") or "").rstrip("/")
+    if not base:
+        return path
+    if not path.startswith('/'):
+        path = '/' + path
+    return base + path
+
+
+def _send_email(to_email: str, subject: str, html_body: str) -> None:
+    mail_server = os.getenv("MAIL_SERVER")
+    mail_port = int(os.getenv("MAIL_PORT", "587"))
+    mail_username = os.getenv("MAIL_USERNAME")
+    mail_password = os.getenv("MAIL_PASSWORD")
+    default_sender = os.getenv("MAIL_DEFAULT_SENDER") or mail_username
+    use_tls = (os.getenv("MAIL_USE_TLS", "true").lower() in {"1", "true", "yes", "y"})
+    use_ssl = (os.getenv("MAIL_USE_SSL", "false").lower() in {"1", "true", "yes", "y"})
+
+    if not mail_server or not mail_username or not mail_password or not default_sender:
+        raise RuntimeError("SMTP env vars not configured (MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER)")
+
+    msg = EmailMessage()
+    msg["From"] = default_sender
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content("This email requires an HTML-capable client.")
+    msg.add_alternative(html_body, subtype="html")
+
+    if use_ssl:
+        server = smtplib.SMTP_SSL(mail_server, mail_port, timeout=20)
+    else:
+        server = smtplib.SMTP(mail_server, mail_port, timeout=20)
+
+    try:
+        if use_tls and not use_ssl:
+            server.starttls()
+        server.login(mail_username, mail_password)
+        server.send_message(msg)
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            pass
+
+
+def _generate_order_id() -> str:
+    return 'ORD-' + uuid.uuid4().hex[:10].upper()
 
 
 def resolve_plan_file_path(file_path: str) -> str | None:
@@ -108,7 +159,9 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
 
     cur.execute(
         """
-        SELECT p.id, p.user_id, p.plan_id, p.amount, p.payment_status, pl.price, pl.sales_count
+        SELECT p.id, p.user_id, p.plan_id, p.amount, p.payment_status,
+               p.order_id,
+               pl.price, pl.sales_count
         FROM purchases p
         JOIN plans pl ON p.plan_id = pl.id
         WHERE p.transaction_id = %s
@@ -190,6 +243,27 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
         """,
         (purchase['plan_id'],)
     )
+
+    # Ensure purchase has a stable external order id
+    if not purchase.get('order_id'):
+        for _ in range(3):
+            try:
+                order_id = _generate_order_id()
+                cur.execute(
+                    """
+                    UPDATE purchases
+                    SET order_id = %s
+                    WHERE id = %s AND order_id IS NULL
+                    RETURNING order_id
+                    """,
+                    (order_id, purchase['id'])
+                )
+                row = cur.fetchone()
+                if row and row.get('order_id'):
+                    purchase['order_id'] = row.get('order_id')
+                    break
+            except Exception:
+                continue
 
     return True, ("Payment verified and purchase activated", 200)
 
@@ -354,14 +428,17 @@ def purchase_plan():
                 return jsonify(message=f"Failed to start Paystack payment: {e}"), 502
 
             purchase_id = str(uuid.uuid4())
+            order_id = _generate_order_id()
             cur.execute("""
                 INSERT INTO purchases (
                     id, user_id, plan_id, amount, payment_method,
-                    payment_status, transaction_id, selected_deliverables
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    payment_status, transaction_id, selected_deliverables,
+                    order_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 purchase_id, user_id, plan_id, amount,
-                payment_method, 'pending', reference, json.dumps(normalized_selection) if normalized_selection is not None else None
+                payment_method, 'pending', reference, json.dumps(normalized_selection) if normalized_selection is not None else None,
+                order_id
             ))
 
             conn.commit()
@@ -370,7 +447,8 @@ def purchase_plan():
                 "status": "pending",
                 "authorization_url": authorization_url,
                 "reference": reference,
-                "purchase_id": purchase_id
+                "purchase_id": purchase_id,
+                "order_id": order_id
             }), 201
 
         # Reject non-Paystack payment methods
@@ -958,7 +1036,8 @@ def generate_download_link():
 
         # Quota check removed - paying customers get unlimited downloads
 
-        # Invalidate previous unused tokens for the same plan/user
+        # Invalidate previous unused tokens for the same plan/user so the newly generated
+        # link is the single usable link.
         cur.execute(
             "UPDATE download_tokens SET used = TRUE WHERE user_id = %s AND plan_id = %s AND used = FALSE",
             (user_id, plan_id)
@@ -977,6 +1056,49 @@ def generate_download_link():
             # Single-use download only
             (user_id, plan_id, token, expires_at, 1)
         )
+
+        # Email the same link the app returns (best-effort)
+        try:
+            cur.execute(
+                """
+                SELECT p.id, p.order_id, pl.name AS plan_name, p.amount
+                FROM purchases p
+                JOIN plans pl ON p.plan_id = pl.id
+                WHERE p.user_id = %s AND p.plan_id = %s AND p.payment_status = 'completed'
+                ORDER BY p.purchased_at DESC NULLS LAST
+                LIMIT 1
+                """,
+                (user_id, plan_id)
+            )
+            purchase_row = cur.fetchone() or {}
+            contact = fetch_user_contact(user_id, conn) or {}
+            to_email = (contact.get('email') or '').strip()
+            if to_email:
+                download_url = _build_app_url(f"/api/customer/plans/download/{token}")
+                subject = f"Your download link {purchase_row.get('order_id') or ''}".strip()
+                html = (
+                    "<div style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial'>"
+                    "<h2 style='margin:0 0 12px'>Your download link is ready</h2>"
+                    f"<p style='margin:0 0 8px'>Order ID: <strong>{purchase_row.get('order_id') or '—'}</strong></p>"
+                    f"<p style='margin:0 0 8px'>Plan: <strong>{purchase_row.get('plan_name') or plan_id}</strong></p>"
+                    f"<p style='margin:0 0 16px'>Amount: <strong>{purchase_row.get('amount') or ''}</strong></p>"
+                    "<p style='margin:0 0 16px'>This is your one-time download link:</p>"
+                    f"<p><a href='{download_url}' style='display:inline-block;padding:10px 14px;background:#0f766e;color:#fff;text-decoration:none;border-radius:8px'>Download your files</a></p>"
+                    f"<p style='color:#64748b;font-size:12px'>If the button doesn't work, copy and paste: {download_url}</p>"
+                    "</div>"
+                )
+                _send_email(to_email, subject, html)
+                if purchase_row.get('id'):
+                    cur.execute(
+                        """
+                        UPDATE purchases
+                        SET confirmation_email_sent_at = NOW()
+                        WHERE id = %s
+                        """,
+                        (purchase_row.get('id'),)
+                    )
+        except Exception as e:
+            current_app.logger.error(f"Failed to send download link email for user {user_id} plan {plan_id}: {e}")
 
         conn.commit()
 
@@ -1323,6 +1445,7 @@ def get_my_purchases():
         cur.execute("""
             SELECT 
                 p.id, p.user_id, p.plan_id, p.amount, p.payment_method, p.payment_status,
+                p.order_id,
                 p.transaction_id, p.purchased_at, p.selected_deliverables,
                 p.admin_confirmed_at, p.admin_confirmed_by,
                 pl.name as plan_name, pl.category, pl.image_url,

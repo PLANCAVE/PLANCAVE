@@ -212,6 +212,7 @@ def list_purchases():
             f"""
             SELECT
                 p.id,
+                p.order_id,
                 p.user_id,
                 u.username AS user_email,
                 p.plan_id,

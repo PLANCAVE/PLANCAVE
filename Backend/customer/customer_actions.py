@@ -160,7 +160,7 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     cur.execute(
         """
         SELECT p.id, p.user_id, p.plan_id, p.amount, p.payment_status,
-               p.order_id,
+               COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id,
                pl.price, pl.sales_count
         FROM purchases p
         JOIN plans pl ON p.plan_id = pl.id
@@ -244,26 +244,21 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
         (purchase['plan_id'],)
     )
 
-    # Ensure purchase has a stable external order id
+    # Ensure purchase has a stable external order id stored in payment_metadata
     if not purchase.get('order_id'):
-        for _ in range(3):
-            try:
-                order_id = _generate_order_id()
-                cur.execute(
-                    """
-                    UPDATE purchases
-                    SET order_id = %s
-                    WHERE id = %s AND order_id IS NULL
-                    RETURNING order_id
-                    """,
-                    (order_id, purchase['id'])
-                )
-                row = cur.fetchone()
-                if row and row.get('order_id'):
-                    purchase['order_id'] = row.get('order_id')
-                    break
-            except Exception:
-                continue
+        try:
+            order_id = _generate_order_id()
+            cur.execute(
+                """
+                UPDATE purchases
+                SET payment_metadata = COALESCE(payment_metadata, '{}'::jsonb) || jsonb_build_object('order_id', %s)
+                WHERE id = %s
+                """,
+                (order_id, purchase['id'])
+            )
+            purchase['order_id'] = order_id
+        except Exception:
+            pass
 
     return True, ("Payment verified and purchase activated", 200)
 
@@ -461,12 +456,12 @@ def purchase_plan():
                 INSERT INTO purchases (
                     id, user_id, plan_id, amount, payment_method,
                     payment_status, transaction_id, selected_deliverables,
-                    order_id
+                    payment_metadata
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 purchase_id, user_id, plan_id, amount,
                 payment_method, 'pending', reference, json.dumps(normalized_selection) if normalized_selection is not None else None,
-                order_id
+                json.dumps({"order_id": order_id})
             ))
 
             conn.commit()
@@ -1025,7 +1020,7 @@ def generate_download_link():
         if purchase_id:
             cur.execute(
                 """
-                SELECT p.id, p.plan_id, p.order_id, p.amount, p.user_id, p.payment_status, pl.name AS plan_name, pl.designer_id
+                SELECT p.id, p.plan_id, COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id, p.amount, p.user_id, p.payment_status, pl.name AS plan_name, pl.designer_id
                 FROM purchases p
                 JOIN plans pl ON p.plan_id = pl.id
                 WHERE p.id = %s
@@ -1056,7 +1051,7 @@ def generate_download_link():
             if not purchase_id:
                 cur.execute(
                     """
-                    SELECT id, order_id, amount, purchased_at
+                    SELECT id, COALESCE(payment_metadata->>'order_id', NULL) AS order_id, amount, purchased_at
                     FROM purchases
                     WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
                     ORDER BY purchased_at DESC NULLS LAST
@@ -1134,7 +1129,7 @@ def generate_download_link():
             if not purchase_row and purchase_id:
                 cur.execute(
                     """
-                    SELECT p.id, p.order_id, pl.name AS plan_name, p.amount
+                    SELECT p.id, COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id, pl.name AS plan_name, p.amount
                     FROM purchases p
                     JOIN plans pl ON p.plan_id = pl.id
                     WHERE p.id = %s
@@ -1145,7 +1140,7 @@ def generate_download_link():
             if not purchase_row:
                 cur.execute(
                     """
-                    SELECT p.id, p.order_id, pl.name AS plan_name, p.amount
+                    SELECT p.id, COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id, pl.name AS plan_name, p.amount
                     FROM purchases p
                     JOIN plans pl ON p.plan_id = pl.id
                     WHERE p.user_id = %s AND p.plan_id = %s AND p.payment_status = 'completed'
@@ -1541,14 +1536,15 @@ def get_my_purchases():
         cur.execute("""
             SELECT 
                 p.id, p.user_id, p.plan_id, p.amount, p.payment_method, p.payment_status,
-                p.order_id,
+                COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id,
                 p.transaction_id, p.purchased_at, p.selected_deliverables,
                 p.admin_confirmed_at, p.admin_confirmed_by,
                 pl.name as plan_name, pl.category, pl.image_url,
-                u.username, u.email as user_email
+                pl.designer_id, pl.designer_name,
+                pl.project_type, pl.package_level,
+                pl.price as plan_price
             FROM purchases p
             JOIN plans pl ON p.plan_id = pl.id
-            JOIN users u ON p.user_id = u.id
             WHERE p.user_id = %s
             ORDER BY p.purchased_at DESC
             LIMIT %s OFFSET %s

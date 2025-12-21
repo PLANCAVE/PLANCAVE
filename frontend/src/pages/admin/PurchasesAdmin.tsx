@@ -629,6 +629,8 @@ export default function PurchasesAdmin() {
           onConfirmReference={(ref) => handleConfirmPayment(ref)}
           verifyingReference={verifyingPayment}
           confirmingReference={confirmingPayment}
+          errorMessage={error}
+          successMessage={success}
           onClose={() => setSelectedPurchase(null)}
         />
       ) : null}
@@ -657,6 +659,8 @@ function PurchaseDetailModal({
   onConfirmReference,
   verifyingReference,
   confirmingReference,
+  errorMessage,
+  successMessage,
   onClose,
 }: {
   purchase: PurchaseRow;
@@ -666,6 +670,8 @@ function PurchaseDetailModal({
   onConfirmReference: (ref: string) => void;
   verifyingReference: string | null;
   confirmingReference: string | null;
+  errorMessage: string | null;
+  successMessage: string | null;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -730,6 +736,18 @@ function PurchaseDetailModal({
         </header>
 
         <div className="p-6 space-y-6 text-white/90 text-sm overflow-y-auto">
+          {errorMessage ? (
+            <div className="p-4 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-200">
+              {errorMessage}
+            </div>
+          ) : null}
+
+          {successMessage ? (
+            <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-100">
+              {successMessage}
+            </div>
+          ) : null}
+
           <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
               <p className="text-xs uppercase tracking-[0.3em] text-white/60">Buyer</p>

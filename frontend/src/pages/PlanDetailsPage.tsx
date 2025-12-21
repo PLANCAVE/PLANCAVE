@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getPlanDetails, adminDownloadPlan, designerDownloadPlan, purchasePlan, verifyPurchase, verifyPaystackPayment, trackPlanView } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCustomerData } from '../contexts/CustomerDataContext';
@@ -75,6 +75,7 @@ interface PlanDetailsData {
 export default function PlanDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, isAdmin, isDesigner, user } = useAuth();
   const { favorites, addFavorite, removeFavorite, cartItems, addCartItem } = useCustomerData();
   const [plan, setPlan] = useState<PlanDetailsData | null>(null);
@@ -1331,7 +1332,7 @@ export default function PlanDetailsPage() {
                   </button>
                 ) : !isAuthenticated ? (
                   <button
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate('/login', { state: { from: location.pathname + location.search } })}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-white/20 text-white/80 hover:text-white"
                   >
                     <ShoppingCart className="w-4 h-4" />

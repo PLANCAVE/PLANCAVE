@@ -33,7 +33,8 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate('/plans');
+      const from = (location.state as any)?.from as string | undefined;
+      navigate(from || '/plans');
     } catch (err: any) {
       // Show detailed error messages
       if (err.response) {

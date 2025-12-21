@@ -395,7 +395,7 @@ export default function Landing() {
                 <p className="mt-2 text-sm text-white/90 line-clamp-3">{currentPlan?.description}</p>
                 <div className="mt-3 flex flex-wrap gap-2 text-[0.55rem] uppercase tracking-[0.35em] text-white/90">
                   <span className="px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
-                    KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
+                    $ {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
                   </span>
                   <span className={`px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
                     {currentPlan?.package_level?.toUpperCase()}
@@ -490,7 +490,7 @@ export default function Landing() {
                   </div>
                   <div className="flex flex-wrap gap-2 text-[0.5rem] uppercase tracking-[0.35em] text-white/90">
                     <span className="px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
-                      KSH {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
+                      $ {currentPlan ? Number(currentPlan.price).toLocaleString() : ''}
                     </span>
                     <span className={`px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm ${currentPlan ? getPackageBadgeColor(currentPlan.package_level) : ''}`}>
                       {currentPlan?.package_level?.toUpperCase()}

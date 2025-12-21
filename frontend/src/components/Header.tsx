@@ -144,7 +144,7 @@ export default function Header() {
                     className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-2"
                   >
                     <LayoutDashboard className="w-4 h-4" />
-                    <span className="hidden lg:inline">Dashboard</span>
+                    <span>Dashboard</span>
                   </Link>
 
                   {canSeePurchases ? (
@@ -152,7 +152,7 @@ export default function Header() {
                       to="/purchases"
                       className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                     >
-                      <span className="hidden lg:inline">Purchases</span>
+                      <span>Purchases</span>
                     </Link>
                   ) : null}
                 </div>

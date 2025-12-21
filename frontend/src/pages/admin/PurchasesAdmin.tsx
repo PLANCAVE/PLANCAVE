@@ -145,7 +145,12 @@ export default function PurchasesAdmin() {
   const [selectedPaystackReference, setSelectedPaystackReference] = useState<string | null>(null);
 
   const totalRevenue = useMemo(() => {
-    return purchases.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+    return purchases.reduce((sum, row) => {
+      if (row.payment_status === 'completed') {
+        return sum + (Number(row.amount) || 0);
+      }
+      return sum;
+    }, 0);
   }, [purchases]);
 
   useEffect(() => {

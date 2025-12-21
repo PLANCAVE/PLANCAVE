@@ -102,6 +102,29 @@ const formatMetadata = (raw: unknown): string | null => {
   return String(raw);
 };
 
+const extractPaystackRefs = (raw: unknown): { refs: string[]; last: string | null } => {
+  let meta: any = raw;
+  if (!meta) return { refs: [], last: null };
+  if (typeof meta === 'string') {
+    try {
+      meta = JSON.parse(meta);
+    } catch {
+      meta = null;
+    }
+  }
+  if (!meta || typeof meta !== 'object') return { refs: [], last: null };
+
+  const refsRaw = (meta as any).paystack_references;
+  const lastRaw = (meta as any).paystack_last_reference;
+  const refs = Array.isArray(refsRaw)
+    ? refsRaw.map((x: any) => String(x)).filter(Boolean)
+    : [];
+  const last = lastRaw ? String(lastRaw) : null;
+
+  const uniq = Array.from(new Set(refs));
+  return { refs: uniq, last };
+};
+
 export default function PurchasesAdmin() {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -424,6 +447,16 @@ export default function PurchasesAdmin() {
                       <div className="flex flex-col">
                         <span className="text-white/80">{purchase.order_id || '—'}</span>
                         <span className="text-white/40">{purchase.transaction_id || '—'}</span>
+                        {(() => {
+                          const { refs, last } = extractPaystackRefs(purchase.payment_metadata);
+                          const toShow = refs.length ? refs : (last ? [last] : []);
+                          if (!toShow.length) return null;
+                          return (
+                            <span className="text-white/30 mt-1">
+                              refs: {toShow.slice(0, 2).join(', ')}{toShow.length > 2 ? '…' : ''}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-white/70">
@@ -603,6 +636,7 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
   };
 
   const metadataDisplay = formatMetadata(purchase.payment_metadata);
+  const paystackRefs = extractPaystackRefs(purchase.payment_metadata);
   const deliverables = purchase.selected_deliverables || [];
 
   return (
@@ -659,6 +693,24 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
               <p className="text-xs uppercase tracking-[0.3em] text-white/60">Transaction</p>
               <p className="text-xs text-white/60">Order ID: {purchase.order_id ?? '—'}</p>
               <p className="text-xs text-white/60">Reference: {purchase.transaction_id ?? '—'}</p>
+              {paystackRefs.last ? (
+                <p className="text-xs text-white/60">Last Paystack Ref: {paystackRefs.last}</p>
+              ) : null}
+              {paystackRefs.refs.length ? (
+                <div className="text-xs text-white/60">
+                  <div>Paystack Ref History:</div>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {paystackRefs.refs.map((ref) => (
+                      <span
+                        key={ref}
+                        className="inline-flex items-center rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] text-white/70"
+                      >
+                        {ref}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <p className="text-xs text-white/60">Tokens Generated: {purchase.download_tokens_generated ?? 0}</p>
               <p className="text-xs text-white/60">Tokens Used: {purchase.download_tokens_used ?? 0}</p>
               <p className="text-xs text-white/60">Download Status: {purchase.download_status ?? 'unknown'}</p>

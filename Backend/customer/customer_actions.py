@@ -143,6 +143,32 @@ def _paystack_signature_for(body: bytes) -> str:
     ).hexdigest()
 
 
+def _purchase_for_paystack_reference(cur, reference: str):
+    """Find a purchase row by matching the current transaction_id or any stored historical Paystack reference."""
+    if not reference:
+        return None
+    try:
+        ref_list_json = json.dumps([reference])
+    except Exception:
+        ref_list_json = '[]'
+
+    cur.execute(
+        """
+        SELECT p.id, p.user_id, p.plan_id, p.amount, p.payment_status,
+               p.transaction_id,
+               COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id,
+               p.payment_metadata
+        FROM purchases p
+        WHERE p.transaction_id = %s
+           OR COALESCE(p.payment_metadata->'paystack_references', '[]'::jsonb) @> %s::jsonb
+        ORDER BY p.purchased_at DESC
+        LIMIT 1
+        """,
+        (reference, ref_list_json),
+    )
+    return cur.fetchone()
+
+
 def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     """Mark a Paystack purchase as completed after verifying all invariants."""
     # Paystack returns many intermediate states; only treat a charge as paid when
@@ -157,18 +183,7 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     if not paid_at:
         return False, ("Payment not completed yet (no paid timestamp)", 202)
 
-    cur.execute(
-        """
-        SELECT p.id, p.user_id, p.plan_id, p.amount, p.payment_status,
-               COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id,
-               pl.price, pl.sales_count
-        FROM purchases p
-        JOIN plans pl ON p.plan_id = pl.id
-        WHERE p.transaction_id = %s
-        """,
-        (reference,)
-    )
-    purchase = cur.fetchone()
+    purchase = _purchase_for_paystack_reference(cur, reference)
     if not purchase:
         current_app.logger.error(f"Purchase record not found for reference: {reference}")
         return False, ("Purchase record not found", 404)
@@ -208,29 +223,54 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     if paid_amount_minor != expected_amount_minor:
         return False, ("Payment amount mismatch", 400)
 
+    # Keep reference history and prefer storing the paid reference as transaction_id
+    try:
+        meta = purchase.get('payment_metadata') or {}
+        if isinstance(meta, str):
+            meta = json.loads(meta)
+        if not isinstance(meta, dict):
+            meta = {}
+    except Exception:
+        meta = {}
+
+    refs = meta.get('paystack_references')
+    if not isinstance(refs, list):
+        refs = []
+    if purchase.get('transaction_id') and purchase.get('transaction_id') not in refs:
+        refs.append(purchase.get('transaction_id'))
+    if reference not in refs:
+        refs.append(reference)
+    meta['paystack_references'] = refs
+    meta['paystack_last_reference'] = reference
+
     cur.execute(
         """
         UPDATE purchases
         SET payment_status = 'completed',
-            purchased_at = COALESCE(purchased_at, NOW())
+            purchased_at = COALESCE(purchased_at, NOW()),
+            transaction_id = %s,
+            payment_metadata = COALESCE(payment_metadata, '{}'::jsonb) || %s
         WHERE id = %s
         RETURNING payment_status, purchased_at
         """,
-        (purchase['id'],)
+        (reference, json.dumps(meta), purchase['id'],)
     )
     updated_row = cur.fetchone()
     if not updated_row or (updated_row.get('payment_status') if isinstance(updated_row, dict) else updated_row[0]) != 'completed':
         current_app.logger.error(f"Purchase {reference} failed to update to completed; row={updated_row}")
         return False, ("Failed to update purchase status", 500)
 
+    # Store full Paystack payload (keep our own fields too)
     try:
+        merged = dict(meta)
+        merged['paystack'] = paystack_data
         cur.execute(
             """
             UPDATE purchases
             SET payment_metadata = %s
             WHERE id = %s
             """,
-            (json.dumps(paystack_data), purchase['id'])
+            (json.dumps(merged), purchase['id'])
         )
     except Exception:
         pass
@@ -462,7 +502,7 @@ def purchase_plan():
             insert_params = (
                 purchase_id, user_id, plan_id, amount,
                 payment_method, 'pending', reference, json.dumps(normalized_selection) if normalized_selection is not None else None,
-                json.dumps({"order_id": order_id})
+                json.dumps({"order_id": order_id, "paystack_references": [reference], "paystack_last_reference": reference})
             )
 
             try:
@@ -681,18 +721,10 @@ def verify_paystack(reference: str):
             return jsonify(message="Payment verification reference mismatch"), 400
 
         # Ensure the authenticated user is allowed to verify this reference
-        cur.execute(
-            """
-            SELECT user_id, plan_id
-            FROM purchases
-            WHERE transaction_id = %s
-            """,
-            (reference,)
-        )
-        owner = cur.fetchone()
-        if not owner:
+        purchase = _purchase_for_paystack_reference(cur, reference)
+        if not purchase:
             return jsonify(message="Purchase record not found"), 404
-        if user_id is not None and int(owner['user_id']) != int(user_id) and role != 'admin':
+        if user_id is not None and int(purchase['user_id']) != int(user_id) and role != 'admin':
             return jsonify(message="Not authorized to verify this purchase"), 403
 
         ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)
@@ -703,7 +735,7 @@ def verify_paystack(reference: str):
         conn.commit()
         return jsonify({
             "message": msg,
-            "plan_id": str(owner['plan_id']),
+            "plan_id": str(purchase['plan_id']),
             "transaction_id": reference
         }), 200
 
@@ -751,17 +783,8 @@ def admin_verify_paystack(reference: str):
         if paystack_reference and str(paystack_reference) != str(reference):
             return jsonify(message="Payment verification reference mismatch"), 400
 
-        # Get purchase details
-        cur.execute(
-            """
-            SELECT user_id, plan_id
-            FROM purchases
-            WHERE transaction_id = %s
-            """,
-            (reference,)
-        )
-        owner = cur.fetchone()
-        if not owner:
+        purchase = _purchase_for_paystack_reference(cur, reference)
+        if not purchase:
             return jsonify(message="Purchase record not found"), 404
 
         ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)
@@ -772,9 +795,9 @@ def admin_verify_paystack(reference: str):
         conn.commit()
         return jsonify({
             "message": msg,
-            "plan_id": str(owner['plan_id']),
+            "plan_id": str(purchase['plan_id']),
             "transaction_id": reference,
-            "user_id": owner['user_id']
+            "user_id": purchase['user_id']
         }), 200
 
     except Exception as e:
@@ -819,6 +842,26 @@ def retry_paystack_payment(purchase_id: str):
         if (purchase.get('payment_status') or '').lower() == 'completed':
             return jsonify(message="Payment already completed"), 409
 
+        # If the existing reference is already paid, complete the purchase instead of creating a new charge.
+        existing_reference = purchase.get('transaction_id')
+        if existing_reference:
+            try:
+                resp = requests.get(
+                    f"https://api.paystack.co/transaction/verify/{existing_reference}",
+                    headers=_paystack_headers(),
+                    timeout=10,
+                )
+                data = resp.json() if resp.content else {}
+                if resp.status_code == 200 and data.get('status') and data.get('data'):
+                    paystack_data = data.get('data') or {}
+                    ok, (msg, code) = _complete_paystack_purchase(existing_reference, paystack_data, conn, cur)
+                    if ok or code == 200:
+                        conn.commit()
+                        return jsonify(message=msg, reference=existing_reference), 200
+                    conn.rollback()
+            except Exception:
+                conn.rollback()
+
         # Fetch contact email (fallback to stored user email)
         contact = fetch_user_contact(purchase['user_id'], conn) or {}
         payer_email = contact.get('email') or purchase.get('email') or f"user-{purchase['user_id']}@example.com"
@@ -834,16 +877,36 @@ def retry_paystack_payment(purchase_id: str):
             conn.rollback()
             return jsonify(message=f"Failed to initialize Paystack transaction: {e}"), 502
 
+        # Preserve reference history + existing metadata (order_id, etc.)
+        try:
+            meta = purchase.get('payment_metadata') or {}
+            if isinstance(meta, str):
+                meta = json.loads(meta)
+            if not isinstance(meta, dict):
+                meta = {}
+        except Exception:
+            meta = {}
+
+        refs = meta.get('paystack_references')
+        if not isinstance(refs, list):
+            refs = []
+        if purchase.get('transaction_id') and purchase.get('transaction_id') not in refs:
+            refs.append(purchase.get('transaction_id'))
+        if new_reference not in refs:
+            refs.append(new_reference)
+        meta['paystack_references'] = refs
+        meta['paystack_last_reference'] = new_reference
+
         cur.execute(
             """
             UPDATE purchases
             SET transaction_id = %s,
                 payment_status = 'pending',
-                payment_metadata = NULL
+                payment_metadata = COALESCE(payment_metadata, '{}'::jsonb) || %s
             WHERE id = %s
             RETURNING plan_id
             """,
-            (new_reference, purchase_id)
+            (new_reference, json.dumps(meta), purchase_id)
         )
         update_row = cur.fetchone()
         if not update_row:
@@ -901,17 +964,8 @@ def admin_confirm_paystack(reference: str):
         if paystack_reference and str(paystack_reference) != str(reference):
             return jsonify(message="Payment verification reference mismatch"), 400
 
-        # Get purchase details
-        cur.execute(
-            """
-            SELECT user_id, plan_id, payment_status
-            FROM purchases
-            WHERE transaction_id = %s
-            """,
-            (reference,)
-        )
-        owner = cur.fetchone()
-        if not owner:
+        purchase = _purchase_for_paystack_reference(cur, reference)
+        if not purchase:
             return jsonify(message="Purchase record not found"), 404
 
         # Allow admin to confirm even if already completed (for audit marking)
@@ -926,17 +980,17 @@ def admin_confirm_paystack(reference: str):
             UPDATE purchases
             SET admin_confirmed_at = NOW(),
                 admin_confirmed_by = %s
-            WHERE transaction_id = %s
+            WHERE id = %s
             """,
-            (user_id, reference)
+            (user_id, purchase['id'])
         )
 
         conn.commit()
         return jsonify({
             "message": f"Payment verified and marked as admin confirmed by user {user_id}",
-            "plan_id": str(owner['plan_id']),
+            "plan_id": str(purchase['plan_id']),
             "transaction_id": reference,
-            "user_id": owner['user_id']
+            "user_id": purchase['user_id']
         }), 200
 
     except Exception as e:

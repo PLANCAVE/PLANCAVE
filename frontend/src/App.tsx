@@ -20,6 +20,7 @@ import UserManagement from './pages/admin/UserManagement';
 import PlanManagement from './pages/admin/PlanManagement';
 import Analytics from './pages/admin/Analytics';
 import PurchasesAdmin from './pages/admin/PurchasesAdmin';
+import AdminPlanView from './pages/admin/AdminPlanView';
 import UploadPlan from './pages/designer/UploadPlan';
 import MyPlans from './pages/designer/MyPlans';
 
@@ -118,6 +119,14 @@ function AppContent() {
             element={
               <AdminRoute>
                 <PlanManagement />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/plans/:id/view"
+            element={
+              <AdminRoute>
+                <AdminPlanView />
               </AdminRoute>
             }
           />

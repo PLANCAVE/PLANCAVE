@@ -109,7 +109,7 @@ export default function PlanManagement() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <Link
-                          to={`/plans/${plan.id}`}
+                          to={`/admin/plans/${plan.id}/view`}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                           title="View plan"
                         >

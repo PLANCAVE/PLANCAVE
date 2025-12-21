@@ -97,6 +97,39 @@ export default function UploadPlan() {
     );
   };
 
+  const ExistingImageGrid = ({
+    title,
+    paths,
+  }: {
+    title: string;
+    paths: string[];
+  }) => {
+    if (!paths.length) return null;
+    return (
+      <div className="mb-3 text-sm">
+        <div className="font-medium text-gray-800">{title}</div>
+        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+          {paths.map((p, idx) => (
+            <div key={`${p}-${idx}`} className="relative">
+              <a href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className="block">
+                <img src={resolveMediaUrl(p)} alt={title} className="w-full h-24 object-cover rounded border" />
+              </a>
+              {isAdmin && isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => removeExistingFile(p)}
+                  className="absolute top-1 right-1 px-2 py-1 text-xs font-medium text-white bg-red-600/90 hover:bg-red-700 rounded"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const searchParams = new URLSearchParams(location.search);
   const editingPlanId = searchParams.get('edit');
   const isEditMode = !!editingPlanId;
@@ -1111,7 +1144,7 @@ export default function UploadPlan() {
         <label className="block text-sm font-semibold text-gray-900 mb-2">
           🎬 3D Renders / Visualizations (Optional)
         </label>
-        <ExistingFileList title="Existing uploads" paths={getExistingPaths('renders')} colorClass="text-purple-700" />
+        <ExistingImageGrid title="Existing renders" paths={getExistingPaths('renders')} />
         <input
           type="file"
           multiple

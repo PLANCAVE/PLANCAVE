@@ -371,7 +371,9 @@ def get_plan_details(plan_id):
     try:
         # Get plan
         cur.execute("""
-            SELECT p.*, u.username as designer_name, u.role as designer_role
+            SELECT p.*,
+                   COALESCE(NULLIF(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name), ''), u.username) as designer_name,
+                   u.role as designer_role
             FROM plans p
             LEFT JOIN users u ON p.designer_id = u.id
             WHERE p.id = %s

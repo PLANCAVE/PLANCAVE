@@ -958,6 +958,36 @@ def purchase_status(plan_id: str):
     try:
         cur.execute(
             """
+            SELECT deliverable_prices
+            FROM plans
+            WHERE id = %s
+            """,
+            (plan_id,)
+        )
+        plan_row = cur.fetchone() or {}
+        raw_deliverable_prices = plan_row.get('deliverable_prices')
+        deliverable_prices = None
+        if raw_deliverable_prices is not None:
+            if isinstance(raw_deliverable_prices, str):
+                try:
+                    deliverable_prices = json.loads(raw_deliverable_prices)
+                except Exception:
+                    deliverable_prices = None
+            elif isinstance(raw_deliverable_prices, dict):
+                deliverable_prices = raw_deliverable_prices
+
+        priced_keys: set[str] = set()
+        if isinstance(deliverable_prices, dict):
+            for k, v in deliverable_prices.items():
+                try:
+                    n = 0 if v is None or v == '' else float(v)
+                except Exception:
+                    n = 0
+                if isinstance(k, str) and n > 0:
+                    priced_keys.add(k)
+
+        cur.execute(
+            """
             SELECT id, payment_status, transaction_id, purchased_at, selected_deliverables
             FROM purchases
             WHERE user_id = %s AND plan_id = %s
@@ -982,6 +1012,10 @@ def purchase_status(plan_id: str):
             if raw is None:
                 full_purchase = True
                 continue
+            # Some clients may send an empty list; treat that as a full-plan purchase.
+            if raw == [] or raw == '[]':
+                full_purchase = True
+                continue
             if isinstance(raw, str):
                 try:
                     raw = json.loads(raw)
@@ -991,6 +1025,10 @@ def purchase_status(plan_id: str):
                 for x in raw:
                     if isinstance(x, str):
                         purchased_deliverables.add(x)
+
+        # If the user has purchased every priced deliverable, treat it as a full purchase.
+        if not full_purchase and priced_keys and priced_keys.issubset(purchased_deliverables):
+            full_purchase = True
 
         if payment_status != 'completed':
             return jsonify(
@@ -1383,7 +1421,7 @@ def add_to_cart():
             """
             SELECT 
                 p.*, 
-                u.username AS designer_name
+                COALESCE(NULLIF(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name), ''), u.username) AS designer_name
             FROM plans p
             LEFT JOIN users u ON p.designer_id = u.id
             WHERE p.id = %s
@@ -1421,7 +1459,7 @@ def add_to_cart():
                 SELECT 
                     c.added_at,
                     p.*, 
-                    u.username AS designer_name
+                    COALESCE(NULLIF(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name), ''), u.username) AS designer_name
                 FROM cart_items c
                 JOIN plans p ON c.plan_id = p.id
                 LEFT JOIN users u ON p.designer_id = u.id
@@ -1435,7 +1473,7 @@ def add_to_cart():
                 SELECT 
                     c.added_at,
                     p.*, 
-                    u.username AS designer_name
+                    COALESCE(NULLIF(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name), ''), u.username) AS designer_name
                 FROM cart_items c
                 JOIN plans p ON c.plan_id = p.id
                 LEFT JOIN users u ON p.designer_id = u.id
@@ -1474,7 +1512,7 @@ def get_cart_items():
             SELECT 
                 c.added_at,
                 p.*, 
-                u.username AS designer_name
+                COALESCE(NULLIF(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name), ''), u.username) AS designer_name
             FROM cart_items c
             JOIN plans p ON c.plan_id = p.id
             LEFT JOIN users u ON p.designer_id = u.id
@@ -1726,18 +1764,20 @@ def get_favorites():
     cur = conn.cursor(row_factory=dict_row)
     
     try:
-        cur.execute("""
+        cur.execute(
+            """
             SELECT 
                 f.added_at,
                 p.*,
-                u.username as designer_name
+                COALESCE(NULLIF(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name), ''), u.username) AS designer_name
             FROM favorites f
             JOIN plans p ON f.plan_id = p.id
             LEFT JOIN users u ON p.designer_id = u.id
             WHERE f.user_id = %s AND p.status = 'Available'
             ORDER BY f.added_at DESC
-        """, (user_id,))
-        
+            """,
+            (user_id,)
+        )
         favorites = [dict(row) for row in cur.fetchall()]
         
         return jsonify(favorites), 200

@@ -48,7 +48,7 @@ def _call_local_llm(messages: list[dict], temperature: float = 0.4, max_tokens: 
         "max_tokens": max_tokens,
     }
     try:
-        resp = requests.post(url, json=payload, timeout=30)
+        resp = requests.post(url, json=payload, timeout=12)
         if resp.status_code != 200:
             return None
         data = resp.json() if resp.content else {}
@@ -313,7 +313,7 @@ def chat():
             {"role": "user", "content": f"User request: {message}\n\nContext JSON: {json.dumps(context, default=str)}"},
         ]
 
-        llm_text = _call_local_llm(llm_messages)
+        llm_text = _call_local_llm(llm_messages, max_tokens=120)
         if not llm_text:
             fallback = _fallback_response(message, plans)
             return jsonify({

@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Building2, TrendingUp, CheckCircle, ArrowLeft, ArrowRight, Mail, Phone, MapPin, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { browsePlans } from '../api';
+import { browsePlans, getTrendingPlans } from '../api';
 
 interface Plan {
   id: string;
@@ -126,6 +126,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const [featuredPlans, setFeaturedPlans] = useState<Plan[]>([]);
   const [topSellingPlans, setTopSellingPlans] = useState<Plan[]>([]);
+  const [trendingPlans, setTrendingPlans] = useState<Plan[]>([]);
   const [isLoadingFeaturedPlans, setIsLoadingFeaturedPlans] = useState(true);
   const [heroImageLoaded, setHeroImageLoaded] = useState(false);
   const [hasCompletedInitialHeroLoad, setHasCompletedInitialHeroLoad] = useState(false);
@@ -165,6 +166,21 @@ export default function Landing() {
     };
 
     loadTopSellingPlans();
+  }, []);
+
+  useEffect(() => {
+    const loadTrendingPlans = async () => {
+      try {
+        const resp = await getTrendingPlans(4);
+        const plans: Plan[] = resp.data?.plans || [];
+        setTrendingPlans(plans);
+      } catch (error) {
+        // Fallback: keep empty so we use local heuristic in useMemo below.
+        setTrendingPlans([]);
+      }
+    };
+
+    loadTrendingPlans();
   }, []);
 
   useEffect(() => {
@@ -229,16 +245,18 @@ export default function Landing() {
       return diff !== 0 ? diff : a.localeCompare(b);
     });
 
-    // Take top category and slice some plans
-    const topType = sortedTypes[0];
-    const popular = topType ? (groupByType[topType] || []).slice(0, 4) : randomized.slice(12, 16);
+    // Prefer server-computed trending plans (based on 30d views) when available.
+    const popular = trendingPlans.length ? trendingPlans.slice(0, 4) : (() => {
+      const topType = sortedTypes[0];
+      return topType ? (groupByType[topType] || []).slice(0, 4) : randomized.slice(12, 16);
+    })();
 
     return {
       budgetPlans: chunk(0, 4),
       newPlans: chunk(8, 12),
       popularCategoryPlans: popular,
     };
-  }, [featuredPlans]);
+  }, [featuredPlans, trendingPlans]);
 
   const triggerManualPause = () => {
     setIsManualPause(true);

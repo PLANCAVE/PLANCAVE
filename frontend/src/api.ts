@@ -123,6 +123,9 @@ export const getPlanDetails = (id: string) =>
 export const trackPlanView = (plan_id: string, user_id?: number | null) =>
   api.post(`/creator/plans/${plan_id}/track-view`, { user_id: user_id ?? null });
 
+export const getTrendingPlans = (limit?: number) =>
+  api.get('/plans/trending', { params: { limit } });
+
 // Customer
 export const purchasePlan = (
   plan_id: string,

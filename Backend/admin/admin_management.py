@@ -121,6 +121,56 @@ def admin_dashboard():
             LIMIT 20
         """)
         recent_activity = [dict(row) for row in cur.fetchall()]
+
+        # Plan engagement metrics (last 30 days)
+        cur.execute(
+            """
+            SELECT
+                COALESCE(SUM(pa.views_count), 0) AS total_plan_views_30d,
+                COALESCE(SUM(pa.downloads_count), 0) AS total_plan_downloads_30d,
+                COALESCE(SUM(pa.favorites_count), 0) AS total_plan_favorites_30d
+            FROM plan_analytics pa
+            WHERE pa.date >= CURRENT_DATE - INTERVAL '30 days'
+            """
+        )
+        plan_engagement = dict(cur.fetchone() or {})
+
+        cur.execute(
+            """
+            SELECT
+                p.id, p.name, p.project_type, p.category, p.price, p.sales_count,
+                COALESCE(SUM(pa.views_count), 0) AS total_views,
+                COALESCE(SUM(pa.downloads_count), 0) AS total_downloads
+            FROM plans p
+            LEFT JOIN plan_analytics pa ON pa.plan_id = p.id
+              AND pa.date >= CURRENT_DATE - INTERVAL '30 days'
+            WHERE p.status = 'Available'
+            GROUP BY p.id
+            ORDER BY total_views DESC
+            LIMIT 10
+            """
+        )
+        top_viewed_plans = [dict(row) for row in cur.fetchall()]
+
+        cur.execute(
+            """
+            SELECT
+                p.project_type,
+                COALESCE(SUM(pa.views_count), 0) AS total_views,
+                COALESCE(SUM(pa.downloads_count), 0) AS total_downloads,
+                COUNT(DISTINCT p.id) AS plan_count
+            FROM plan_analytics pa
+            JOIN plans p ON pa.plan_id = p.id
+            WHERE pa.date >= CURRENT_DATE - INTERVAL '30 days'
+              AND p.status = 'Available'
+              AND p.project_type IS NOT NULL
+              AND TRIM(p.project_type) <> ''
+            GROUP BY p.project_type
+            ORDER BY total_views DESC
+            LIMIT 10
+            """
+        )
+        top_viewed_types = [dict(row) for row in cur.fetchall()]
         
         return jsonify({
             "user_stats": user_stats,
@@ -128,7 +178,10 @@ def admin_dashboard():
             "revenue_stats": revenue_stats,
             "activity_stats": activity_stats,
             "top_designers": top_designers,
-            "recent_activity": recent_activity
+            "recent_activity": recent_activity,
+            "plan_engagement": plan_engagement,
+            "top_viewed_plans": top_viewed_plans,
+            "top_viewed_types": top_viewed_types,
         }), 200
         
     except Exception as e:

@@ -604,6 +604,81 @@ def update_plan(plan_id):
         conn.close()
 
 
+@plans_bp.route('/trending', methods=['GET'])
+def get_trending():
+    """Public trending endpoint based on plan views (last 30 days)."""
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        limit = request.args.get('limit', default=4, type=int)
+        limit = max(1, min(limit or 4, 12))
+
+        cur.execute(
+            """
+            WITH type_views AS (
+                SELECT
+                    p.project_type,
+                    SUM(pa.views_count) AS total_views
+                FROM plan_analytics pa
+                JOIN plans p ON pa.plan_id = p.id
+                WHERE p.status = 'Available'
+                  AND pa.date >= CURRENT_DATE - INTERVAL '30 days'
+                  AND p.project_type IS NOT NULL
+                  AND TRIM(p.project_type) <> ''
+                GROUP BY p.project_type
+            )
+            SELECT project_type, COALESCE(total_views, 0) AS total_views
+            FROM type_views
+            ORDER BY total_views DESC
+            LIMIT 5
+            """
+        )
+        top_types = [dict(r) for r in cur.fetchall()]
+        top_type = (top_types[0].get('project_type') if top_types else None)
+
+        plans: list[dict] = []
+        if top_type:
+            cur.execute(
+                """
+                SELECT
+                    p.id, p.name, p.category, p.project_type, p.description, p.package_level,
+                    p.price, p.area, p.bedrooms, p.bathrooms, p.floors, p.includes_boq,
+                    p.disciplines_included, p.sales_count, p.image_url, p.created_at, p.certifications,
+                    COALESCE(SUM(pa.views_count), 0) AS total_views
+                FROM plans p
+                LEFT JOIN plan_analytics pa ON pa.plan_id = p.id
+                  AND pa.date >= CURRENT_DATE - INTERVAL '30 days'
+                WHERE p.status = 'Available'
+                  AND p.project_type = %s
+                GROUP BY p.id
+                ORDER BY total_views DESC, p.sales_count DESC, p.created_at DESC
+                LIMIT %s
+                """,
+                (top_type, limit)
+            )
+            rows = cur.fetchall() or []
+            for row in rows:
+                plan_dict = dict(row)
+                if plan_dict.get('disciplines_included'):
+                    plan_dict['disciplines_included'] = json.loads(plan_dict['disciplines_included']) if isinstance(plan_dict['disciplines_included'], str) else plan_dict['disciplines_included']
+                if plan_dict.get('certifications'):
+                    plan_dict['certifications'] = json.loads(plan_dict['certifications']) if isinstance(plan_dict['certifications'], str) else plan_dict['certifications']
+                plans.append(plan_dict)
+
+        return jsonify({
+            'top_types': top_types,
+            'top_type': top_type,
+            'plans': plans,
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error computing trending: {e}")
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @plans_bp.route('/', methods=['GET'])
 def browse_plans():
     """

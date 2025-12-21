@@ -97,6 +97,7 @@ export default function PlanDetailsPage() {
   const autoVerifyRanRef = useRef(false);
   const selectionTouchedRef = useRef(false);
   const lastPlanIdRef = useRef<string | null>(null);
+  const hadPriorPurchasesRef = useRef(false);
   
   // Cart and favorites states
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -266,6 +267,22 @@ export default function PlanDetailsPage() {
 
     const purchasedSet = new Set(purchasedDeliverables);
     const hasPriorPurchases = purchasedSet.size > 0;
+
+    // Fix initial-load race:
+    // On first render, purchasedDeliverables is empty so we may auto-select all deliverables.
+    // When purchase status loads and we discover the user has prior purchases, we want upgrades
+    // to start deselected (unless the user already changed selection manually).
+    if (hasPriorPurchases && !hadPriorPurchasesRef.current) {
+      hadPriorPurchasesRef.current = true;
+      if (!selectionTouchedRef.current) {
+        if (selectedDeliverables.length > 0) {
+          setSelectedDeliverables([]);
+          return;
+        }
+      }
+    } else if (!hasPriorPurchases && hadPriorPurchasesRef.current) {
+      hadPriorPurchasesRef.current = false;
+    }
     const sanitizedSelection = selectedDeliverables.filter(
       (key) => availableKeys.includes(key) && !purchasedSet.has(key)
     );

@@ -1,15 +1,26 @@
 import { useState, useEffect } from 'react';
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import api, { updatePlan, getPlanDetails } from '../../api';
+import api, { updatePlan, getPlanDetails, getAdminPlan } from '../../api';
 import { Upload, FileText, Building2, Hammer, Zap, Shield, Palette, DollarSign, Award } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function UploadPlan() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
+
+  const [existingUploads, setExistingUploads] = useState<{ [key: string]: any }>({});
+
+  const resolveMediaUrl = (path?: string) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) return path;
+    const cleanedPath = path.replace(/^\/api(?=\/)/, '');
+    return cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
+  };
 
   const searchParams = new URLSearchParams(location.search);
   const editingPlanId = searchParams.get('edit');
@@ -221,8 +232,15 @@ export default function UploadPlan() {
 
     const loadPlan = async () => {
       try {
-        const response = await getPlanDetails(editingPlanId);
+        const response = isAdmin ? await getAdminPlan(editingPlanId) : await getPlanDetails(editingPlanId);
         const plan = response.data;
+
+        const filePaths = plan?.file_paths && typeof plan.file_paths === 'object' ? plan.file_paths : {};
+        setExistingUploads({
+          image_url: plan?.image_url,
+          file_paths: filePaths,
+          files: Array.isArray(plan?.files) ? plan.files : [],
+        });
 
         setBasicInfo({
           name: plan.name || '',
@@ -303,10 +321,15 @@ export default function UploadPlan() {
     }
     if (!packageLevel) validationErrors.push('Package level is required');
 
+    const existingFilePaths = (existingUploads?.file_paths && typeof existingUploads.file_paths === 'object') ? existingUploads.file_paths : {};
+    const hasExistingThumbnail = !!existingUploads?.image_url || !!existingFilePaths?.thumbnail;
+    const hasExistingArchitectural = Array.isArray(existingFilePaths?.architectural) && existingFilePaths.architectural.length > 0;
+    const hasExistingRenders = Array.isArray(existingFilePaths?.renders) && existingFilePaths.renders.length > 0;
+
     // Check required files
-    if (!files.thumbnail) validationErrors.push('Thumbnail image is required');
-    if (files.architectural.length === 0) validationErrors.push('Architectural files are required');
-    if (files.renders.length === 0) validationErrors.push('3D renders are required');
+    if (!files.thumbnail && !hasExistingThumbnail) validationErrors.push('Thumbnail image is required');
+    if (files.architectural.length === 0 && !hasExistingArchitectural) validationErrors.push('Architectural files are required');
+    if (files.renders.length === 0 && !hasExistingRenders) validationErrors.push('3D renders are required');
 
     if (validationErrors.length > 0) {
       setError(`Validation failed: ${validationErrors.join(', ')}`);
@@ -853,23 +876,33 @@ export default function UploadPlan() {
         <Upload className="w-6 h-6 text-indigo-600" />
         File Uploads
       </h3>
-      <p className="text-sm text-gray-600">Upload plan files for each selected discipline (PDF, DWG, or ZIP)</p>
 
       {disciplines.architectural && (
         <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
           <label className="block text-sm font-semibold text-gray-900 mb-2">
-            📐 Architectural Plans * (Required)
+            📐 Architectural Plans
           </label>
+          {Array.isArray(existingUploads?.file_paths?.architectural) && existingUploads.file_paths.architectural.length > 0 && (
+            <div className="mb-3 text-sm">
+              <div className="font-medium text-gray-800">Existing uploads</div>
+              <div className="mt-1 space-y-1">
+                {existingUploads.file_paths.architectural.map((p: string, idx: number) => (
+                  <a key={`${p}-${idx}`} href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className="block text-blue-700 hover:underline break-all">
+                    {p}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
           <input
             type="file"
             multiple
             accept=".pdf,.dwg,.zip"
             onChange={(e) => handleFileChange('architectural', e.target.files)}
             className="input-field"
-            required
           />
           <p className="text-xs text-gray-600 mt-1">
-            Upload: Floor plans, elevations, sections, roof plans, site plans
+            Upload: Floor plans, elevations, sections, details, schedules
           </p>
         </div>
       )}
@@ -986,6 +1019,18 @@ export default function UploadPlan() {
         <label className="block text-sm font-semibold text-gray-900 mb-2">
           🎬 3D Renders / Visualizations (Optional)
         </label>
+        {Array.isArray(existingUploads?.file_paths?.renders) && existingUploads.file_paths.renders.length > 0 && (
+          <div className="mb-3 text-sm">
+            <div className="font-medium text-gray-800">Existing uploads</div>
+            <div className="mt-1 space-y-1">
+              {existingUploads.file_paths.renders.map((p: string, idx: number) => (
+                <a key={`${p}-${idx}`} href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className="block text-purple-700 hover:underline break-all">
+                  {p}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
         <input
           type="file"
           multiple
@@ -999,12 +1044,25 @@ export default function UploadPlan() {
         <label className="block text-sm font-semibold text-gray-900 mb-2">
           🖼️ Thumbnail Image * (Required)
         </label>
+        {(existingUploads?.image_url || existingUploads?.file_paths?.thumbnail) && (
+          <div className="mb-3">
+            <div className="text-sm font-medium text-gray-800">Existing upload</div>
+            <a
+              href={resolveMediaUrl(existingUploads?.image_url || existingUploads?.file_paths?.thumbnail)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-blue-700 hover:underline break-all"
+            >
+              {existingUploads?.image_url || existingUploads?.file_paths?.thumbnail}
+            </a>
+          </div>
+        )}
         <input
           type="file"
           accept=".jpg,.jpeg,.png"
           onChange={(e) => setFiles({...files, thumbnail: e.target.files?.[0] || null})}
           className="input-field"
-          required
+          required={!isEditMode}
         />
         <p className="text-xs text-gray-600 mt-1">Main image shown in browse plans (JPG/PNG, max 5MB)</p>
       </div>
@@ -1013,6 +1071,18 @@ export default function UploadPlan() {
         <label className="block text-sm font-semibold text-gray-900 mb-2">
           🖼️ Gallery Images (Optional, max 10)
         </label>
+        {Array.isArray(existingUploads?.file_paths?.gallery) && existingUploads.file_paths.gallery.length > 0 && (
+          <div className="mb-3 text-sm">
+            <div className="font-medium text-gray-800">Existing uploads</div>
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+              {existingUploads.file_paths.gallery.map((p: string, idx: number) => (
+                <a key={`${p}-${idx}`} href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className="block">
+                  <img src={resolveMediaUrl(p)} alt="gallery" className="w-full h-24 object-cover rounded border" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
         <input
           type="file"
           multiple

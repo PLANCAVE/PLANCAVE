@@ -191,6 +191,87 @@ def admin_dashboard():
         conn.close()
 
 
+@admin_bp.route('/plans/<plan_id>', methods=['GET'])
+@jwt_required()
+@require_admin
+def get_admin_plan(plan_id):
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+
+    try:
+        cur.execute(
+            """
+            SELECT p.*,
+                   COALESCE(NULLIF(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name), ''), u.username) as designer_name,
+                   u.role as designer_role
+            FROM plans p
+            LEFT JOIN users u ON p.designer_id = u.id
+            WHERE p.id = %s
+            """,
+            (plan_id,),
+        )
+        plan = cur.fetchone()
+        if not plan:
+            return jsonify(message="Plan not found"), 404
+
+        plan_dict = dict(plan)
+
+        def _json_load_if_str(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except Exception:
+                    return value
+            return value
+
+        for key in (
+            'disciplines_included',
+            'certifications',
+            'special_features',
+            'file_paths',
+            'deliverable_prices',
+            'tags',
+        ):
+            if key in plan_dict:
+                plan_dict[key] = _json_load_if_str(plan_dict.get(key))
+
+        cur.execute("SELECT * FROM plan_files WHERE plan_id = %s", (plan_id,))
+        files = [dict(row) for row in cur.fetchall()]
+
+        try:
+            raw_file_paths = plan_dict.get('file_paths')
+            if isinstance(raw_file_paths, dict):
+                file_paths = raw_file_paths
+            else:
+                file_paths = None
+
+            if file_paths and isinstance(file_paths, dict):
+                gallery_paths = file_paths.get('gallery') or []
+                image_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+                for path in gallery_paths:
+                    if not isinstance(path, str):
+                        continue
+                    _, ext = os.path.splitext(path)
+                    if ext.lower() in image_exts:
+                        files.append({
+                            'plan_id': plan_id,
+                            'file_type': ext.lstrip('.').lower(),
+                            'file_path': path,
+                        })
+        except Exception:
+            pass
+
+        plan_dict['files'] = files
+        return jsonify(plan_dict), 200
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @admin_bp.route('/plans/<plan_id>/download', methods=['GET'])
 @jwt_required()
 @require_admin

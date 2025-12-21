@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import api, { updatePlan, getPlanDetails, getAdminPlan } from '../../api';
+import api, { updatePlan, getPlanDetails, getAdminPlan, adminRemovePlanFile } from '../../api';
 import { Upload, FileText, Building2, Hammer, Zap, Shield, Palette, DollarSign, Award } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -20,6 +20,81 @@ export default function UploadPlan() {
     if (/^https?:\/\//i.test(path)) return path;
     const cleanedPath = path.replace(/^\/api(?=\/)/, '');
     return cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
+  };
+
+  const removeExistingFile = async (file_path: string) => {
+    if (!isAdmin || !isEditMode || !editingPlanId) return;
+    if (!confirm('Remove this file? This will hide it from the plan immediately.')) return;
+    try {
+      const resp = await adminRemovePlanFile(editingPlanId, file_path);
+      const updatedFilePaths = resp.data?.file_paths && typeof resp.data.file_paths === 'object' ? resp.data.file_paths : {};
+      setExistingUploads((prev) => {
+        const next: any = {
+          ...(prev || {}),
+          image_url: resp.data?.image_url,
+          file_paths: updatedFilePaths,
+        };
+
+        const prevFiles = Array.isArray(prev?.files) ? prev.files : [];
+        next.files = prevFiles.filter((f: any) => (f?.file_path || f?.filePath) !== file_path);
+        return next;
+      });
+    } catch (e: any) {
+      alert(e?.response?.data?.message || e?.message || 'Failed to remove file');
+    }
+  };
+
+  const getExistingPaths = (key: string): string[] => {
+    const fp = existingUploads?.file_paths;
+    if (!fp || typeof fp !== 'object') return [];
+    const val = (fp as any)[key];
+    if (Array.isArray(val)) return val.filter((x) => typeof x === 'string');
+    if (typeof val === 'string') return [val];
+    return [];
+  };
+
+  const getExistingPlanFilesByType = (types: string[]): string[] => {
+    const files = Array.isArray(existingUploads?.files) ? existingUploads.files : [];
+    return files
+      .filter((f: any) => f && typeof f === 'object')
+      .filter((f: any) => types.includes(String(f.file_type || f.fileType || '').toUpperCase()))
+      .map((f: any) => f.file_path || f.filePath)
+      .filter((p: any) => typeof p === 'string');
+  };
+
+  const ExistingFileList = ({
+    title,
+    paths,
+    colorClass,
+  }: {
+    title: string;
+    paths: string[];
+    colorClass: string;
+  }) => {
+    if (!paths.length) return null;
+    return (
+      <div className="mb-3 text-sm">
+        <div className="font-medium text-gray-800">{title}</div>
+        <div className="mt-1 space-y-1">
+          {paths.map((p, idx) => (
+            <div key={`${p}-${idx}`} className="flex items-center gap-2">
+              <a href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className={`flex-1 hover:underline break-all ${colorClass}`}>
+                {p}
+              </a>
+              {isAdmin && isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => removeExistingFile(p)}
+                  className="px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const searchParams = new URLSearchParams(location.search);
@@ -882,18 +957,7 @@ export default function UploadPlan() {
           <label className="block text-sm font-semibold text-gray-900 mb-2">
             📐 Architectural Plans
           </label>
-          {Array.isArray(existingUploads?.file_paths?.architectural) && existingUploads.file_paths.architectural.length > 0 && (
-            <div className="mb-3 text-sm">
-              <div className="font-medium text-gray-800">Existing uploads</div>
-              <div className="mt-1 space-y-1">
-                {existingUploads.file_paths.architectural.map((p: string, idx: number) => (
-                  <a key={`${p}-${idx}`} href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className="block text-blue-700 hover:underline break-all">
-                    {p}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
+          <ExistingFileList title="Existing uploads" paths={getExistingPaths('architectural')} colorClass="text-blue-700" />
           <input
             type="file"
             multiple
@@ -912,6 +976,7 @@ export default function UploadPlan() {
           <label className="block text-sm font-semibold text-gray-900 mb-2">
             🏗️ Structural Plans
           </label>
+          <ExistingFileList title="Existing uploads" paths={getExistingPaths('structural')} colorClass="text-green-700" />
           <input
             type="file"
             multiple
@@ -930,6 +995,14 @@ export default function UploadPlan() {
           <label className="block text-sm font-semibold text-gray-900 mb-2">
             ❄️ Mechanical Plans (HVAC)
           </label>
+          <ExistingFileList
+            title="Existing uploads"
+            paths={(() => {
+              const typed = getExistingPlanFilesByType(['MEP_MECHANICAL']);
+              return typed.length ? typed : getExistingPaths('mep');
+            })()}
+            colorClass="text-amber-700"
+          />
           <input
             type="file"
             multiple
@@ -945,6 +1018,14 @@ export default function UploadPlan() {
           <label className="block text-sm font-semibold text-gray-900 mb-2">
             ⚡ Electrical Plans
           </label>
+          <ExistingFileList
+            title="Existing uploads"
+            paths={(() => {
+              const typed = getExistingPlanFilesByType(['MEP_ELECTRICAL']);
+              return typed.length ? typed : getExistingPaths('mep');
+            })()}
+            colorClass="text-yellow-700"
+          />
           <input
             type="file"
             multiple
@@ -960,6 +1041,14 @@ export default function UploadPlan() {
           <label className="block text-sm font-semibold text-gray-900 mb-2">
             💧 Plumbing Plans
           </label>
+          <ExistingFileList
+            title="Existing uploads"
+            paths={(() => {
+              const typed = getExistingPlanFilesByType(['MEP_PLUMBING']);
+              return typed.length ? typed : getExistingPaths('mep');
+            })()}
+            colorClass="text-cyan-700"
+          />
           <input
             type="file"
             multiple
@@ -975,6 +1064,7 @@ export default function UploadPlan() {
           <label className="block text-sm font-semibold text-gray-900 mb-2">
             🛣️ Civil/Infrastructure Plans
           </label>
+          <ExistingFileList title="Existing uploads" paths={getExistingPaths('civil')} colorClass="text-gray-700" />
           <input
             type="file"
             multiple
@@ -990,6 +1080,7 @@ export default function UploadPlan() {
           <label className="block text-sm font-semibold text-gray-900 mb-2">
             🚨 Fire & Safety Plans
           </label>
+          <ExistingFileList title="Existing uploads" paths={getExistingPaths('fire_safety')} colorClass="text-red-700" />
           <input
             type="file"
             multiple
@@ -1005,6 +1096,7 @@ export default function UploadPlan() {
           <label className="block text-sm font-semibold text-gray-900 mb-2">
             🎨 Interior Design Package
           </label>
+          <ExistingFileList title="Existing uploads" paths={getExistingPaths('interior')} colorClass="text-pink-700" />
           <input
             type="file"
             multiple
@@ -1019,18 +1111,7 @@ export default function UploadPlan() {
         <label className="block text-sm font-semibold text-gray-900 mb-2">
           🎬 3D Renders / Visualizations (Optional)
         </label>
-        {Array.isArray(existingUploads?.file_paths?.renders) && existingUploads.file_paths.renders.length > 0 && (
-          <div className="mb-3 text-sm">
-            <div className="font-medium text-gray-800">Existing uploads</div>
-            <div className="mt-1 space-y-1">
-              {existingUploads.file_paths.renders.map((p: string, idx: number) => (
-                <a key={`${p}-${idx}`} href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className="block text-purple-700 hover:underline break-all">
-                  {p}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
+        <ExistingFileList title="Existing uploads" paths={getExistingPaths('renders')} colorClass="text-purple-700" />
         <input
           type="file"
           multiple
@@ -1047,14 +1128,25 @@ export default function UploadPlan() {
         {(existingUploads?.image_url || existingUploads?.file_paths?.thumbnail) && (
           <div className="mb-3">
             <div className="text-sm font-medium text-gray-800">Existing upload</div>
-            <a
-              href={resolveMediaUrl(existingUploads?.image_url || existingUploads?.file_paths?.thumbnail)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-blue-700 hover:underline break-all"
-            >
-              {existingUploads?.image_url || existingUploads?.file_paths?.thumbnail}
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={resolveMediaUrl(existingUploads?.image_url || existingUploads?.file_paths?.thumbnail)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 text-sm text-blue-700 hover:underline break-all"
+              >
+                {existingUploads?.image_url || existingUploads?.file_paths?.thumbnail}
+              </a>
+              {isAdmin && isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => removeExistingFile(String(existingUploads?.image_url || existingUploads?.file_paths?.thumbnail))}
+                  className="px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
         )}
         <input
@@ -1076,9 +1168,20 @@ export default function UploadPlan() {
             <div className="font-medium text-gray-800">Existing uploads</div>
             <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
               {existingUploads.file_paths.gallery.map((p: string, idx: number) => (
-                <a key={`${p}-${idx}`} href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className="block">
-                  <img src={resolveMediaUrl(p)} alt="gallery" className="w-full h-24 object-cover rounded border" />
-                </a>
+                <div key={`${p}-${idx}`} className="relative">
+                  <a href={resolveMediaUrl(p)} target="_blank" rel="noreferrer" className="block">
+                    <img src={resolveMediaUrl(p)} alt="gallery" className="w-full h-24 object-cover rounded border" />
+                  </a>
+                  {isAdmin && isEditMode && (
+                    <button
+                      type="button"
+                      onClick={() => removeExistingFile(p)}
+                      className="absolute top-1 right-1 px-2 py-1 text-xs font-medium text-white bg-red-600/90 hover:bg-red-700 rounded"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -1116,6 +1219,7 @@ export default function UploadPlan() {
 
       {boq.includes_boq && (
         <div className="space-y-4 ml-8">
+          <ExistingFileList title="Existing BOQ uploads" paths={getExistingPaths('boq')} colorClass="text-emerald-700" />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               📊 Architectural BOQ (Excel/PDF)

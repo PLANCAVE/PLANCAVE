@@ -191,6 +191,83 @@ def admin_dashboard():
         conn.close()
 
 
+@admin_bp.route('/plans/<plan_id>/files/remove', methods=['POST'])
+@jwt_required()
+@require_admin
+def admin_remove_plan_file(plan_id):
+    data = request.get_json() or {}
+    file_path = data.get('file_path')
+    if not file_path or not isinstance(file_path, str):
+        return jsonify(message="file_path is required"), 400
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute("SELECT id, image_url, file_paths FROM plans WHERE id = %s", (plan_id,))
+        plan = cur.fetchone()
+        if not plan:
+            return jsonify(message="Plan not found"), 404
+
+        image_url = plan.get('image_url')
+        raw_file_paths = plan.get('file_paths')
+        file_paths = {}
+        if isinstance(raw_file_paths, dict):
+            file_paths = raw_file_paths
+        elif isinstance(raw_file_paths, str):
+            try:
+                parsed = json.loads(raw_file_paths)
+                if isinstance(parsed, dict):
+                    file_paths = parsed
+            except Exception:
+                file_paths = {}
+
+        mutated = False
+
+        if image_url == file_path:
+            image_url = None
+            mutated = True
+
+        for key, val in list(file_paths.items()):
+            if isinstance(val, list):
+                new_list = [x for x in val if x != file_path]
+                if len(new_list) != len(val):
+                    file_paths[key] = new_list
+                    mutated = True
+            elif isinstance(val, str):
+                if val == file_path:
+                    file_paths[key] = None
+                    mutated = True
+
+        cur.execute(
+            "DELETE FROM plan_files WHERE plan_id = %s AND file_path = %s",
+            (plan_id, file_path),
+        )
+
+        if mutated:
+            cur.execute(
+                """
+                UPDATE plans
+                SET image_url = %s,
+                    file_paths = %s
+                WHERE id = %s
+                """,
+                (image_url, json.dumps(file_paths), plan_id),
+            )
+
+        conn.commit()
+        return jsonify(
+            message="File removed",
+            image_url=image_url,
+            file_paths=file_paths,
+        ), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify(error=str(e)), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @admin_bp.route('/plans/<plan_id>', methods=['GET'])
 @jwt_required()
 @require_admin

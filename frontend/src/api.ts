@@ -230,6 +230,9 @@ export const deletePlan = (planId: string) =>
 export const getAdminPlan = (planId: string) =>
   api.get(`/admin/plans/${planId}`);
 
+export const adminRemovePlanFile = (planId: string, file_path: string) =>
+  api.post(`/admin/plans/${planId}/files/remove`, { file_path });
+
 export const getAdminPurchases = (params?: Record<string, any>) =>
   api.get('/admin/purchases', { params });
 

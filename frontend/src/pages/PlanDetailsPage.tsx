@@ -95,6 +95,8 @@ export default function PlanDetailsPage() {
   const [purchasedDeliverables, setPurchasedDeliverables] = useState<string[]>([]);
   const [fullPurchase, setFullPurchase] = useState(false);
   const autoVerifyRanRef = useRef(false);
+  const selectionTouchedRef = useRef(false);
+  const lastPlanIdRef = useRef<string | null>(null);
   
   // Cart and favorites states
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -215,15 +217,78 @@ export default function PlanDetailsPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!plan) return;
-    const prices = plan.deliverable_prices;
-    if (!prices || typeof prices !== 'object') {
-      setSelectedDeliverables([]);
+    if (!plan) {
+      lastPlanIdRef.current = null;
+      if (selectedDeliverables.length > 0) {
+        selectionTouchedRef.current = false;
+        setSelectedDeliverables([]);
+      }
       return;
     }
 
-    setSelectedDeliverables([]);
-  }, [plan]);
+    const planChanged = plan.id !== lastPlanIdRef.current;
+    if (planChanged) {
+      lastPlanIdRef.current = plan.id;
+      selectionTouchedRef.current = false;
+    }
+
+    const rawPrices = plan.deliverable_prices;
+    if (!rawPrices || typeof rawPrices !== 'object') {
+      if (selectedDeliverables.length > 0) {
+        selectionTouchedRef.current = false;
+        setSelectedDeliverables([]);
+      }
+      return;
+    }
+
+    const availableKeys = Object.entries(rawPrices)
+      .filter(([, value]) => {
+        const numeric = value === '' || value === null || value === undefined ? 0 : Number(value);
+        return Number.isFinite(numeric) && numeric > 0;
+      })
+      .map(([key]) => key);
+
+    if (availableKeys.length === 0) {
+      if (selectedDeliverables.length > 0) {
+        selectionTouchedRef.current = false;
+        setSelectedDeliverables([]);
+      }
+      return;
+    }
+
+    if (fullPurchase) {
+      if (selectedDeliverables.length > 0) {
+        selectionTouchedRef.current = false;
+        setSelectedDeliverables([]);
+      }
+      return;
+    }
+
+    const purchasedSet = new Set(purchasedDeliverables);
+    const sanitizedSelection = selectedDeliverables.filter(
+      (key) => availableKeys.includes(key) && !purchasedSet.has(key)
+    );
+
+    const remainingKeys = availableKeys.filter((key) => !purchasedSet.has(key));
+
+    let nextSelection = sanitizedSelection;
+
+    const shouldDefaultSelection =
+      planChanged || (!selectionTouchedRef.current && sanitizedSelection.length === 0 && remainingKeys.length > 0);
+
+    if (shouldDefaultSelection) {
+      nextSelection = remainingKeys;
+    }
+
+    const hasSameItems =
+      nextSelection.length === selectedDeliverables.length &&
+      nextSelection.every((key) => selectedDeliverables.includes(key));
+
+    if (!hasSameItems) {
+      selectionTouchedRef.current = false;
+      setSelectedDeliverables(nextSelection);
+    }
+  }, [plan, purchasedDeliverables, fullPurchase, selectedDeliverables]);
 
   // Check purchase status when plan loads and user is authenticated
   useEffect(() => {
@@ -875,6 +940,7 @@ export default function PlanDetailsPage() {
                             disabled={isPurchased}
                             onChange={(e) => {
                               if (isPurchased) return;
+                              selectionTouchedRef.current = true;
                               setSelectedDeliverables((prev) => {
                                 if (e.target.checked) return Array.from(new Set([...prev, key]));
                                 return prev.filter((x) => x !== key);

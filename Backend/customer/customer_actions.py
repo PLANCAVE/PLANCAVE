@@ -1592,31 +1592,61 @@ def get_my_purchases():
             download_status = None
             last_downloaded_at = None
             if payment_status == 'completed' and plan_id and purchase_id:
-                cur.execute(
-                    """
-                    SELECT MAX(created_at) AS last_downloaded_at
-                    FROM download_tokens
-                    WHERE purchase_id = %s AND used = TRUE
-                    """,
-                    (purchase_id,)
-                )
-                dl_row = cur.fetchone() or {}
+                try:
+                    cur.execute(
+                        """
+                        SELECT MAX(created_at) AS last_downloaded_at
+                        FROM download_tokens
+                        WHERE purchase_id = %s AND used = TRUE
+                        """,
+                        (purchase_id,)
+                    )
+                    dl_row = cur.fetchone() or {}
+                except Exception as e:
+                    # Backward-compat: older DBs may not have download_tokens.purchase_id.
+                    if 'purchase_id' in str(e) and 'does not exist' in str(e):
+                        cur.execute(
+                            """
+                            SELECT MAX(created_at) AS last_downloaded_at
+                            FROM download_tokens
+                            WHERE user_id = %s AND plan_id = %s AND used = TRUE
+                            """,
+                            (user_id, plan_id)
+                        )
+                        dl_row = cur.fetchone() or {}
+                    else:
+                        raise
                 ts = dl_row.get('last_downloaded_at')
                 if ts is not None and hasattr(ts, 'isoformat'):
                     last_downloaded_at = ts.isoformat() + 'Z'
                 if ts:
                     download_status = 'downloaded'
                 else:
-                    cur.execute(
-                        """
-                        SELECT 1
-                        FROM download_tokens
-                        WHERE purchase_id = %s
-                        LIMIT 1
-                        """,
-                        (purchase_id,)
-                    )
-                    download_status = 'pending_download' if cur.fetchone() else 'not_generated'
+                    try:
+                        cur.execute(
+                            """
+                            SELECT 1
+                            FROM download_tokens
+                            WHERE purchase_id = %s
+                            LIMIT 1
+                            """,
+                            (purchase_id,)
+                        )
+                        download_status = 'pending_download' if cur.fetchone() else 'not_generated'
+                    except Exception as e:
+                        if 'purchase_id' in str(e) and 'does not exist' in str(e):
+                            cur.execute(
+                                """
+                                SELECT 1
+                                FROM download_tokens
+                                WHERE user_id = %s AND plan_id = %s
+                                LIMIT 1
+                                """,
+                                (user_id, plan_id)
+                            )
+                            download_status = 'pending_download' if cur.fetchone() else 'not_generated'
+                        else:
+                            raise
 
             purchase['download_status'] = download_status
             purchase['last_downloaded_at'] = last_downloaded_at

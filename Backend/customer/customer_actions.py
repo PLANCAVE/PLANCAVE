@@ -709,6 +709,7 @@ def paystack_webhook():
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
     try:
+        cur.execute("BEGIN")
         ok, (msg, code) = _complete_paystack_purchase(reference, data, conn, cur)
         if not ok and code != 200:
             # If Paystack says it's not completed yet, acknowledge the webhook to
@@ -897,6 +898,7 @@ def retry_paystack_payment(purchase_id: str):
     cur = conn.cursor(row_factory=dict_row)
 
     try:
+        cur.execute("BEGIN")
         cur.execute(
             """
             SELECT p.id, p.user_id, p.plan_id, p.payment_status, p.payment_method,
@@ -910,15 +912,19 @@ def retry_paystack_payment(purchase_id: str):
         purchase = cur.fetchone()
 
         if not purchase:
+            conn.rollback()
             return jsonify(message="Purchase not found"), 404
 
         if role != 'admin' and int(purchase['user_id']) != int(user_id):
+            conn.rollback()
             return jsonify(message="Not authorized to retry this payment"), 403
 
         if purchase['payment_method'] != 'paystack':
+            conn.rollback()
             return jsonify(message="Retry is only available for Paystack purchases"), 400
 
         if (purchase.get('payment_status') or '').lower() == 'completed':
+            conn.rollback()
             return jsonify(message="Payment already completed"), 409
 
         # If the existing reference is already paid, complete the purchase instead of creating a new charge.

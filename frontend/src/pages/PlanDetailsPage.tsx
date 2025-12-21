@@ -107,6 +107,16 @@ export default function PlanDetailsPage() {
 
   const [selectedDeliverables, setSelectedDeliverables] = useState<string[]>([]);
 
+  const isPlanOwnerDesigner = Boolean(
+    isDesigner &&
+      user &&
+      plan?.designer_id !== undefined &&
+      plan?.designer_id !== null &&
+      Number(plan.designer_id) === Number((user as any).id)
+  );
+
+  const isBuyer = Boolean(isAuthenticated && !isAdmin && !isPlanOwnerDesigner);
+
   const designerLabel = (() => {
     if (!plan) return '';
     if (plan.designer_role === 'admin') return 'Ramanicave LTD';
@@ -332,10 +342,10 @@ export default function PlanDetailsPage() {
 
   // Check purchase status when plan loads and user is authenticated
   useEffect(() => {
-    if (plan && isAuthenticated) {
+    if (plan && isBuyer) {
       checkPurchaseStatus();
     }
-  }, [plan, isAuthenticated]);
+  }, [plan, isBuyer]);
 
   // Track a view whenever the plan details page is opened.
   // Without this, analytics can show 0 views even when sales/downloads exist.
@@ -418,8 +428,6 @@ export default function PlanDetailsPage() {
       setIsPurchasing(false);
     }
   };
-
-  const isPlanOwnerDesigner = Boolean(isDesigner && user && plan?.designer_id === user.id);
 
   const handleAdminDownload = async () => {
     if (!id || !plan) return;

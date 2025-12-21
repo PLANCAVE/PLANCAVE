@@ -1140,6 +1140,8 @@ def purchase_status(plan_id: str):
             return jsonify(
                 status=payment_status,
                 transaction_id=latest_txn,
+                purchased_deliverables=([] if full_purchase else sorted(purchased_deliverables)),
+                full_purchase=bool(full_purchase),
             )
 
         # Paid: determine whether the plan has been downloaded (based on used download tokens)

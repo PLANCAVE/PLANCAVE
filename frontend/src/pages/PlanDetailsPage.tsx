@@ -537,8 +537,8 @@ export default function PlanDetailsPage() {
         }
         setPurchaseDownloadStatus(null);
         setLastDownloadedAt(null);
-        setPurchasedDeliverables([]);
-        setFullPurchase(false);
+        setPurchasedDeliverables(Array.isArray(purchased) ? purchased : []);
+        setFullPurchase(isFull);
       } else {
         setPurchaseStatus('none');
         setPendingReference(null);

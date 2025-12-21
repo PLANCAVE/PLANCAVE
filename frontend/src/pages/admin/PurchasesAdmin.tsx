@@ -125,6 +125,11 @@ const extractPaystackRefs = (raw: unknown): { refs: string[]; last: string | nul
   return { refs: uniq, last };
 };
 
+const getPreferredReference = (purchase: PurchaseRow): string | null => {
+  const refs = extractPaystackRefs(purchase.payment_metadata);
+  return refs.last || purchase.transaction_id || (refs.refs[0] ?? null);
+};
+
 export default function PurchasesAdmin() {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,6 +141,7 @@ export default function PurchasesAdmin() {
   const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(null);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRow | null>(null);
+  const [selectedPaystackReference, setSelectedPaystackReference] = useState<string | null>(null);
 
   const totalRevenue = useMemo(() => {
     return purchases.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
@@ -148,6 +154,9 @@ export default function PurchasesAdmin() {
 
   useEffect(() => {
     if (!selectedPurchase) return;
+
+    const refs = extractPaystackRefs(selectedPurchase.payment_metadata);
+    setSelectedPaystackReference(refs.last || selectedPurchase.transaction_id || null);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -497,16 +506,17 @@ export default function PurchasesAdmin() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-2">
-                        {purchase.payment_status === 'pending' && purchase.transaction_id ? (
+                        {purchase.payment_status === 'pending' && getPreferredReference(purchase) ? (
                           <button
                             onClick={(event) => {
                               event.stopPropagation();
-                              handleCompletePayment(purchase.transaction_id!);
+                              const ref = getPreferredReference(purchase);
+                              if (ref) handleCompletePayment(ref);
                             }}
-                            disabled={verifyingPayment === purchase.transaction_id}
+                            disabled={verifyingPayment === getPreferredReference(purchase)}
                             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
                           >
-                            {verifyingPayment === purchase.transaction_id ? (
+                            {verifyingPayment === getPreferredReference(purchase) ? (
                               <>
                                 <Loader2 className="w-3 h-3 animate-spin" />
                                 Verifying...
@@ -518,16 +528,17 @@ export default function PurchasesAdmin() {
                               </>
                             )}
                           </button>
-                        ) : purchase.payment_status === 'completed' && purchase.transaction_id && !purchase.admin_confirmed_at ? (
+                        ) : purchase.payment_status === 'completed' && getPreferredReference(purchase) && !purchase.admin_confirmed_at ? (
                           <button
                             onClick={(event) => {
                               event.stopPropagation();
-                              handleConfirmPayment(purchase.transaction_id!);
+                              const ref = getPreferredReference(purchase);
+                              if (ref) handleConfirmPayment(ref);
                             }}
-                            disabled={confirmingPayment === purchase.transaction_id}
+                            disabled={confirmingPayment === getPreferredReference(purchase)}
                             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
                           >
-                            {confirmingPayment === purchase.transaction_id ? (
+                            {confirmingPayment === getPreferredReference(purchase) ? (
                               <>
                                 <Loader2 className="w-3 h-3 animate-spin" />
                                 Confirming...
@@ -590,6 +601,12 @@ export default function PurchasesAdmin() {
       {selectedPurchase ? (
         <PurchaseDetailModal
           purchase={selectedPurchase}
+          selectedReference={selectedPaystackReference}
+          onSelectReference={setSelectedPaystackReference}
+          onVerifyReference={(ref) => handleCompletePayment(ref)}
+          onConfirmReference={(ref) => handleConfirmPayment(ref)}
+          verifyingReference={verifyingPayment}
+          confirmingReference={confirmingPayment}
           onClose={() => setSelectedPurchase(null)}
         />
       ) : null}
@@ -610,7 +627,25 @@ function StatusDot({ status }: { status: string | null }) {
   return <div className={`w-2 h-2 rounded-full ${color}`} />;
 }
 
-function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onClose: () => void }) {
+function PurchaseDetailModal({
+  purchase,
+  selectedReference,
+  onSelectReference,
+  onVerifyReference,
+  onConfirmReference,
+  verifyingReference,
+  confirmingReference,
+  onClose,
+}: {
+  purchase: PurchaseRow;
+  selectedReference: string | null;
+  onSelectReference: (ref: string | null) => void;
+  onVerifyReference: (ref: string) => void;
+  onConfirmReference: (ref: string) => void;
+  verifyingReference: string | null;
+  confirmingReference: string | null;
+  onClose: () => void;
+}) {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -638,6 +673,14 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
   const metadataDisplay = formatMetadata(purchase.payment_metadata);
   const paystackRefs = extractPaystackRefs(purchase.payment_metadata);
   const deliverables = purchase.selected_deliverables || [];
+  const availableRefs = (() => {
+    const base = [paystackRefs.last, ...paystackRefs.refs, purchase.transaction_id]
+      .filter(Boolean)
+      .map((x) => String(x));
+    return Array.from(new Set(base));
+  })();
+
+  const activeRef = selectedReference || getPreferredReference(purchase);
 
   return (
     <div
@@ -696,18 +739,72 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
               {paystackRefs.last ? (
                 <p className="text-xs text-white/60">Last Paystack Ref: {paystackRefs.last}</p>
               ) : null}
-              {paystackRefs.refs.length ? (
+              {availableRefs.length ? (
                 <div className="text-xs text-white/60">
-                  <div>Paystack Ref History:</div>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {paystackRefs.refs.map((ref) => (
-                      <span
-                        key={ref}
-                        className="inline-flex items-center rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] text-white/70"
-                      >
-                        {ref}
-                      </span>
-                    ))}
+                  <div>Paystack References (click to select):</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {availableRefs.map((ref) => {
+                      const isActive = Boolean(activeRef && ref === activeRef);
+                      return (
+                        <button
+                          key={ref}
+                          type="button"
+                          onClick={() => onSelectReference(ref)}
+                          className={
+                            'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] transition-colors ' +
+                            (isActive
+                              ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
+                              : 'border-white/10 bg-white/10 text-white/70 hover:bg-white/15')
+                          }
+                        >
+                          {ref}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={!activeRef || verifyingReference === activeRef}
+                      onClick={() => {
+                        if (activeRef) onVerifyReference(activeRef);
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                    >
+                      {verifyingReference === activeRef ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          Verify Selected Ref
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={!activeRef || confirmingReference === activeRef || Boolean(purchase.admin_confirmed_at)}
+                      onClick={() => {
+                        if (activeRef) onConfirmReference(activeRef);
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                    >
+                      {confirmingReference === activeRef ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Confirming...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          Mark Admin Confirmed
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               ) : null}

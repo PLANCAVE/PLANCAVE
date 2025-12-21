@@ -40,18 +40,6 @@ ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_metadata JSONB;
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS admin_confirmed_at TIMESTAMP NULL;
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS admin_confirmed_by INTEGER NULL REFERENCES users(id);
 
--- Stable external order reference
-ALTER TABLE purchases ADD COLUMN IF NOT EXISTS order_id TEXT;
-ALTER TABLE purchases ADD COLUMN IF NOT EXISTS confirmation_email_sent_at TIMESTAMP NULL;
-
--- Backfill missing order IDs for existing purchases
-UPDATE purchases
-SET order_id = COALESCE(order_id, 'ORD-' || UPPER(SUBSTRING(md5(random()::text), 1, 10)))
-WHERE order_id IS NULL;
-
--- Ensure uniqueness for order references
-CREATE UNIQUE INDEX IF NOT EXISTS uniq_purchases_order_id ON purchases(order_id);
-
 -- Ensure uniqueness of user/plan purchases
 DO $$
 BEGIN

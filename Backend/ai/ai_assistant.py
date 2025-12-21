@@ -231,7 +231,7 @@ def _fallback_response(message: str, plans: list[dict]) -> dict:
     suggested = []
     for p in plans[:5]:
         suggested.append({
-            "id": p.get('id'),
+            "id": str(p.get('id')) if p.get('id') is not None else None,
             "name": p.get('name'),
             "price": p.get('price'),
             "category": p.get('category'),
@@ -283,7 +283,7 @@ def chat():
                     deliverable_keys.append(_deliverable_label(k))
 
             plan_facts.append({
-                "id": p.get('id'),
+                "id": str(p.get('id')) if p.get('id') is not None else None,
                 "name": p.get('name'),
                 "price": p.get('price'),
                 "category": p.get('category'),
@@ -312,7 +312,7 @@ def chat():
 
         llm_messages = [
             {"role": "system", "content": system},
-            {"role": "user", "content": f"User request: {message}\n\nContext JSON: {json.dumps(context)}"},
+            {"role": "user", "content": f"User request: {message}\n\nContext JSON: {json.dumps(context, default=str)}"},
         ]
 
         llm_text = _call_local_llm(llm_messages)

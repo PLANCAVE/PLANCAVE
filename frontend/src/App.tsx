@@ -23,6 +23,7 @@ import PurchasesAdmin from './pages/admin/PurchasesAdmin';
 import AdminPlanView from './pages/admin/AdminPlanView';
 import UploadPlan from './pages/designer/UploadPlan';
 import MyPlans from './pages/designer/MyPlans';
+import AIAssistantWidget from './components/AIAssistantWidget';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -55,6 +56,7 @@ function AppContent() {
     <BrowserRouter>
       <div className="min-h-screen bg-gray-50">
         <Header />
+        <AIAssistantWidget />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/plans" element={<BrowsePlans />} />

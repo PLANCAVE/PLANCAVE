@@ -32,6 +32,7 @@ from teams.teams import teams_bp
 from creator.creator_tools import creator_tools_bp
 from admin.admin_management import admin_bp
 from customer.customer_actions import customer_bp
+from ai.ai_assistant import ai_bp
 
 load_dotenv()
 
@@ -168,6 +169,7 @@ app.register_blueprint(teams_bp)
 app.register_blueprint(creator_tools_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(customer_bp)
+app.register_blueprint(ai_bp)
 
 
 @app.route('/')

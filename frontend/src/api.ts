@@ -134,6 +134,9 @@ export const getMyPurchases = () =>
 export const generateDownloadLink = (plan_id: string) =>
   api.post('/customer/plans/download-link', { plan_id });
 
+export const generatePurchaseDownloadLink = (purchase_id: string) =>
+  api.post('/customer/plans/download-link', { purchase_id });
+
 export const downloadPlanFile = (download_token: string) =>
   api.get(`/customer/plans/download/${download_token}`, { responseType: 'blob' });
 

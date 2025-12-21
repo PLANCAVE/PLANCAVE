@@ -64,6 +64,21 @@ BEGIN
     END IF;
 END$$;
 
+-- Allow multiple purchases per plan/user to support upgrading deliverables (partial purchases).
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_purchases_user_plan'
+    ) THEN
+        ALTER TABLE purchases
+            DROP CONSTRAINT uniq_purchases_user_plan;
+    END IF;
+END$$;
+
+-- Helpful index for common lookups (purchase status / upgrades / download checks)
+CREATE INDEX IF NOT EXISTS idx_purchases_user_plan ON purchases(user_id, plan_id);
+
 -- Cart items table
 CREATE TABLE IF NOT EXISTS cart_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -220,6 +235,7 @@ CREATE TABLE IF NOT EXISTS download_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     plan_id UUID REFERENCES plans(id) ON DELETE CASCADE,
+    purchase_id UUID REFERENCES purchases(id) ON DELETE CASCADE,
     token UUID UNIQUE NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     used BOOLEAN DEFAULT FALSE,
@@ -228,8 +244,13 @@ CREATE TABLE IF NOT EXISTS download_tokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Backfill schema if the table existed before purchase_id was added
+ALTER TABLE download_tokens
+    ADD COLUMN IF NOT EXISTS purchase_id UUID REFERENCES purchases(id) ON DELETE CASCADE;
+
 CREATE INDEX IF NOT EXISTS idx_download_tokens_user ON download_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_download_tokens_plan ON download_tokens(plan_id);
+CREATE INDEX IF NOT EXISTS idx_download_tokens_purchase ON download_tokens(purchase_id);
 
 -- Teams table
 CREATE TABLE IF NOT EXISTS teams (

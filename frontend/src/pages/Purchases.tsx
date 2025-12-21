@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Download, Copy, ExternalLink, RefreshCw, CreditCard } from 'lucide-react';
-import { generateDownloadLink, getMyPurchases, retryPaystackPayment } from '../api';
+import { generatePurchaseDownloadLink, getMyPurchases, retryPaystackPayment } from '../api';
 import api from '../api';
 
 type PurchaseRow = {
@@ -32,9 +32,9 @@ export default function Purchases() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
-  const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
-  const [tokenByPlanId, setTokenByPlanId] = useState<Record<string, string>>({});
-  const [copiedPlanId, setCopiedPlanId] = useState<string | null>(null);
+  const [busyPurchaseId, setBusyPurchaseId] = useState<string | null>(null);
+  const [tokenByPurchaseId, setTokenByPurchaseId] = useState<Record<string, string>>({});
+  const [copiedPurchaseId, setCopiedPurchaseId] = useState<string | null>(null);
 
   const apiBase = useMemo(() => {
     const base = (api.defaults.baseURL || '').replace(/\/+$/, '');
@@ -68,22 +68,22 @@ export default function Purchases() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
 
-  const handleGenerate = async (planId: string, downloadStatus?: PurchaseRow['download_status']) => {
+  const handleGenerate = async (purchaseId: string, downloadStatus?: PurchaseRow['download_status']) => {
     if (downloadStatus === 'downloaded') {
       return;
     }
-    setBusyPlanId(planId);
-    setCopiedPlanId(null);
+    setBusyPurchaseId(purchaseId);
+    setCopiedPurchaseId(null);
     try {
-      const resp = await generateDownloadLink(planId);
+      const resp = await generatePurchaseDownloadLink(purchaseId);
       const token = resp.data?.download_token;
       if (token) {
-        setTokenByPlanId((prev: Record<string, string>) => ({ ...prev, [planId]: token }));
+        setTokenByPurchaseId((prev: Record<string, string>) => ({ ...prev, [purchaseId]: token }));
       }
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to generate download link');
     } finally {
-      setBusyPlanId(null);
+      setBusyPurchaseId(null);
     }
   };
 
@@ -92,15 +92,15 @@ export default function Purchases() {
     return `${safeBase}/customer/plans/download/${token}`;
   };
 
-  const handleCopy = async (planId: string) => {
-    const token = tokenByPlanId[planId];
+  const handleCopy = async (purchaseId: string) => {
+    const token = tokenByPurchaseId[purchaseId];
     if (!token) return;
 
     const url = buildDownloadUrl(token);
     try {
       await navigator.clipboard.writeText(url);
-      setCopiedPlanId(planId);
-      setTimeout(() => setCopiedPlanId(null), 2000);
+      setCopiedPurchaseId(purchaseId);
+      setTimeout(() => setCopiedPurchaseId(null), 2000);
     } catch {
       setError('Failed to copy link. Please copy it manually.');
     }
@@ -116,7 +116,7 @@ export default function Purchases() {
     // Only show spinner/disable if still pending
     const willDisable = (purchase.payment_status || '').toLowerCase() !== 'completed';
     if (willDisable) {
-      setBusyPlanId(purchase.plan_id);
+      setBusyPurchaseId(purchase.id);
     }
     setError(null);
     try {
@@ -132,7 +132,7 @@ export default function Purchases() {
       setError(msg);
     } finally {
       if (willDisable) {
-        setBusyPlanId(null);
+        setBusyPurchaseId(null);
       }
     }
   };
@@ -174,8 +174,7 @@ export default function Purchases() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {purchases.map((p) => {
-              const planId = p.plan_id;
-              const token = tokenByPlanId[planId];
+              const token = tokenByPurchaseId[p.id];
               const canDownload = p.payment_status === 'completed';
               const url = token ? buildDownloadUrl(token) : '';
               const downloadStatus = p.download_status || null;
@@ -234,7 +233,7 @@ export default function Purchases() {
                         <button
                           type="button"
                           onClick={() => handleCompletePayment(p)}
-                          disabled={busyPlanId === planId}
+                          disabled={busyPurchaseId === p.id}
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
                         >
                           <CreditCard className="w-4 h-4" />
@@ -243,12 +242,12 @@ export default function Purchases() {
                       )}
                       <button
                         type="button"
-                        onClick={() => handleGenerate(planId, downloadStatus)}
-                        disabled={!canDownload || busyPlanId === planId || downloadStatus === 'downloaded'}
+                        onClick={() => handleGenerate(p.id, downloadStatus)}
+                        disabled={!canDownload || busyPurchaseId === p.id || downloadStatus === 'downloaded'}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white disabled:opacity-50"
                       >
                         <Download className="w-4 h-4" />
-                        {busyPlanId === planId ? 'Generating…' : 'Generate Download Link'}
+                        {busyPurchaseId === p.id ? 'Generating…' : 'Generate Download Link'}
                       </button>
 
                       {token ? (
@@ -272,11 +271,11 @@ export default function Purchases() {
                           />
                           <button
                             type="button"
-                            onClick={() => handleCopy(planId)}
+                            onClick={() => handleCopy(p.id)}
                             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
                           >
                             <Copy className="w-4 h-4" />
-                            {copiedPlanId === planId ? 'Copied' : 'Copy'}
+                            {copiedPurchaseId === p.id ? 'Copied' : 'Copy'}
                           </button>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">

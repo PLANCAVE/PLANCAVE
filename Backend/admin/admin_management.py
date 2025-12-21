@@ -238,7 +238,7 @@ def list_purchases():
                     COUNT(*) FILTER (WHERE used) AS used_tokens,
                     MAX(created_at) FILTER (WHERE used) AS last_downloaded_at
                 FROM download_tokens dt
-                WHERE dt.user_id = p.user_id AND dt.plan_id = p.plan_id
+                WHERE dt.purchase_id = p.id
             ) dt ON TRUE
             WHERE {where_sql}
             ORDER BY p.purchased_at DESC

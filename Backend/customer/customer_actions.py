@@ -369,10 +369,33 @@ def purchase_plan():
         if not plan:
             return jsonify(message="Plan not found or not available"), 404
         
-        # Check if already purchased
-        cur.execute("SELECT id FROM purchases WHERE user_id = %s AND plan_id = %s", (user_id, plan_id))
-        if cur.fetchone():
-            return jsonify(message="You have already purchased this plan"), 409
+        # Determine which deliverables have already been purchased for this plan.
+        # This enables upgrade purchases (buy the remaining deliverables later).
+        cur.execute(
+            """
+            SELECT selected_deliverables
+            FROM purchases
+            WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
+            """,
+            (user_id, plan_id)
+        )
+        prior_rows = cur.fetchall() or []
+        already_purchased: set[str] = set()
+        for r in prior_rows:
+            raw = (r or {}).get('selected_deliverables')
+            if raw is None:
+                # A completed purchase with no selection implies "full plan".
+                already_purchased.add('__FULL__')
+                continue
+            if isinstance(raw, str):
+                try:
+                    raw = json.loads(raw)
+                except Exception:
+                    raw = None
+            if isinstance(raw, list):
+                for x in raw:
+                    if isinstance(x, str):
+                        already_purchased.add(x)
         
         # Determine amount (support per-deliverable pricing)
         amount = float(plan['price'])
@@ -398,6 +421,8 @@ def purchase_plan():
             for key in selected_deliverables:
                 if key not in deliverable_prices:
                     continue
+                if '__FULL__' in already_purchased or key in already_purchased:
+                    continue
                 val = deliverable_prices.get(key)
                 if val is None or val == '':
                     continue
@@ -408,12 +433,15 @@ def purchase_plan():
                     continue
 
             if total <= 0:
-                return jsonify(message="Selected deliverables total must be greater than 0"), 400
+                return jsonify(message="No new deliverables selected to purchase"), 409
 
             amount = total
 
         # If Paystack flow, initialize payment and mark purchase pending
         if payment_method == 'paystack':
+            if '__FULL__' in already_purchased:
+                return jsonify(message="You have already purchased this plan"), 409
+
             contact = fetch_user_contact(user_id, conn)
             payer_email = (contact or {}).get('email') or f"user-{user_id}@example.com"
             try:
@@ -904,24 +932,44 @@ def purchase_status(plan_id: str):
     try:
         cur.execute(
             """
-            SELECT id, payment_status, transaction_id, purchased_at
+            SELECT id, payment_status, transaction_id, purchased_at, selected_deliverables
             FROM purchases
             WHERE user_id = %s AND plan_id = %s
             ORDER BY purchased_at DESC
-            LIMIT 1
             """,
             (user_id, plan_id)
         )
-        purchase = cur.fetchone()
-        if not purchase:
+        purchases = cur.fetchall() or []
+        if not purchases:
             return jsonify(status="none")
 
-        payment_status = purchase.get('payment_status')
+        latest = purchases[0]
+        payment_status = (latest or {}).get('payment_status')
+        latest_txn = (latest or {}).get('transaction_id')
+
+        purchased_deliverables: set[str] = set()
+        full_purchase = False
+        for row in purchases:
+            if (row or {}).get('payment_status') != 'completed':
+                continue
+            raw = (row or {}).get('selected_deliverables')
+            if raw is None:
+                full_purchase = True
+                continue
+            if isinstance(raw, str):
+                try:
+                    raw = json.loads(raw)
+                except Exception:
+                    raw = None
+            if isinstance(raw, list):
+                for x in raw:
+                    if isinstance(x, str):
+                        purchased_deliverables.add(x)
+
         if payment_status != 'completed':
-            # pending / failed etc.
             return jsonify(
                 status=payment_status,
-                transaction_id=purchase.get('transaction_id'),
+                transaction_id=latest_txn,
             )
 
         # Paid: determine whether the plan has been downloaded (based on used download tokens)
@@ -942,9 +990,11 @@ def purchase_status(plan_id: str):
 
         return jsonify(
             status='completed',
-            transaction_id=purchase.get('transaction_id'),
+            transaction_id=latest_txn,
             download_status=download_status,
             last_downloaded_at=last_downloaded_at,
+            purchased_deliverables=([] if full_purchase else sorted(purchased_deliverables)),
+            full_purchase=bool(full_purchase),
         )
     except Exception as e:
         conn.rollback()
@@ -962,13 +1012,35 @@ def generate_download_link():
     data = request.get_json() or {}
 
     plan_id = data.get('plan_id')
-    if not plan_id:
-        return jsonify(message="plan_id is required"), 400
+    purchase_id = data.get('purchase_id')
+    if not plan_id and not purchase_id:
+        return jsonify(message="plan_id or purchase_id is required"), 400
 
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
 
     try:
+        purchase_row = {}
+
+        if purchase_id:
+            cur.execute(
+                """
+                SELECT p.id, p.plan_id, p.order_id, p.amount, p.user_id, p.payment_status, pl.name AS plan_name, pl.designer_id
+                FROM purchases p
+                JOIN plans pl ON p.plan_id = pl.id
+                WHERE p.id = %s
+                """,
+                (purchase_id,)
+            )
+            purchase_row = cur.fetchone() or {}
+            if not purchase_row:
+                return jsonify(message="Purchase not found"), 404
+            if int(purchase_row.get('user_id') or 0) != int(user_id) and role != 'admin':
+                return jsonify(message="Purchase does not belong to you"), 403
+            if purchase_row.get('payment_status') != 'completed':
+                return jsonify(message="Purchase not completed yet"), 409
+            plan_id = purchase_row.get('plan_id')
+
         cur.execute("SELECT id, name, designer_id FROM plans WHERE id = %s", (plan_id,))
         plan = cur.fetchone()
         if not plan:
@@ -981,67 +1053,67 @@ def generate_download_link():
             is_plan_owner = False
 
         if role != 'admin' and not is_plan_owner:
-            cur.execute(
-                """
-                SELECT id, purchased_at
-                FROM purchases
-                WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
-                ORDER BY purchased_at DESC NULLS LAST
-                LIMIT 1
-                """,
-                (user_id, plan_id)
-            )
-            purchase = cur.fetchone()
-            if not purchase:
-                # Helpful diagnostics: distinguish between "no purchase record" and
-                # "purchase exists but not completed".
+            if not purchase_id:
                 cur.execute(
                     """
-                    SELECT id, payment_status, payment_method, transaction_id, purchased_at
+                    SELECT id, order_id, amount, purchased_at
                     FROM purchases
-                    WHERE user_id = %s AND plan_id = %s
+                    WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
                     ORDER BY purchased_at DESC NULLS LAST
                     LIMIT 1
                     """,
                     (user_id, plan_id)
                 )
-                latest_purchase = cur.fetchone()
-                if latest_purchase:
-                    return jsonify(
-                        message="Purchase not completed yet",
-                        payment_status=latest_purchase.get('payment_status'),
-                        transaction_id=latest_purchase.get('transaction_id'),
-                        purchased_at=(
-                            latest_purchase.get('purchased_at').isoformat() + 'Z'
-                            if latest_purchase.get('purchased_at') is not None and hasattr(latest_purchase.get('purchased_at'), 'isoformat')
-                            else latest_purchase.get('purchased_at')
-                        ),
-                    ), 409
-                if not purchase:
+                purchase_row = cur.fetchone() or {}
+                if not purchase_row:
+                    # Helpful diagnostics: distinguish between "no purchase record" and
+                    # "purchase exists but not completed".
+                    cur.execute(
+                        """
+                        SELECT id, payment_status, payment_method, transaction_id, purchased_at
+                        FROM purchases
+                        WHERE user_id = %s AND plan_id = %s
+                        ORDER BY purchased_at DESC NULLS LAST
+                        LIMIT 1
+                        """,
+                        (user_id, plan_id)
+                    )
+                    latest_purchase = cur.fetchone()
+                    if latest_purchase:
+                        return jsonify(
+                            message="Purchase not completed yet",
+                            payment_status=latest_purchase.get('payment_status'),
+                            transaction_id=latest_purchase.get('transaction_id'),
+                            purchased_at=(
+                                latest_purchase.get('purchased_at').isoformat() + 'Z'
+                                if latest_purchase.get('purchased_at') is not None and hasattr(latest_purchase.get('purchased_at'), 'isoformat')
+                                else latest_purchase.get('purchased_at')
+                            ),
+                        ), 409
                     return jsonify(message="Purchase required before downloading"), 403
+                purchase_id = purchase_row.get('id')
 
-            # Enforce a strict one-time download per paid purchase.
-            # If the user has already used a token for this plan, do not allow issuing another.
             cur.execute(
                 """
                 SELECT 1
                 FROM download_tokens
-                WHERE user_id = %s AND plan_id = %s AND used = TRUE
+                WHERE purchase_id = %s AND used = TRUE
                 LIMIT 1
                 """,
-                (user_id, plan_id)
+                (purchase_id,)
             )
             if cur.fetchone():
-                return jsonify(message="This plan has already been downloaded"), 409
+                return jsonify(message="This purchase has already been downloaded"), 409
 
         # Quota check removed - paying customers get unlimited downloads
 
-        # Invalidate previous unused tokens for the same plan/user so the newly generated
+        # Invalidate previous unused tokens for the same purchase so the newly generated
         # link is the single usable link.
-        cur.execute(
-            "UPDATE download_tokens SET used = TRUE WHERE user_id = %s AND plan_id = %s AND used = FALSE",
-            (user_id, plan_id)
-        )
+        if purchase_id:
+            cur.execute(
+                "UPDATE download_tokens SET used = TRUE WHERE purchase_id = %s AND used = FALSE",
+                (purchase_id,)
+            )
 
         token = str(uuid.uuid4())
         # Tokens should never expire unless used. Column is NOT NULL, so store a far-future expiry.
@@ -1049,28 +1121,40 @@ def generate_download_link():
 
         cur.execute(
             """
-            INSERT INTO download_tokens (user_id, plan_id, token, expires_at, max_downloads)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO download_tokens (user_id, plan_id, purchase_id, token, expires_at, max_downloads)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING token, expires_at
             """,
             # Single-use download only
-            (user_id, plan_id, token, expires_at, 1)
+            (user_id, plan_id, purchase_id, token, expires_at, 1)
         )
 
         # Email the same link the app returns (best-effort)
         try:
-            cur.execute(
-                """
-                SELECT p.id, p.order_id, pl.name AS plan_name, p.amount
-                FROM purchases p
-                JOIN plans pl ON p.plan_id = pl.id
-                WHERE p.user_id = %s AND p.plan_id = %s AND p.payment_status = 'completed'
-                ORDER BY p.purchased_at DESC NULLS LAST
-                LIMIT 1
-                """,
-                (user_id, plan_id)
-            )
-            purchase_row = cur.fetchone() or {}
+            if not purchase_row and purchase_id:
+                cur.execute(
+                    """
+                    SELECT p.id, p.order_id, pl.name AS plan_name, p.amount
+                    FROM purchases p
+                    JOIN plans pl ON p.plan_id = pl.id
+                    WHERE p.id = %s
+                    """,
+                    (purchase_id,)
+                )
+                purchase_row = cur.fetchone() or {}
+            if not purchase_row:
+                cur.execute(
+                    """
+                    SELECT p.id, p.order_id, pl.name AS plan_name, p.amount
+                    FROM purchases p
+                    JOIN plans pl ON p.plan_id = pl.id
+                    WHERE p.user_id = %s AND p.plan_id = %s AND p.payment_status = 'completed'
+                    ORDER BY p.purchased_at DESC NULLS LAST
+                    LIMIT 1
+                    """,
+                    (user_id, plan_id)
+                )
+                purchase_row = cur.fetchone() or {}
             contact = fetch_user_contact(user_id, conn) or {}
             to_email = (contact.get('email') or '').strip()
             if to_email:
@@ -1165,16 +1249,28 @@ def download_plan_files(download_token: str):
 
         selected_deliverables = None
         if role != 'admin':
-            cur.execute(
-                """
-                SELECT selected_deliverables
-                FROM purchases
-                WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
-                ORDER BY purchased_at DESC
-                LIMIT 1
-                """,
-                (int(token_row['user_id']), plan_id)
-            )
+            purchase_id = token_row.get('purchase_id')
+            if purchase_id:
+                cur.execute(
+                    """
+                    SELECT selected_deliverables
+                    FROM purchases
+                    WHERE id = %s AND user_id = %s AND plan_id = %s AND payment_status = 'completed'
+                    """,
+                    (purchase_id, int(token_row['user_id']), plan_id)
+                )
+            else:
+                # Legacy fallback: no purchase_id stored on token
+                cur.execute(
+                    """
+                    SELECT selected_deliverables
+                    FROM purchases
+                    WHERE user_id = %s AND plan_id = %s AND payment_status = 'completed'
+                    ORDER BY purchased_at DESC
+                    LIMIT 1
+                    """,
+                    (int(token_row['user_id']), plan_id)
+                )
             purchase_row = cur.fetchone() or {}
             selected_deliverables = purchase_row.get('selected_deliverables')
 
@@ -1223,7 +1319,7 @@ def download_plan_files(download_token: str):
         conn.commit()
 
         zip_buffer.seek(0)
-        return send_file(
+        response = send_file(
             zip_buffer,
             mimetype='application/zip',
             as_attachment=True,
@@ -1464,23 +1560,36 @@ def get_my_purchases():
             purchase = _serialize_purchase_row(row)
             plan_id = purchase.get('plan_id')
             payment_status = purchase.get('payment_status')
+            purchase_id = purchase.get('id')
 
             download_status = None
             last_downloaded_at = None
-            if payment_status == 'completed' and plan_id:
+            if payment_status == 'completed' and plan_id and purchase_id:
                 cur.execute(
                     """
                     SELECT MAX(created_at) AS last_downloaded_at
                     FROM download_tokens
-                    WHERE user_id = %s AND plan_id = %s AND used = TRUE
+                    WHERE purchase_id = %s AND used = TRUE
                     """,
-                    (user_id, plan_id)
+                    (purchase_id,)
                 )
                 dl_row = cur.fetchone() or {}
                 ts = dl_row.get('last_downloaded_at')
                 if ts is not None and hasattr(ts, 'isoformat'):
                     last_downloaded_at = ts.isoformat() + 'Z'
-                download_status = 'downloaded' if ts else 'pending_download'
+                if ts:
+                    download_status = 'downloaded'
+                else:
+                    cur.execute(
+                        """
+                        SELECT 1
+                        FROM download_tokens
+                        WHERE purchase_id = %s
+                        LIMIT 1
+                        """,
+                        (purchase_id,)
+                    )
+                    download_status = 'pending_download' if cur.fetchone() else 'not_generated'
 
             purchase['download_status'] = download_status
             purchase['last_downloaded_at'] = last_downloaded_at

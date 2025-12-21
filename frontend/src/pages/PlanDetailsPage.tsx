@@ -92,6 +92,8 @@ export default function PlanDetailsPage() {
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [purchaseDownloadStatus, setPurchaseDownloadStatus] = useState<'pending_download' | 'downloaded' | null>(null);
   const [lastDownloadedAt, setLastDownloadedAt] = useState<string | null>(null);
+  const [purchasedDeliverables, setPurchasedDeliverables] = useState<string[]>([]);
+  const [fullPurchase, setFullPurchase] = useState(false);
   const autoVerifyRanRef = useRef(false);
   
   // Cart and favorites states
@@ -220,12 +222,7 @@ export default function PlanDetailsPage() {
       return;
     }
 
-    const keys = Object.keys(prices).filter((k) => {
-      const raw = (prices as any)[k];
-      const n = raw === '' || raw === null || raw === undefined ? 0 : Number(raw);
-      return Number.isFinite(n) && n > 0;
-    });
-    setSelectedDeliverables(keys);
+    setSelectedDeliverables([]);
   }, [plan]);
 
   // Check purchase status when plan loads and user is authenticated
@@ -410,11 +407,15 @@ export default function PlanDetailsPage() {
       const transactionId = resp.data?.transaction_id as string | undefined;
       const dlStatus = resp.data?.download_status as 'pending_download' | 'downloaded' | undefined;
       const lastDl = resp.data?.last_downloaded_at as string | undefined;
+      const purchased = resp.data?.purchased_deliverables as string[] | undefined;
+      const isFull = Boolean(resp.data?.full_purchase);
       if (status === 'completed' || status === 'purchased') {
         setPurchaseStatus('purchased');
         setPendingReference(null);
         setPurchaseDownloadStatus(dlStatus || null);
         setLastDownloadedAt(lastDl || null);
+        setPurchasedDeliverables(Array.isArray(purchased) ? purchased : []);
+        setFullPurchase(isFull);
       } else if (status === 'pending') {
         setPurchaseStatus('processing');
         if (transactionId) {
@@ -422,17 +423,23 @@ export default function PlanDetailsPage() {
         }
         setPurchaseDownloadStatus(null);
         setLastDownloadedAt(null);
+        setPurchasedDeliverables([]);
+        setFullPurchase(false);
       } else {
         setPurchaseStatus('none');
         setPendingReference(null);
         setPurchaseDownloadStatus(null);
         setLastDownloadedAt(null);
+        setPurchasedDeliverables([]);
+        setFullPurchase(false);
       }
     } catch {
       setPurchaseStatus('none');
       setPendingReference(null);
       setPurchaseDownloadStatus(null);
       setLastDownloadedAt(null);
+      setPurchasedDeliverables([]);
+      setFullPurchase(false);
     }
   };
 
@@ -498,6 +505,13 @@ export default function PlanDetailsPage() {
         return Number.isFinite(n) && n > 0;
       })
     : [];
+  const hasAnyDeliverables = Boolean(deliverablePrices && pricedDeliverables.length > 0);
+  const remainingDeliverablesCount = (() => {
+    if (!hasAnyDeliverables) return 0;
+    if (fullPurchase) return 0;
+    const purchasedSet = new Set(purchasedDeliverables);
+    return pricedDeliverables.reduce((count, [key]) => count + (purchasedSet.has(key) ? 0 : 1), 0);
+  })();
   const selectedTotal = (() => {
     if (!deliverablePrices) return priceNumber || 0;
     return selectedDeliverables.reduce((sum, key) => {
@@ -597,6 +611,15 @@ export default function PlanDetailsPage() {
               {plan.project_type}
               {plan.category ? ` · ${plan.category}` : ''}
             </p>
+
+            {isAuthenticated && !isAdmin && purchaseStatus === 'purchased' ? (
+              <div className="mb-4">
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                  <CheckCircle className="w-4 h-4" />
+                  Purchased
+                </span>
+              </div>
+            ) : null}
 
             <div className="text-sm text-gray-600 mb-6">
               Designer: <span className="font-medium text-gray-900">{designerLabel}</span>
@@ -729,6 +752,15 @@ export default function PlanDetailsPage() {
                       <div className="text-sm text-slate-600 mt-1 max-w-xl">
                         Select only the disciplines you need. Your total updates as you make changes.
                       </div>
+                      {purchaseStatus === 'purchased' ? (
+                        <div className="text-xs text-slate-500 mt-2">
+                          {fullPurchase
+                            ? 'You already own the full plan.'
+                            : remainingDeliverablesCount > 0
+                              ? `You already purchased some items. ${remainingDeliverablesCount} more available to buy.`
+                              : 'You already purchased all available deliverables.'}
+                        </div>
+                      ) : null}
                     </div>
                     <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-2 text-right">
                       <div className="text-[11px] uppercase tracking-wide text-teal-700">Total</div>
@@ -739,7 +771,8 @@ export default function PlanDetailsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {pricedDeliverables.map(([key, value]) => {
                       const n = value === '' || value === null || value === undefined ? 0 : Number(value);
-                      const checked = selectedDeliverables.includes(key);
+                      const isPurchased = Boolean(fullPurchase || purchasedDeliverables.includes(key));
+                      const checked = isPurchased || selectedDeliverables.includes(key);
                       const label = key.replace(/_/g, ' ');
                       
                       // Icon mapping for different deliverable types
@@ -816,10 +849,12 @@ export default function PlanDetailsPage() {
                       return (
                         <label
                           key={key}
-                          className={`group relative flex items-start gap-4 rounded-2xl border-2 p-5 cursor-pointer transition-all duration-200 overflow-hidden ${
-                            checked
-                              ? 'border-teal-400 bg-gradient-to-br from-teal-50 via-white to-blue-50 shadow-lg scale-[1.02]'
-                              : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md hover:scale-[1.01]'
+                          className={`group relative flex items-start gap-4 rounded-2xl border-2 p-5 transition-all duration-200 overflow-hidden ${
+                            isPurchased
+                              ? 'border-emerald-200 bg-emerald-50/50 opacity-90 cursor-not-allowed'
+                              : checked
+                                ? 'border-teal-400 bg-gradient-to-br from-teal-50 via-white to-blue-50 shadow-lg scale-[1.02] cursor-pointer'
+                                : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md hover:scale-[1.01] cursor-pointer'
                           }`}
                         >
                           {/* Decorative background pattern */}
@@ -837,7 +872,9 @@ export default function PlanDetailsPage() {
                           <input
                             type="checkbox"
                             checked={checked}
+                            disabled={isPurchased}
                             onChange={(e) => {
+                              if (isPurchased) return;
                               setSelectedDeliverables((prev) => {
                                 if (e.target.checked) return Array.from(new Set([...prev, key]));
                                 return prev.filter((x) => x !== key);
@@ -859,27 +896,29 @@ export default function PlanDetailsPage() {
                                   {label}
                                 </h4>
                                 <p className="text-xs text-slate-600 mt-1">
-                                  {checked ? 'Selected' : 'Add to your plan'}
+                                  {isPurchased ? 'Purchased' : checked ? 'Selected' : 'Add to your plan'}
                                 </p>
                               </div>
                               <div className="text-right">
                                 <div className="text-lg font-bold text-slate-900">
                                   $ {Number.isFinite(n) ? n.toLocaleString() : '—'}
                                 </div>
-                                {checked && (
-                                  <div className="text-xs text-teal-600 font-medium mt-1">
-                                    ✓ Included
-                                  </div>
-                                )}
+                                {isPurchased ? (
+                                  <div className="text-xs text-emerald-700 font-medium mt-1">✓ Purchased</div>
+                                ) : checked ? (
+                                  <div className="text-xs text-teal-600 font-medium mt-1">✓ Selected</div>
+                                ) : null}
                               </div>
                             </div>
                           </div>
                           
                           {/* Check indicator */}
                           <div className={`absolute top-5 right-5 w-6 h-6 rounded-full transition-all duration-200 z-20 ${
-                            checked
-                              ? 'bg-teal-500 text-white shadow-lg'
-                              : 'bg-white border-2 border-slate-300 text-transparent'
+                            isPurchased
+                              ? 'bg-emerald-600 text-white shadow-lg'
+                              : checked
+                                ? 'bg-teal-500 text-white shadow-lg'
+                                : 'bg-white border-2 border-slate-300 text-transparent'
                           }`}>
                             {checked && (
                               <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">

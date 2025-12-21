@@ -1198,7 +1198,8 @@ def generate_download_link():
             if not purchase_row and purchase_id:
                 cur.execute(
                     """
-                    SELECT p.id, COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id, pl.name AS plan_name, p.amount
+                    SELECT p.id, COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id, pl.name AS plan_name, p.amount,
+                           p.transaction_id, p.selected_deliverables, pl.deliverable_prices
                     FROM purchases p
                     JOIN plans pl ON p.plan_id = pl.id
                     WHERE p.id = %s
@@ -1209,7 +1210,8 @@ def generate_download_link():
             if not purchase_row:
                 cur.execute(
                     """
-                    SELECT p.id, COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id, pl.name AS plan_name, p.amount
+                    SELECT p.id, COALESCE(p.payment_metadata->>'order_id', NULL) AS order_id, pl.name AS plan_name, p.amount,
+                           p.transaction_id, p.selected_deliverables, pl.deliverable_prices
                     FROM purchases p
                     JOIN plans pl ON p.plan_id = pl.id
                     WHERE p.user_id = %s AND p.plan_id = %s AND p.payment_status = 'completed'
@@ -1223,18 +1225,128 @@ def generate_download_link():
             to_email = (contact.get('email') or '').strip()
             if to_email:
                 download_url = _build_app_url(f"/api/customer/plans/download/{token}")
-                subject = f"Your download link {purchase_row.get('order_id') or ''}".strip()
-                html = (
-                    "<div style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial'>"
-                    "<h2 style='margin:0 0 12px'>Your download link is ready</h2>"
-                    f"<p style='margin:0 0 8px'>Order ID: <strong>{purchase_row.get('order_id') or '—'}</strong></p>"
-                    f"<p style='margin:0 0 8px'>Plan: <strong>{purchase_row.get('plan_name') or plan_id}</strong></p>"
-                    f"<p style='margin:0 0 16px'>Amount: <strong>{purchase_row.get('amount') or ''}</strong></p>"
-                    "<p style='margin:0 0 16px'>This is your one-time download link:</p>"
-                    f"<p><a href='{download_url}' style='display:inline-block;padding:10px 14px;background:#0f766e;color:#fff;text-decoration:none;border-radius:8px'>Download your files</a></p>"
-                    f"<p style='color:#64748b;font-size:12px'>If the button doesn't work, copy and paste: {download_url}</p>"
-                    "</div>"
-                )
+
+                def _parse_json_value(value):
+                    if value is None:
+                        return None
+                    if isinstance(value, (dict, list)):
+                        return value
+                    if isinstance(value, str):
+                        try:
+                            return json.loads(value)
+                        except Exception:
+                            return value
+                    return value
+
+                selected_deliverables = _parse_json_value(purchase_row.get('selected_deliverables'))
+                deliverable_prices = _parse_json_value(purchase_row.get('deliverable_prices'))
+
+                order_id = (purchase_row.get('order_id') or '').strip() if isinstance(purchase_row.get('order_id'), str) else purchase_row.get('order_id')
+                purchase_id_for_email = purchase_row.get('id')
+                transaction_id = purchase_row.get('transaction_id')
+                order_id_display = order_id or (transaction_id or purchase_id_for_email or '—')
+
+                def _format_amount(val):
+                    try:
+                        if val is None or val == '':
+                            return ''
+                        num = float(val)
+                        return f"{num:,.2f}"
+                    except Exception:
+                        return str(val)
+
+                def _label_for_key(key: str) -> str:
+                    mapping = {
+                        '__FULL__': 'Full Plan (All deliverables)',
+                        'architectural': 'Architectural',
+                        'renders': '3D Renders',
+                        'structural': 'Structural',
+                        'mep': 'MEP',
+                        'civil': 'Civil',
+                        'fire_safety': 'Fire Safety',
+                        'interior': 'Interior',
+                        'boq': 'BOQ',
+                    }
+                    return mapping.get(key, key.replace('_', ' ').title())
+
+                deliverable_rows = []
+                total_from_breakdown = 0.0
+                if selected_deliverables is None:
+                    # Legacy/full purchase
+                    deliverable_rows = [('__FULL__', None)]
+                elif isinstance(selected_deliverables, list):
+                    deliverable_rows = [(k, None) for k in selected_deliverables if isinstance(k, str)]
+
+                if isinstance(deliverable_prices, dict) and deliverable_rows:
+                    computed = []
+                    for k, _ in deliverable_rows:
+                        if k == '__FULL__':
+                            # For full purchases, list all known deliverable prices if present
+                            for dk, dv in deliverable_prices.items():
+                                computed.append((dk, dv))
+                                try:
+                                    total_from_breakdown += float(dv or 0)
+                                except Exception:
+                                    pass
+                            deliverable_rows = computed
+                            break
+
+                        if k in deliverable_prices:
+                            price_val = deliverable_prices.get(k)
+                            computed.append((k, price_val))
+                            try:
+                                total_from_breakdown += float(price_val or 0)
+                            except Exception:
+                                pass
+                        else:
+                            computed.append((k, None))
+                    deliverable_rows = computed
+
+                rows_html = ''
+                if deliverable_rows:
+                    row_lines = []
+                    for k, price_val in deliverable_rows:
+                        label = _label_for_key(k)
+                        price_html = _format_amount(price_val) if price_val is not None else '—'
+                        row_lines.append(
+                            "<tr>"
+                            f"<td style='padding:6px 8px;border-bottom:1px solid #e2e8f0'>{label}</td>"
+                            f"<td style='padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right'>{price_html}</td>"
+                            "</tr>"
+                        )
+                    rows_html = (
+                        "<div style='margin:16px 0'>"
+                        "<div style='font-weight:600;margin:0 0 6px'>Deliverables</div>"
+                        "<table style='width:100%;border-collapse:collapse;font-size:14px'>"
+                        "<thead><tr>"
+                        "<th style='text-align:left;padding:6px 8px;border-bottom:1px solid #cbd5e1'>Item</th>"
+                        "<th style='text-align:right;padding:6px 8px;border-bottom:1px solid #cbd5e1'>Price</th>"
+                        "</tr></thead>"
+                        "<tbody>"
+                        + "".join(row_lines) +
+                        "</tbody></table></div>"
+                    )
+
+                email_total_amount = purchase_row.get('amount')
+                total_display = _format_amount(email_total_amount)
+                breakdown_total_display = _format_amount(total_from_breakdown) if total_from_breakdown > 0 else ''
+                subject = f"Your download link {order_id_display}".strip()
+                html_parts = [
+                    "<div style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial'>",
+                    "<h2 style='margin:0 0 12px'>Your download link is ready</h2>",
+                    f"<p style='margin:0 0 8px'>Order ID: <strong>{order_id_display}</strong></p>",
+                    f"<p style='margin:0 0 8px'>Plan: <strong>{purchase_row.get('plan_name') or plan_id}</strong></p>",
+                    f"<p style='margin:0 0 6px'>Amount paid: <strong>{total_display}</strong></p>",
+                    (f"<p style='margin:0 0 12px;color:#475569'>Deliverables total: <strong>{breakdown_total_display}</strong></p>" if breakdown_total_display else "<div style='margin:0 0 12px'></div>"),
+                    rows_html,
+                    (f"<p style='margin:12px 0 0;color:#475569;font-size:12px'>Purchase ID: {purchase_id_for_email}</p>" if purchase_id_for_email else ""),
+                    (f"<p style='margin:4px 0 0;color:#475569;font-size:12px'>Transaction ID: {transaction_id}</p>" if transaction_id else ""),
+                    "<p style='margin:0 0 16px'>This is your one-time download link:</p>",
+                    f"<p><a href='{download_url}' style='display:inline-block;padding:10px 14px;background:#0f766e;color:#fff;text-decoration:none;border-radius:8px'>Download your files</a></p>",
+                    f"<p style='color:#64748b;font-size:12px'>If the button doesn't work, copy and paste: {download_url}</p>",
+                    "</div>",
+                ]
+                html = "".join(html_parts)
                 _send_email(to_email, subject, html)
                 if purchase_row.get('id'):
                     cur.execute(

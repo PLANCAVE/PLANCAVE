@@ -135,6 +135,7 @@ export default function PurchasesAdmin() {
   const [loading, setLoading] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [metadata, setMetadata] = useState<PurchasesResponse['metadata'] | null>(null);
@@ -174,6 +175,7 @@ export default function PurchasesAdmin() {
     if (reset) {
       setLoading(true);
       setError(null);
+      setSuccess(null);
     } else {
       setFetchingMore(true);
     }
@@ -224,13 +226,20 @@ export default function PurchasesAdmin() {
     }
     setVerifyingPayment(reference);
     try {
-      await adminVerifyPaystackPayment(reference);
+      const resp = await adminVerifyPaystackPayment(reference);
+      if (resp?.status !== 200) {
+        setError(resp?.data?.message || 'Payment not completed yet.');
+        setSuccess(null);
+        return;
+      }
       // Refresh purchases list to show updated status
       await loadPurchases({ reset: true });
       setError(null);
+      setSuccess(resp?.data?.message || 'Payment verification completed.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to complete payment verification';
       setError(msg);
+      setSuccess(null);
     } finally {
       setVerifyingPayment(null);
     }
@@ -243,13 +252,20 @@ export default function PurchasesAdmin() {
     }
     setConfirmingPayment(reference);
     try {
-      await adminConfirmPaystackPayment(reference);
+      const resp = await adminConfirmPaystackPayment(reference);
+      if (resp?.status !== 200) {
+        setError(resp?.data?.message || 'Payment not completed yet.');
+        setSuccess(null);
+        return;
+      }
       // Refresh purchases list to show admin confirmed status
       await loadPurchases({ reset: true });
       setError(null);
+      setSuccess(resp?.data?.message || 'Payment marked as admin confirmed.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to confirm payment';
       setError(msg);
+      setSuccess(null);
     } finally {
       setConfirmingPayment(null);
     }
@@ -289,6 +305,12 @@ export default function PurchasesAdmin() {
         {error ? (
           <div className="p-4 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-200">
             {error}
+          </div>
+        ) : null}
+
+        {success ? (
+          <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-100">
+            {success}
           </div>
         ) : null}
 

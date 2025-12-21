@@ -125,6 +125,7 @@ export default function Landing() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [featuredPlans, setFeaturedPlans] = useState<Plan[]>([]);
+  const [topSellingPlans, setTopSellingPlans] = useState<Plan[]>([]);
   const [isLoadingFeaturedPlans, setIsLoadingFeaturedPlans] = useState(true);
   const [heroImageLoaded, setHeroImageLoaded] = useState(false);
   const [hasCompletedInitialHeroLoad, setHasCompletedInitialHeroLoad] = useState(false);
@@ -150,6 +151,20 @@ export default function Landing() {
     };
 
     loadFeaturedPlans();
+  }, []);
+
+  useEffect(() => {
+    const loadTopSellingPlans = async () => {
+      try {
+        const response = await browsePlans({ sort_by: 'sales_count', order: 'desc', limit: 4, offset: 0 });
+        const results: Plan[] = response.data.results || [];
+        setTopSellingPlans(results);
+      } catch (error) {
+        console.error('Failed to load top selling plans:', error);
+      }
+    };
+
+    loadTopSellingPlans();
   }, []);
 
   useEffect(() => {
@@ -186,7 +201,7 @@ export default function Landing() {
     setHeroImageLoaded(false);
   }, [currentPlanIndex]);
 
-  const { budgetPlans, bestSellingPlans, newPlans, popularCategoryPlans } = useMemo(() => {
+  const { budgetPlans, newPlans, popularCategoryPlans } = useMemo(() => {
     const shuffle = (plans: Plan[]) => {
       const copy = [...plans];
       for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -220,7 +235,6 @@ export default function Landing() {
 
     return {
       budgetPlans: chunk(0, 4),
-      bestSellingPlans: chunk(4, 8),
       newPlans: chunk(8, 12),
       popularCategoryPlans: popular,
     };
@@ -527,7 +541,7 @@ export default function Landing() {
 
       {/* Plan Collections - redesigned order and logic */}
       <PlanShowcase title="This month’s new releases" subtitle="Fresh arrivals published this month by our designers." plans={newPlans} cta="See new arrivals" ctaLink="/plans?quick=new" />
-      <PlanShowcase title="Top-selling plans" subtitle="Proven choices customers keep choosing." plans={bestSellingPlans} cta="Shop bestsellers" ctaLink="/plans?quick=top" badge="Best Seller" />
+      <PlanShowcase title="Top-selling plans" subtitle="Proven choices customers keep choosing." plans={topSellingPlans} cta="Shop bestsellers" ctaLink="/plans?quick=top" badge="Best Seller" />
       <PlanShowcase title="Best value plans" subtitle="Quality designs at accessible prices." plans={budgetPlans} cta="Browse best value" ctaLink="/plans?quick=budget" />
       <PlanShowcase title="Trending categories" subtitle="Explore the plan types customers are choosing right now." plans={popularCategoryPlans} cta="Browse all categories" ctaLink="/plans" />
 

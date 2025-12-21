@@ -174,6 +174,7 @@ def _append_paystack_reference_to_purchase(cur, purchase_id: str, reference: str
     if not purchase_id or not reference:
         return
     try:
+        cur.execute("SAVEPOINT paystack_ref_append")
         cur.execute(
             """
             UPDATE purchases
@@ -206,7 +207,13 @@ def _append_paystack_reference_to_purchase(cur, purchase_id: str, reference: str
             """,
             (reference, reference, purchase_id),
         )
+        cur.execute("RELEASE SAVEPOINT paystack_ref_append")
     except Exception:
+        try:
+            cur.execute("ROLLBACK TO SAVEPOINT paystack_ref_append")
+            cur.execute("RELEASE SAVEPOINT paystack_ref_append")
+        except Exception:
+            pass
         # Never fail payment verification because of metadata bookkeeping
         return
 
@@ -304,6 +311,7 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
 
     # Store full Paystack payload (keep our own fields too)
     try:
+        cur.execute("SAVEPOINT paystack_payload_store")
         merged = dict(meta)
         merged['paystack'] = paystack_data
         cur.execute(
@@ -314,8 +322,13 @@ def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
             """,
             (json.dumps(merged), purchase['id'])
         )
+        cur.execute("RELEASE SAVEPOINT paystack_payload_store")
     except Exception:
-        pass
+        try:
+            cur.execute("ROLLBACK TO SAVEPOINT paystack_payload_store")
+            cur.execute("RELEASE SAVEPOINT paystack_payload_store")
+        except Exception:
+            pass
 
     cur.execute(
         """

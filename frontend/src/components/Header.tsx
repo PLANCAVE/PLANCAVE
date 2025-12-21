@@ -15,6 +15,8 @@ export default function Header() {
   const { isAuthenticated, user, refreshUserProfile, token } = useAuth() as any;
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const canSeePurchases = isAuthenticated && (user?.role === 'designer' || user?.role === 'customer');
 
@@ -36,23 +38,50 @@ export default function Header() {
 
   useEffect(() => {
     const loadProfileForHeader = async () => {
-      if (!isAuthenticated || !token) return;
+      if (!isAuthenticated || !token || profileLoaded) return;
       try {
         const res = await getMyProfile();
         const data = res.data || {};
-        refreshUserProfile({
+        const resolvedAvatar = resolveAvatarUrl(data.profile_picture_url);
+        const nextProfile = {
           first_name: data.first_name,
           middle_name: data.middle_name,
           last_name: data.last_name,
-          profile_picture_url: data.profile_picture_url,
-        });
+          profile_picture_url: resolvedAvatar,
+        } as const;
+
+        const hasChanges =
+          !user ||
+          user.first_name !== nextProfile.first_name ||
+          user.middle_name !== nextProfile.middle_name ||
+          user.last_name !== nextProfile.last_name ||
+          user.profile_picture_url !== nextProfile.profile_picture_url;
+
+        if (hasChanges) {
+          refreshUserProfile(nextProfile);
+        }
+        setProfileLoaded(true);
       } catch {
         // Keep header resilient: if /me fails, fall back to whatever is in JWT.
+        setProfileLoaded(true);
       }
     };
 
     loadProfileForHeader();
-  }, [isAuthenticated, token, refreshUserProfile]);
+  }, [isAuthenticated, token, refreshUserProfile, profileLoaded, user]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setProfileLoaded(false);
+      setAvatarError(false);
+    }
+  }, [isAuthenticated]);
+
+  const avatarSrc = user?.profile_picture_url ? resolveAvatarUrl(user.profile_picture_url) : '';
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [avatarSrc]);
 
   return (
     <header className="bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] border-b border-teal-500/30 sticky top-0 z-50 backdrop-blur-xl shadow-2xl shadow-black/30">
@@ -133,11 +162,12 @@ export default function Header() {
                   onClick={() => navigate('/profile')}
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-teal-300/60 bg-white/5 hover:bg-white/15 transition-all ml-auto overflow-hidden"
                 >
-                  {user?.profile_picture_url ? (
+                  {avatarSrc && !avatarError ? (
                     <img
-                      src={resolveAvatarUrl(user.profile_picture_url)}
+                      src={avatarSrc}
                       alt={user.email}
-                      className="h-full w-full object-cover"
+                      className="block h-full w-full object-cover object-center"
+                      onError={() => setAvatarError(true)}
                     />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center bg-teal-500/20 text-teal-100 text-sm font-semibold tracking-wide">

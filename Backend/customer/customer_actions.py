@@ -1134,13 +1134,16 @@ def add_to_cart():
     cur = conn.cursor(row_factory=dict_row)
 
     try:
-        # Ensure plan exists and is available
+        # Ensure plan exists and is available for carting
         cur.execute(
             """
-            SELECT id, name
-            FROM plans
-            WHERE id = %s
-              AND (status IS NULL OR LOWER(status) = 'available')
+            SELECT 
+                p.*, 
+                u.username AS designer_name
+            FROM plans p
+            LEFT JOIN users u ON p.designer_id = u.id
+            WHERE p.id = %s
+              AND (p.status IS NULL OR LOWER(p.status) = 'available')
             """,
             (plan_id,)
         )
@@ -1167,9 +1170,42 @@ def add_to_cart():
                 'plan_name': plan['name']
             }, conn)
 
+        # Retrieve the cart item payload (whether newly inserted or existing)
+        if inserted:
+            cart_lookup_query = (
+                """
+                SELECT 
+                    c.added_at,
+                    p.*, 
+                    u.username AS designer_name
+                FROM cart_items c
+                JOIN plans p ON c.plan_id = p.id
+                LEFT JOIN users u ON p.designer_id = u.id
+                WHERE c.id = %s
+                """
+            )
+            lookup_params = (inserted['id'],)
+        else:
+            cart_lookup_query = (
+                """
+                SELECT 
+                    c.added_at,
+                    p.*, 
+                    u.username AS designer_name
+                FROM cart_items c
+                JOIN plans p ON c.plan_id = p.id
+                LEFT JOIN users u ON p.designer_id = u.id
+                WHERE c.user_id = %s AND c.plan_id = %s
+                """
+            )
+            lookup_params = (user_id, plan_id)
+
+        cur.execute(cart_lookup_query, lookup_params)
+        cart_item = cur.fetchone()
+
         conn.commit()
 
-        return jsonify(message="Added to cart"), 201
+        return jsonify(message="Added to cart", item=cart_item, created=bool(inserted)), 201
 
     except Exception as e:
         conn.rollback()

@@ -554,6 +554,15 @@ function StatusDot({ status }: { status: string | null }) {
 }
 
 function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onClose: () => void }) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) {
       onClose();
@@ -578,7 +587,7 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
       onClick={handleOverlayClick}
     >
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" />
-      <div className="relative w-full max-w-3xl mx-4 bg-slate-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-3xl mx-4 bg-slate-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         <header className="flex items-start justify-between gap-4 border-b border-white/10 p-6 text-white">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-white/60">Purchase Details</p>
@@ -597,7 +606,7 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
           </button>
         </header>
 
-        <div className="p-6 space-y-6 text-white/90 text-sm">
+        <div className="p-6 space-y-6 text-white/90 text-sm overflow-y-auto">
           <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
               <p className="text-xs uppercase tracking-[0.3em] text-white/60">Buyer</p>
@@ -660,6 +669,17 @@ function PurchaseDetailModal({ purchase, onClose }: { purchase: PurchaseRow; onC
             )}
           </section>
         </div>
+
+        <footer className="border-t border-white/10 p-4 flex justify-end bg-slate-950/95">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-colors"
+          >
+            <X className="w-4 h-4" />
+            Close
+          </button>
+        </footer>
       </div>
     </div>
   );

@@ -69,7 +69,7 @@ const PlanShowcase = ({ title, subtitle, plans, cta, ctaLink, badge }: PlanShowc
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
                 
                 <div className="absolute top-4 left-4 flex gap-2">
-                  {badge && (
+                  {badge && (Number((plan as any).sales_count || 0) > 0) && (
                     <span className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md">
                       {badge}
                     </span>

@@ -343,6 +343,21 @@ export default function UploadPlan() {
         const response = isAdmin ? await getAdminPlan(editingPlanId) : await getPlanDetails(editingPlanId);
         const plan = response.data;
 
+        const parsedDeliverablePrices = (() => {
+          const raw = plan?.deliverable_prices;
+          if (!raw) return null;
+          if (typeof raw === 'object') return raw;
+          if (typeof raw === 'string') {
+            try {
+              const obj = JSON.parse(raw);
+              return obj && typeof obj === 'object' ? obj : null;
+            } catch {
+              return null;
+            }
+          }
+          return null;
+        })();
+
         const filePaths = plan?.file_paths && typeof plan.file_paths === 'object' ? plan.file_paths : {};
         setExistingUploads({
           image_url: plan?.image_url,
@@ -396,6 +411,21 @@ export default function UploadPlan() {
           customization_available: !!plan.customization_available,
           support_duration: plan.support_duration != null ? String(plan.support_duration) : '0',
         });
+
+        if (parsedDeliverablePrices && typeof parsedDeliverablePrices === 'object') {
+          const toStr = (v: any) => (v == null || v === '' ? '' : String(v));
+          setDeliverablePrices((prev) => ({
+            ...prev,
+            architectural: toStr((parsedDeliverablePrices as any).architectural ?? prev.architectural),
+            renders: toStr((parsedDeliverablePrices as any).renders ?? prev.renders),
+            structural: toStr((parsedDeliverablePrices as any).structural ?? prev.structural),
+            mep: toStr((parsedDeliverablePrices as any).mep ?? prev.mep),
+            civil: toStr((parsedDeliverablePrices as any).civil ?? prev.civil),
+            fire_safety: toStr((parsedDeliverablePrices as any).fire_safety ?? prev.fire_safety),
+            interior: toStr((parsedDeliverablePrices as any).interior ?? prev.interior),
+            boq: toStr((parsedDeliverablePrices as any).boq ?? prev.boq),
+          }));
+        }
 
         setAdditional({
           project_timeline_ref: plan.project_timeline_ref || '',

@@ -236,6 +236,11 @@ export default function PurchasesAdmin() {
       await loadPurchases({ reset: true });
       setError(null);
       setSuccess(resp?.data?.message || 'Payment verification completed.');
+      // If modal is open, refresh its purchase data by re-selecting to trigger a prop update
+      if (selectedPurchase) {
+        const updated = purchases.find(p => p.id === selectedPurchase.id);
+        if (updated) setSelectedPurchase(updated);
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to complete payment verification';
       setError(msg);
@@ -262,6 +267,11 @@ export default function PurchasesAdmin() {
       await loadPurchases({ reset: true });
       setError(null);
       setSuccess(resp?.data?.message || 'Payment marked as admin confirmed.');
+      // If modal is open, refresh its purchase data by re-selecting to trigger a prop update
+      if (selectedPurchase) {
+        const updated = purchases.find(p => p.id === selectedPurchase.id);
+        if (updated) setSelectedPurchase(updated);
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to confirm payment';
       setError(msg);

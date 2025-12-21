@@ -169,6 +169,48 @@ def _purchase_for_paystack_reference(cur, reference: str):
     return cur.fetchone()
 
 
+def _append_paystack_reference_to_purchase(cur, purchase_id: str, reference: str):
+    """Ensure a Paystack reference is recorded in purchases.payment_metadata.paystack_references."""
+    if not purchase_id or not reference:
+        return
+    try:
+        cur.execute(
+            """
+            UPDATE purchases
+            SET payment_metadata =
+                COALESCE(payment_metadata, '{}'::jsonb)
+                || jsonb_build_object(
+                    'paystack_last_reference', %s,
+                    'paystack_references', (
+                        SELECT to_jsonb(ARRAY(
+                            SELECT DISTINCT x
+                            FROM unnest(
+                                COALESCE(
+                                    (
+                                        SELECT ARRAY(
+                                            SELECT jsonb_array_elements_text(
+                                                COALESCE(p.payment_metadata->'paystack_references', '[]'::jsonb)
+                                            )
+                                        )
+                                        FROM purchases p
+                                        WHERE p.id = purchases.id
+                                    ),
+                                    ARRAY[]::text[]
+                                )
+                                || ARRAY[%s]::text[]
+                            ) AS x
+                        ))
+                    )
+                )
+            WHERE id = %s
+            """,
+            (reference, reference, purchase_id),
+        )
+    except Exception:
+        # Never fail payment verification because of metadata bookkeeping
+        return
+
+
 def _complete_paystack_purchase(reference: str, paystack_data: dict, conn, cur):
     """Mark a Paystack purchase as completed after verifying all invariants."""
     # Paystack returns many intermediate states; only treat a charge as paid when
@@ -724,8 +766,12 @@ def verify_paystack(reference: str):
         purchase = _purchase_for_paystack_reference(cur, reference)
         if not purchase:
             return jsonify(message="Purchase record not found"), 404
+
         if user_id is not None and int(purchase['user_id']) != int(user_id) and role != 'admin':
             return jsonify(message="Not authorized to verify this purchase"), 403
+
+        # Record the reference attempt even if payment isn't completed yet.
+        _append_paystack_reference_to_purchase(cur, purchase['id'], reference)
 
         ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)
         if not ok and code != 200:
@@ -786,6 +832,9 @@ def admin_verify_paystack(reference: str):
         purchase = _purchase_for_paystack_reference(cur, reference)
         if not purchase:
             return jsonify(message="Purchase record not found"), 404
+
+        # Record the reference attempt even if payment isn't completed yet.
+        _append_paystack_reference_to_purchase(cur, purchase['id'], reference)
 
         ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)
         if not ok and code != 200:
@@ -967,6 +1016,9 @@ def admin_confirm_paystack(reference: str):
         purchase = _purchase_for_paystack_reference(cur, reference)
         if not purchase:
             return jsonify(message="Purchase record not found"), 404
+
+        # Record the reference attempt even if payment isn't completed yet.
+        _append_paystack_reference_to_purchase(cur, purchase['id'], reference)
 
         # Allow admin to confirm even if already completed (for audit marking)
         ok, (msg, code) = _complete_paystack_purchase(reference, paystack_data, conn, cur)

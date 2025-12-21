@@ -770,8 +770,11 @@ def verify_paystack(reference: str):
         if user_id is not None and int(purchase['user_id']) != int(user_id) and role != 'admin':
             return jsonify(message="Not authorized to verify this purchase"), 403
 
-        # Idempotency: if already completed, return success without re-running DB updates
+        # Idempotency: if already completed, return success but still update reference history
         if purchase.get('payment_status') == 'completed':
+            # Still update reference history to reflect this verification attempt
+            _append_paystack_reference_to_purchase(cur, purchase['id'], reference)
+            conn.commit()
             return jsonify({
                 "message": "Payment already completed",
                 "plan_id": str(purchase['plan_id']),
@@ -841,8 +844,11 @@ def admin_verify_paystack(reference: str):
         if not purchase:
             return jsonify(message="Purchase record not found"), 404
 
-        # Idempotency: if already completed, return success without re-running DB updates
+        # Idempotency: if already completed, return success but still update reference history
         if purchase.get('payment_status') == 'completed':
+            # Still update reference history to reflect this verification attempt
+            _append_paystack_reference_to_purchase(cur, purchase['id'], reference)
+            conn.commit()
             return jsonify({
                 "message": "Payment already verified and completed",
                 "plan_id": str(purchase['plan_id']),

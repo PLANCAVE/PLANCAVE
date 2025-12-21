@@ -817,6 +817,11 @@ function PurchaseDetailModal({
                           <Loader2 className="w-3 h-3 animate-spin" />
                           Verifying...
                         </>
+                      ) : purchase.payment_status === 'completed' ? (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          Verified
+                        </>
                       ) : (
                         <>
                           <CheckCircle className="w-3 h-3" />
@@ -837,6 +842,11 @@ function PurchaseDetailModal({
                         <>
                           <Loader2 className="w-3 h-3 animate-spin" />
                           Confirming...
+                        </>
+                      ) : purchase.admin_confirmed_at ? (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          Admin Completed
                         </>
                       ) : (
                         <>

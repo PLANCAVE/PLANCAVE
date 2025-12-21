@@ -740,6 +740,7 @@ def verify_paystack(reference: str):
     conn = get_db()
     cur = conn.cursor(row_factory=dict_row)
     try:
+        cur.execute("BEGIN")
         # Verify with Paystack
         resp = requests.get(
             f"https://api.paystack.co/transaction/verify/{reference}",
@@ -755,19 +756,23 @@ def verify_paystack(reference: str):
             current_app.logger.info(f"Paystack data: status={paystack_data.get('status')}, paid_at={paystack_data.get('paid_at')}, reference={paystack_data.get('reference')}")
         
         if resp.status_code != 200 or not data.get("status"):
+            conn.rollback()
             return jsonify(message=data.get("message") or "Failed to verify Paystack payment"), 400
 
         paystack_data = data.get("data") or {}
         paystack_reference = paystack_data.get('reference')
         if paystack_reference and str(paystack_reference) != str(reference):
+            conn.rollback()
             return jsonify(message="Payment verification reference mismatch"), 400
 
         # Ensure the authenticated user is allowed to verify this reference
         purchase = _purchase_for_paystack_reference(cur, reference)
         if not purchase:
+            conn.rollback()
             return jsonify(message="Purchase record not found"), 404
 
         if user_id is not None and int(purchase['user_id']) != int(user_id) and role != 'admin':
+            conn.rollback()
             return jsonify(message="Not authorized to verify this purchase"), 403
 
         # Idempotency: if already completed, return success but still update reference history
@@ -818,6 +823,7 @@ def admin_verify_paystack(reference: str):
     cur = conn.cursor(row_factory=dict_row)
 
     try:
+        cur.execute("BEGIN")
         # Verify with Paystack
         resp = requests.get(
             f"https://api.paystack.co/transaction/verify/{reference}",
@@ -833,15 +839,18 @@ def admin_verify_paystack(reference: str):
             current_app.logger.info(f"Paystack data: status={paystack_data.get('status')}, paid_at={paystack_data.get('paid_at')}, reference={paystack_data.get('reference')}")
         
         if resp.status_code != 200 or not data.get("status"):
+            conn.rollback()
             return jsonify(message=data.get("message") or "Failed to verify Paystack payment"), 400
 
         paystack_data = data.get("data") or {}
         paystack_reference = paystack_data.get('reference')
         if paystack_reference and str(paystack_reference) != str(reference):
+            conn.rollback()
             return jsonify(message="Payment verification reference mismatch"), 400
 
         purchase = _purchase_for_paystack_reference(cur, reference)
         if not purchase:
+            conn.rollback()
             return jsonify(message="Purchase record not found"), 404
 
         # Idempotency: if already completed, return success but still update reference history
@@ -1012,6 +1021,7 @@ def admin_confirm_paystack(reference: str):
     cur = conn.cursor(row_factory=dict_row)
 
     try:
+        cur.execute("BEGIN")
         # Verify with Paystack
         resp = requests.get(
             f"https://api.paystack.co/transaction/verify/{reference}",
@@ -1027,15 +1037,18 @@ def admin_confirm_paystack(reference: str):
             current_app.logger.info(f"Paystack data: status={paystack_data.get('status')}, paid_at={paystack_data.get('paid_at')}, reference={paystack_data.get('reference')}")
         
         if resp.status_code != 200 or not data.get("status"):
+            conn.rollback()
             return jsonify(message=data.get("message") or "Failed to verify Paystack payment"), 400
 
         paystack_data = data.get("data") or {}
         paystack_reference = paystack_data.get('reference')
         if paystack_reference and str(paystack_reference) != str(reference):
+            conn.rollback()
             return jsonify(message="Payment verification reference mismatch"), 400
 
         purchase = _purchase_for_paystack_reference(cur, reference)
         if not purchase:
+            conn.rollback()
             return jsonify(message="Purchase record not found"), 404
 
         # Idempotency: if already completed, just mark admin confirmation if needed

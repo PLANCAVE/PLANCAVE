@@ -1732,13 +1732,13 @@ def chat():
 
         # If we're on a plan page, do not drive recommendations by default.
         # Only include suggested_plans when the user explicitly asks for alternatives/recommendations.
-        if plan_id and not (_is_similar_or_recommendation_question(message) or _is_recommendation_intent(message)):
+        if plan_id and not (_is_similar_or_recommendation_question(routed_message) or _is_recommendation_intent(routed_message)):
             plan_facts = []
 
         # If no plan is open and the user is asking general help/advice, prefer LLM over plan search.
         # This also helps follow-ups like "yes"/"no" by leveraging chat history.
         is_general_nonplan = (not plan_id) and (not is_recommendation) and (
-            _is_site_help_intent(message) or _is_design_or_build_advice_intent(message) or _is_general_chat(message)
+            _is_site_help_intent(routed_message) or _is_design_or_build_advice_intent(routed_message) or _is_general_chat(routed_message)
         )
 
         # If we're on a specific plan and the user asks for pros/cons, answer directly.
@@ -1820,7 +1820,7 @@ def chat():
             }), 200
 
         # Focused-plan quick replies that should not echo the plan details block.
-        if focused_plan and _is_boq_question(message):
+        if focused_plan and _is_boq_question(routed_message):
             includes_boq = bool(focused_plan.get('includes_boq'))
             if includes_boq:
                 reply = "Yes — BOQ is included for this plan."
@@ -1839,7 +1839,7 @@ def chat():
                 "llm_used": False,
             }), 200
 
-        if focused_plan and _is_show_similar_plans(message):
+        if focused_plan and _is_show_similar_plans(routed_message):
             # Build a query from the focused plan so we actually return alternatives.
             # Keep it simple and DB-only (no feature invention).
             q_parts = []
@@ -1888,8 +1888,8 @@ def chat():
                 "llm_used": False,
             }), 200
 
-        if focused_plan and _is_budget_only_message(message):
-            b = _extract_any_budget_value(message)
+        if focused_plan and _is_budget_only_message(routed_message):
+            b = _extract_any_budget_value(routed_message)
             b_text = f"$ {float(b):,.0f}" if b is not None else "that budget"
             return jsonify({
                 "reply": (
@@ -1903,7 +1903,7 @@ def chat():
             }), 200
 
         # Focused-plan direct-answer handlers to avoid generic fallback.
-        if focused_plan and _is_risks_question(message):
+        if focused_plan and _is_risks_question(routed_message):
             name = focused_plan.get('name') or 'This plan'
             floors = focused_plan.get('floors')
             area = focused_plan.get('area')
@@ -1931,7 +1931,7 @@ def chat():
                 "llm_used": False,
             }), 200
 
-        if focused_plan and _is_build_location_question(message):
+        if focused_plan and _is_build_location_question(routed_message):
             name = focused_plan.get('name') or 'This plan'
             floors = focused_plan.get('floors')
             area = focused_plan.get('area')
@@ -2009,31 +2009,31 @@ def chat():
 
         llm_messages.append({
             "role": "user",
-            "content": f"Context JSON: {json.dumps(context, default=str)}\n\nUser message: {message}",
+            "content": f"Context JSON: {json.dumps(context, default=str)}\n\nUser message: {routed_message}",
         })
 
         llm_text = _call_local_llm(llm_messages, max_tokens=220 if is_general_nonplan else 180)
         if not llm_text:
             # If the client indicates a plan_id but we couldn't load it, avoid irrelevant plan search fallbacks.
-            if plan_id and not focused_plan and _is_short_or_implicit_plan_query(message):
+            if plan_id and not focused_plan and _is_short_or_implicit_plan_query(routed_message):
                 return jsonify({
                     "reply": "I couldn’t load the current plan details right now. Please refresh the plan page and try again — then I can answer pros/cons, BOQ, suitability, costs, and location/approval questions for that plan.",
                     "suggested_plans": [],
-                    "quick_replies": ["Pros", "Cons", "Pros and cons", "What is included?"],
+                    "quick_replies": ["Refresh plan page", "Pros", "Does it include BOQ?"],
                     "actions": [],
                     "llm_used": False,
                 }), 200
 
-            if focused_plan and (_should_prioritize_focused_plan(message) or focused_plan_question):
+            if focused_plan and (_should_prioritize_focused_plan(routed_message) or focused_plan_question):
                 return jsonify({
                     "reply": _focused_plan_fallback_reply(focused_plan),
                     "suggested_plans": plan_facts,
-                    "quick_replies": quick_replies,
-                    "actions": actions,
+                    "quick_replies": ["Pros", "Cons", "Does it include BOQ?"],
+                    "actions": [],
                     "llm_used": False,
                 }), 200
 
-            if _is_top_selling_question(message):
+            if _is_top_selling_question(routed_message):
                 top = _top_selling_plans(conn, limit=6)
                 top_facts = []
                 for p in top:
@@ -2058,9 +2058,9 @@ def chat():
                     "llm_used": False,
                 }), 200
 
-            if _is_general_chat(message):
+            if _is_general_chat(routed_message):
                 return jsonify({
-                    "reply": _general_chat_reply(message),
+                    "reply": _general_chat_reply(routed_message),
                     "suggested_plans": plan_facts,
                     "quick_replies": quick_replies,
                     "actions": actions,

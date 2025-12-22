@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircle, Send, Trash2, X } from 'lucide-react';
-import { aiChat } from '../api';
+import { aiChat, getPlanDetails } from '../api';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -21,13 +21,36 @@ type ChatAction = {
   url?: string;
 };
 
+type PlanContext = {
+  id: string;
+  name?: string;
+  project_type?: string;
+  category?: string;
+  description?: string;
+  package_level?: string;
+  price?: number | string;
+  area?: number | null;
+  plot_size?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  floors?: number;
+  includes_boq?: boolean;
+  disciplines_included?: any;
+  certifications?: string[];
+  license_type?: string;
+  customization_available?: boolean;
+  support_duration?: number | null;
+  estimated_cost_min?: number | null;
+  estimated_cost_max?: number | null;
+};
+
 export default function AIAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
       content:
-        'Want the pros and cons of this plan, or help picking the best option? Tell me your budget, bedrooms, floors (single/two storey), and whether BOQ is required. You can also tap a Quick pick below.',
+        'Tell me what you want to build (budget, bedrooms, floors, and BOQ). I will recommend the best plans.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -36,13 +59,15 @@ export default function AIAssistantWidget() {
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [suggestedPlans, setSuggestedPlans] = useState<SuggestedPlan[]>([]);
   const [actions, setActions] = useState<ChatAction[]>([]);
+  const [planContext, setPlanContext] = useState<PlanContext | null>(null);
 
   const resetChat = () => {
     setMessages([
       {
         role: 'assistant',
-        content:
-          'Want the pros and cons of this plan, or help picking the best option? Tell me your budget, bedrooms, floors (single/two storey), and whether BOQ is required. You can also tap a Quick pick below.',
+        content: pageContext.plan_id
+          ? 'Ask me about this plan (pros/cons, what is included, BOQ, suitability).'
+          : 'Tell me what you want to build (budget, bedrooms, floors, and BOQ). I will recommend the best plans.',
       },
     ]);
     setInput('');
@@ -92,15 +117,88 @@ export default function AIAssistantWidget() {
   }, [open, loading, messages.length]);
 
   useEffect(() => {
+    const loadPlanContext = async () => {
+      if (!pageContext.plan_id) {
+        setPlanContext(null);
+        return;
+      }
+
+      try {
+        const resp = await getPlanDetails(pageContext.plan_id);
+        const data = resp.data || {};
+        const ctx: PlanContext = {
+          id: String(data.id || pageContext.plan_id),
+          name: data.name,
+          project_type: data.project_type,
+          category: data.category,
+          description: data.description,
+          package_level: data.package_level,
+          price: data.price,
+          area: data.area,
+          plot_size: data.plot_size,
+          bedrooms: data.bedrooms,
+          bathrooms: data.bathrooms,
+          floors: data.floors,
+          includes_boq: data.includes_boq,
+          disciplines_included: data.disciplines_included,
+          certifications: data.certifications,
+          license_type: data.license_type,
+          customization_available: data.customization_available,
+          support_duration: data.support_duration,
+          estimated_cost_min: data.estimated_cost_min,
+          estimated_cost_max: data.estimated_cost_max,
+        };
+        setPlanContext(ctx);
+
+        // If the chat hasn't started, swap the initial message to be plan-specific.
+        setMessages((prev) => {
+          if (prev.length !== 1 || prev[0]?.role !== 'assistant') return prev;
+          return [
+            {
+              role: 'assistant',
+              content: `You're viewing “${String(ctx.name || 'this plan')}”. Ask me for pros and cons, suitability, what's included, BOQ, or any risks to watch for.`,
+            },
+          ];
+        });
+      } catch {
+        setPlanContext(null);
+      }
+    };
+
+    loadPlanContext();
+  }, [pageContext.plan_id]);
+
+  useEffect(() => {
     if (!open) return;
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [open, messages, loading]);
 
+  const buildPlanSnapshotForPrompt = () => {
+    if (!pageContext.plan_id || !planContext) return '';
+    const parts: string[] = [];
+    parts.push(`Plan name: ${planContext.name || 'N/A'}`);
+    if (planContext.project_type) parts.push(`Project type: ${planContext.project_type}`);
+    if (planContext.category) parts.push(`Category: ${planContext.category}`);
+    if (planContext.package_level) parts.push(`Package level: ${planContext.package_level}`);
+    if (planContext.price !== undefined && planContext.price !== null && String(planContext.price) !== '') {
+      parts.push(`Price: ${String(planContext.price)}`);
+    }
+    if (planContext.area !== undefined && planContext.area !== null) parts.push(`Area: ${String(planContext.area)} m²`);
+    if (planContext.bedrooms !== undefined && planContext.bedrooms !== null) parts.push(`Bedrooms: ${String(planContext.bedrooms)}`);
+    if (planContext.bathrooms !== undefined && planContext.bathrooms !== null) parts.push(`Bathrooms: ${String(planContext.bathrooms)}`);
+    if (planContext.floors !== undefined && planContext.floors !== null) parts.push(`Floors: ${String(planContext.floors)}`);
+    if (planContext.includes_boq !== undefined) parts.push(`Includes BOQ: ${planContext.includes_boq ? 'Yes' : 'No'}`);
+    if (planContext.description) parts.push(`Description: ${String(planContext.description).slice(0, 600)}`);
+    return parts.length ? `\n\n[Current plan context]\n${parts.join('\n')}` : '';
+  };
+
   const send = async () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
+
+    const messageWithContext = pageContext.plan_id ? `${trimmed}${buildPlanSnapshotForPrompt()}` : trimmed;
 
     setError(null);
     setQuickReplies([]);
@@ -113,9 +211,10 @@ export default function AIAssistantWidget() {
     try {
       const history = messages.slice(-10);
       const resp = await aiChat({
-        message: trimmed,
+        message: messageWithContext,
         page: pageContext.page,
         plan_id: pageContext.plan_id,
+        plan_context: planContext,
         messages: history,
       });
 
@@ -131,7 +230,11 @@ export default function AIAssistantWidget() {
         ...prev,
         {
           role: 'assistant',
-          content: reply || 'Tell me your budget, bedrooms, floors, and whether BOQ is required—or ask for pros and cons of a specific plan.',
+          content:
+            reply ||
+            (pageContext.plan_id
+              ? 'Ask me for pros and cons of this plan, what is included, whether BOQ is included, and whether it fits your needs.'
+              : 'Tell me your budget, bedrooms, floors, and whether BOQ is required—or ask for plan recommendations.'),
         },
       ]);
     } catch (e: any) {
@@ -168,6 +271,8 @@ export default function AIAssistantWidget() {
     await (async () => {
       const trimmed = text.trim();
       if (!trimmed || loading) return;
+
+      const messageWithContext = pageContext.plan_id ? `${trimmed}${buildPlanSnapshotForPrompt()}` : trimmed;
       setError(null);
       setQuickReplies([]);
       setSuggestedPlans([]);
@@ -179,9 +284,10 @@ export default function AIAssistantWidget() {
       try {
         const history = messages.slice(-10);
         const resp = await aiChat({
-          message: trimmed,
+          message: messageWithContext,
           page: pageContext.page,
           plan_id: pageContext.plan_id,
+          plan_context: planContext,
           messages: history,
         });
         const reply = String(resp.data?.reply || '').trim();
@@ -352,7 +458,7 @@ export default function AIAssistantWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Ask for pros/cons, or tell me your budget + bedrooms…"
+              placeholder={pageContext.plan_id ? 'Ask about this plan (pros/cons, BOQ, what is included)…' : 'Tell me your budget + bedrooms…'}
               className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               disabled={loading}
             />

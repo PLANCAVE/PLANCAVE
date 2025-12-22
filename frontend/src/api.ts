@@ -286,6 +286,7 @@ export const aiChat = (payload: {
   message: string;
   page?: string;
   plan_id?: string | null;
+  plan_context?: any;
   messages?: { role: 'user' | 'assistant'; content: string }[];
 }) =>
   api.post('/ai/chat', payload);

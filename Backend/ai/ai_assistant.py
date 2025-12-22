@@ -152,6 +152,34 @@ def _deliverable_label(key: str) -> str:
     return mapping.get(key, key.replace('_', ' ').title())
 
 
+def _get_plan_public_details(conn, plan_id: str) -> dict | None:
+    if not plan_id:
+        return None
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            """
+            SELECT
+                p.id, p.name, p.description, p.price, p.category, p.project_type,
+                p.area, p.bedrooms, p.bathrooms, p.floors, p.includes_boq,
+                p.created_at
+            FROM plans p
+            WHERE p.id = %s
+            LIMIT 1
+            """,
+            (plan_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        if d.get('id') is not None:
+            d['id'] = str(d['id'])
+        return d
+    finally:
+        cur.close()
+
+
 def _search_plans(conn, message: str, limit: int = 8) -> list[dict]:
     """DB-only plan retrieval.
 
@@ -300,17 +328,36 @@ def chat():
         system = (
             "You are Ramanicave's AI assistant. You are friendly, interactive and conversational. "
             "You can chat about house plans, design decisions, and help users choose a plan. "
-            "When recommending plans, only reference the provided plan_candidates. Do not invent plan features. "
-            "Do not provide payment/checkout instructions. If asked about payment, redirect to support. "
+            "When recommending plans, only reference the provided plan_candidates and focused_plan. Do not invent plan features. "
+            "You MUST NOT help users bypass payments, obtain downloads, or access paid files. "
+            "Never output file paths, download URLs, or hidden plan contents. "
+            "If asked about payment or downloads, tell them to use the normal checkout flow on the website. "
             "Always ask 1-2 clarifying questions if key info is missing (budget, bedrooms, floors, BOQ). "
             "Keep answers short, structured, and helpful."
         )
 
+        focused_plan = _get_plan_public_details(conn, plan_id) if plan_id else None
+
         context = {
             "page": page,
             "plan_id": plan_id,
+            "focused_plan": focused_plan,
             "plan_candidates": plan_facts,
         }
+
+        actions = []
+        if focused_plan and focused_plan.get('id'):
+            actions.append({
+                "type": "open_plan",
+                "label": "Open this plan",
+                "url": f"/plans/{focused_plan.get('id')}",
+            })
+        elif plan_facts and plan_facts[0].get('id'):
+            actions.append({
+                "type": "open_plan",
+                "label": "Open top match",
+                "url": f"/plans/{plan_facts[0].get('id')}",
+            })
 
         quick_replies = [
             "Budget under $500",
@@ -341,6 +388,7 @@ def chat():
                 "reply": fallback["reply"],
                 "suggested_plans": fallback["suggested_plans"],
                 "quick_replies": quick_replies,
+                "actions": actions,
                 "llm_used": False,
             }), 200
 
@@ -348,6 +396,7 @@ def chat():
             "reply": llm_text,
             "suggested_plans": plan_facts,
             "quick_replies": quick_replies,
+            "actions": actions,
             "llm_used": True,
         }), 200
 

@@ -15,6 +15,12 @@ type SuggestedPlan = {
   url?: string | null;
 };
 
+type ChatAction = {
+  type?: string;
+  label?: string;
+  url?: string;
+};
+
 export default function AIAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -29,6 +35,7 @@ export default function AIAssistantWidget() {
   const [error, setError] = useState<string | null>(null);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [suggestedPlans, setSuggestedPlans] = useState<SuggestedPlan[]>([]);
+  const [actions, setActions] = useState<ChatAction[]>([]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,6 +64,7 @@ export default function AIAssistantWidget() {
     setError(null);
     setQuickReplies([]);
     setSuggestedPlans([]);
+    setActions([]);
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
     setInput('');
     setLoading(true);
@@ -73,8 +81,10 @@ export default function AIAssistantWidget() {
       const reply = String(resp.data?.reply || '').trim();
       const suggested: SuggestedPlan[] = Array.isArray(resp.data?.suggested_plans) ? resp.data.suggested_plans : [];
       const qr: string[] = Array.isArray(resp.data?.quick_replies) ? resp.data.quick_replies : [];
+      const act: ChatAction[] = Array.isArray(resp.data?.actions) ? resp.data.actions : [];
       setSuggestedPlans(suggested.slice(0, 5));
       setQuickReplies(qr.slice(0, 6));
+      setActions(act.slice(0, 3));
 
       setMessages((prev) => [
         ...prev,
@@ -120,6 +130,7 @@ export default function AIAssistantWidget() {
       setError(null);
       setQuickReplies([]);
       setSuggestedPlans([]);
+      setActions([]);
       setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
       setInput('');
       setLoading(true);
@@ -135,8 +146,10 @@ export default function AIAssistantWidget() {
         const reply = String(resp.data?.reply || '').trim();
         const suggested: SuggestedPlan[] = Array.isArray(resp.data?.suggested_plans) ? resp.data.suggested_plans : [];
         const qr: string[] = Array.isArray(resp.data?.quick_replies) ? resp.data.quick_replies : [];
+        const act: ChatAction[] = Array.isArray(resp.data?.actions) ? resp.data.actions : [];
         setSuggestedPlans(suggested.slice(0, 5));
         setQuickReplies(qr.slice(0, 6));
+        setActions(act.slice(0, 3));
         setMessages((prev) => [...prev, { role: 'assistant', content: reply || 'OK.' }]);
       } catch (e: any) {
         const msg = e?.response?.data?.message || e?.message || 'AI request failed';
@@ -188,6 +201,22 @@ export default function AIAssistantWidget() {
                 </div>
               );
             })}
+
+            {actions.length ? (
+              <div className="mr-10 flex flex-wrap gap-2">
+                {actions.map((a, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleOpenPlanUrl(a?.url)}
+                    className="text-xs rounded-full bg-teal-600 hover:bg-teal-700 text-white px-3 py-1"
+                    disabled={loading || !a?.url}
+                  >
+                    {a?.label || 'Open'}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             {suggestedPlans.length ? (
               <div className="mr-10 rounded-2xl bg-slate-50 border border-slate-200 p-2">

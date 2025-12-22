@@ -763,7 +763,11 @@ def chat():
             full = _pros_cons_reply(plan)
             # Keep only header + Pros section.
             parts = full.split("\nCons:\n", 1)
-            return parts[0].rstrip() + "\n"
+            pros_part = parts[0].rstrip()
+            # Remove the upsell line if present
+            if "\nIf you want, tell me your budget" in pros_part:
+                pros_part = pros_part.split("\nIf you want, tell me your budget")[0].rstrip()
+            return pros_part + "\n"
 
         def _cons_only_reply(plan: dict) -> str:
             full = _pros_cons_reply(plan)
@@ -773,7 +777,10 @@ def chat():
             header, rest = full.split("\nCons:\n", 1)
             # Convert first line to "Cons:" for clarity.
             header_line = (header.splitlines() or ['Cons'])[0]
-            return "\n".join([header_line.replace('Pros and cons:', 'Cons:'), "", "Cons:", *[f"- {x.strip()[2:]}" if x.strip().startswith('- ') else x for x in rest.splitlines() if x.strip()]])
+            cons_lines = [f"- {x.strip()[2:]}" if x.strip().startswith('- ') else x for x in rest.splitlines() if x.strip()]
+            # Remove the upsell line if present
+            cons_lines = [line for line in cons_lines if not line.startswith("If you want, tell me your budget")]
+            return "\n".join([header_line.replace('Pros and cons:', 'Cons:'), "", "Cons:", *cons_lines])
 
         def _should_prioritize_focused_plan(text: str) -> bool:
             if not focused_plan:

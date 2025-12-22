@@ -239,6 +239,15 @@ def _extract_budget(message: str) -> tuple[float | None, float | None]:
     return None, None
 
 
+def _extract_any_budget_value(message: str) -> float | None:
+    lo, hi = _extract_budget(message)
+    if hi is not None:
+        return hi
+    if lo is not None:
+        return lo
+    return None
+
+
 def _extract_bedrooms(message: str) -> int | None:
     msg = (message or '').lower()
     m = re.search(r"(\d+)\s*(?:bed|beds|bedroom|bedrooms)", msg)
@@ -678,6 +687,42 @@ def chat():
                     return s
             return ''
 
+        def _is_boq_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            if not t:
+                return False
+            # Covers: "Does it include BOQ?", "BOQ?", "Is BOQ included" etc.
+            return _has_token(t, 'boq') or ('bill of quantities' in t)
+
+        def _is_show_similar_plans(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            if not t:
+                return False
+            return (
+                'show similar plans' in t
+                or 'similar plans' in t
+                or 'show similar' in t
+                or 'similar to this' in t
+                or 'alternatives to this' in t
+            )
+
+        def _is_budget_only_message(text: str) -> bool:
+            raw = (text or '').strip()
+            if not raw:
+                return False
+            # If user only drops a budget (often pasted with plan details), treat as budget-only.
+            any_budget = _extract_any_budget_value(raw)
+            if any_budget is None:
+                return False
+            t = _normalize_for_intent(raw)
+            # If they explicitly ask a different question, don't treat as budget-only.
+            if _is_pros_cons_question(t) or _is_pros_only_question(t) or _is_cons_only_question(t):
+                return False
+            if _is_boq_question(t) or _is_show_similar_plans(t):
+                return False
+            # Very short messages like "$400000" or "budget $400000".
+            return len(t.split()) <= 6
+
         def _is_pros_cons_question(text: str) -> bool:
             t = _normalize_for_intent(text)
             return (
@@ -854,6 +899,89 @@ def chat():
                 "reply": _cons_only_reply(focused_plan),
                 "suggested_plans": plan_facts,
                 "quick_replies": ["Pros", "Pros and cons", "Any risks to watch for?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        # Focused-plan quick replies that should not echo the plan details block.
+        if focused_plan and _is_boq_question(message):
+            includes_boq = bool(focused_plan.get('includes_boq'))
+            if includes_boq:
+                reply = "Yes — BOQ is included for this plan."
+            else:
+                reply = (
+                    "No — BOQ is not included for this plan.\n\n"
+                    "If you want one, you can: \n"
+                    "- Ask a quantity surveyor to prepare a BOQ from the drawings\n"
+                    "- Or request a BOQ add-on (if available for this plan)"
+                )
+            return jsonify({
+                "reply": reply,
+                "suggested_plans": [],
+                "quick_replies": ["Pros", "Cons", "Show similar plans"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        if focused_plan and _is_show_similar_plans(message):
+            # Build a query from the focused plan so we actually return alternatives.
+            # Keep it simple and DB-only (no feature invention).
+            q_parts = []
+            try:
+                if focused_plan.get('bedrooms') is not None:
+                    q_parts.append(f"{int(focused_plan.get('bedrooms'))} bedrooms")
+            except Exception:
+                pass
+            try:
+                if focused_plan.get('floors') is not None:
+                    q_parts.append(f"{int(focused_plan.get('floors'))} floors")
+            except Exception:
+                pass
+            if focused_plan.get('category'):
+                q_parts.append(str(focused_plan.get('category')))
+            if focused_plan.get('project_type'):
+                q_parts.append(str(focused_plan.get('project_type')))
+            query = " ".join([p for p in q_parts if p]).strip() or (focused_plan.get('name') or '')
+
+            similar = _search_plans(conn, query, limit=limit)
+            # Remove the current plan from results if present.
+            fid = str(focused_plan.get('id')) if focused_plan.get('id') is not None else None
+            similar = [p for p in (similar or []) if str(p.get('id')) != fid]
+            if not similar:
+                return jsonify({
+                    "reply": "I couldn’t find close alternatives right now. Try telling me what you want to change (cheaper, fewer floors, must include BOQ, etc.) and I’ll suggest the closest matches.",
+                    "suggested_plans": [],
+                    "quick_replies": ["Cheaper alternatives", "Must include BOQ", "2 floors"],
+                    "actions": [],
+                    "llm_used": False,
+                }), 200
+
+            return jsonify({
+                "reply": _fallback_response("", similar)["reply"].replace("Here are a few plans that match what you asked for:", "Here are a few similar plans:"),
+                "suggested_plans": [
+                    {
+                        "id": str(p.get('id')) if p.get('id') is not None else None,
+                        "name": p.get('name'),
+                        "price": p.get('price'),
+                        "url": f"/plans/{str(p.get('id'))}" if p.get('id') is not None else None,
+                    }
+                    for p in similar[:5]
+                ],
+                "quick_replies": ["Pros", "Cons", "Does it include BOQ?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        if focused_plan and _is_budget_only_message(message):
+            b = _extract_any_budget_value(message)
+            b_text = f"$ {float(b):,.0f}" if b is not None else "that budget"
+            return jsonify({
+                "reply": (
+                    f"Got it — budget {b_text}.\n\n"
+                    "Quick clarification (pick one): is this your **construction budget** (to build the house), or your **plan purchase budget** (to buy drawings/BOQ add-ons)?"
+                ),
+                "suggested_plans": [],
+                "quick_replies": ["Construction budget", "Plan purchase budget"],
                 "actions": [],
                 "llm_used": False,
             }), 200

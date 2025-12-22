@@ -27,7 +27,7 @@ export default function AIAssistantWidget() {
     {
       role: 'assistant',
       content:
-        'Tell me what you want to build (budget, bedrooms, floors, and BOQ). I will recommend the best plans.',
+        'Want the pros and cons of this plan, or help picking the best option? Tell me your budget, bedrooms, floors (single/two storey), and whether BOQ is required. You can also tap a Quick pick below.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -41,7 +41,8 @@ export default function AIAssistantWidget() {
     setMessages([
       {
         role: 'assistant',
-        content: 'Tell me what you want to build (budget, bedrooms, floors, and BOQ). I will recommend the best plans.',
+        content:
+          'Want the pros and cons of this plan, or help picking the best option? Tell me your budget, bedrooms, floors (single/two storey), and whether BOQ is required. You can also tap a Quick pick below.',
       },
     ]);
     setInput('');
@@ -130,7 +131,7 @@ export default function AIAssistantWidget() {
         ...prev,
         {
           role: 'assistant',
-          content: reply || 'Tell me what you want to build, or ask me anything about house plans and design decisions.',
+          content: reply || 'Tell me your budget, bedrooms, floors, and whether BOQ is required—or ask for pros and cons of a specific plan.',
         },
       ]);
     } catch (e: any) {
@@ -351,7 +352,7 @@ export default function AIAssistantWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Ask about this plan, or tell me your budget + bedrooms…"
+              placeholder="Ask for pros/cons, or tell me your budget + bedrooms…"
               className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               disabled={loading}
             />

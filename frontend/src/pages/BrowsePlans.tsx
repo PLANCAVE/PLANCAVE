@@ -391,17 +391,17 @@ export default function BrowsePlans() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-teal-50/30 relative">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-teal-50/30 relative">
       {/* Header with browse label and controls */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <div className="bg-white/80 border-b border-teal-900/10 sticky top-0 z-50 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4" ref={filterBarRef}>
           <div className="flex flex-wrap items-center gap-2 py-4 md:flex-nowrap">
             <button
               onClick={() => setShowSearch((prev) => !prev)}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm font-semibold tracking-wide transition border ${
+              className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm font-semibold tracking-wide transition-all duration-200 border ${
                 showSearch
                   ? 'bg-[#0f4c45] text-white border-[#0f4c45]'
-                  : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                  : 'bg-white text-gray-800 border-gray-200 hover:bg-gray-50 hover:-translate-y-0.5 active:translate-y-0'
               }`}
             >
               <Search className="w-4 h-4" />
@@ -590,7 +590,7 @@ export default function BrowsePlans() {
 
       {/* Search + active filters */}
       {(showSearch || activeChips.length > 0 || search) && (
-        <div className="bg-white/90 border-b border-gray-100">
+        <div className="bg-white/80 border-b border-teal-900/10 backdrop-blur-xl">
           <div className="max-w-6xl mx-auto px-4 py-4 space-y-3">
             {showSearch && (
               <div className="relative">
@@ -600,7 +600,7 @@ export default function BrowsePlans() {
                   placeholder="Search plan names, descriptions, or keywords"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-full py-3 pl-11 pr-4 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full bg-white border border-gray-200 rounded-full py-3 pl-11 pr-4 text-sm shadow-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
             )}
@@ -636,6 +636,18 @@ export default function BrowsePlans() {
 
       {/* Plans Grid */}
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        <div className="mb-6 md:mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/60 bg-white/70 px-4 py-1 text-xs font-semibold text-teal-800 shadow-sm">
+            Browse Plans
+          </div>
+          <h1 className="mt-4 text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
+            Find a plan that fits your style
+          </h1>
+          <p className="mt-2 text-slate-600 max-w-2xl">
+            Filter by size, style, budget, bedrooms, and floors—then save your favorites or add plans to your cart.
+          </p>
+        </div>
+
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-600"></div>
@@ -651,11 +663,11 @@ export default function BrowsePlans() {
           </div>
         ) : (
           <>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">
-                Over {pagination.total.toLocaleString()} Plans Available
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+              <h2 className="text-base sm:text-lg font-semibold text-slate-800">
+                {pagination.total.toLocaleString()} plan{pagination.total === 1 ? '' : 's'} available
               </h2>
-              <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+              <div className="text-xs sm:text-sm text-slate-500 bg-white/70 border border-slate-200 px-3 py-1 rounded-full shadow-sm">
                 Page {pagination.current_page} of {pagination.total_pages}
               </div>
             </div>
@@ -665,16 +677,16 @@ export default function BrowsePlans() {
                 <Link
                   key={plan.id}
                   to={`/plans/${plan.id}`}
-                  className="card hover:shadow-lg transition-all duration-300 border border-gray-100 rounded-lg overflow-hidden"
+                  className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-900/10 hover:border-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                 >
                   {/* Image */}
-                  <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                     <img
                       src={(plan.image_url ? resolveMediaUrl(plan.image_url) : '/vite.svg')}
                       alt={plan.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
                     />
-                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-2">
                       <h3 className="text-lg font-semibold text-white drop-shadow-lg line-clamp-2">
                         {plan.name.trim()}
@@ -694,7 +706,7 @@ export default function BrowsePlans() {
                   </div>
 
                   {/* Content */}
-                  <div className="space-y-3">
+                  <div className="p-5 space-y-3">
                     {/* Meta row */}
                     <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-100">
@@ -761,7 +773,11 @@ export default function BrowsePlans() {
                             handleFavoriteClick(plan.id);
                           }}
                           disabled={favoriteBusyId === plan.id}
-                          className={`p-2 rounded-full transition-colors border ${favoriteIds.has(plan.id) ? 'bg-red-50 border-red-100 text-red-500' : 'border-gray-200 hover:bg-red-50 text-gray-400 hover:text-red-500'}`}
+                          className={`p-2.5 rounded-full transition-all duration-200 border shadow-sm ${
+                            favoriteIds.has(plan.id)
+                              ? 'bg-rose-50 border-rose-100 text-rose-600'
+                              : 'border-slate-200 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 hover:-translate-y-0.5'
+                          }`}
                           aria-pressed={favoriteIds.has(plan.id)}
                           aria-label={favoriteIds.has(plan.id) ? 'Remove from favorites' : 'Add to favorites'}
                         >
@@ -773,7 +789,11 @@ export default function BrowsePlans() {
                             handleCartClick(plan.id);
                           }}
                           disabled={cartBusyId === plan.id}
-                          className={`p-2 rounded-full transition-colors border ${cartIds.has(plan.id) ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'border-gray-200 hover:bg-green-50 text-gray-400 hover:text-emerald-600'}`}
+                          className={`p-2.5 rounded-full transition-all duration-200 border shadow-sm ${
+                            cartIds.has(plan.id)
+                              ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                              : 'border-slate-200 bg-white hover:bg-emerald-50 text-slate-400 hover:text-emerald-700 hover:-translate-y-0.5'
+                          }`}
                           aria-pressed={cartIds.has(plan.id)}
                           aria-label={cartIds.has(plan.id) ? 'Remove from cart' : 'Add to cart'}
                         >

@@ -96,7 +96,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-4">
+          <nav className="hidden md:flex flex-1 items-center justify-end gap-4">
             <Link
               to="/plans"
               className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/20 text-white/90 tracking-[0.2em] uppercase text-xs hover:bg-white/10 hover:text-white hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200"

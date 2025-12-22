@@ -137,6 +137,54 @@ export default function PlanDetailsPage() {
     return cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
   };
 
+  // If the user completes Paystack in a separate tab, that tab will notify this page.
+  // We then verify and redirect to Purchases, avoiding an infinite "Confirming" state.
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        if (event.origin !== window.location.origin) return;
+        const data: any = event.data;
+        if (!data || data.type !== 'RAMANICAVE_PAYSTACK_VERIFIED') return;
+        const ref = typeof data.reference === 'string' ? data.reference : null;
+        const planId = data.planId ? String(data.planId) : null;
+        if (planId && id && String(id) !== planId) return;
+        if (!ref) return;
+        setPendingReference(ref);
+        setPurchaseStatus('processing');
+        autoVerifyProcessingRef.current = false;
+        handleVerifyPayment(ref);
+      } catch {
+        // ignore
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      try {
+        if (event.key !== 'ramanicave_paystack_verified') return;
+        if (!event.newValue) return;
+        const data: any = JSON.parse(event.newValue);
+        const ref = typeof data?.reference === 'string' ? data.reference : null;
+        const planId = data?.planId ? String(data.planId) : null;
+        if (planId && id && String(id) !== planId) return;
+        if (!ref) return;
+        setPendingReference(ref);
+        setPurchaseStatus('processing');
+        autoVerifyProcessingRef.current = false;
+        handleVerifyPayment(ref);
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('storage', handleStorage);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   // Auto-verify ONLY when Paystack redirects back with ?reference=...
   // Runs once and then cleans up the URL to prevent repeated verifies on refresh.
   useEffect(() => {
@@ -476,7 +524,7 @@ export default function PlanDetailsPage() {
       if (authorization_url && reference) {
         setPendingReference(reference);
         setPurchaseStatus('processing');
-        window.open(authorization_url, '_blank', 'noopener');
+        window.open(authorization_url, '_blank');
       } else if (status === 'pending') {
         setPurchaseStatus('processing');
       } else {

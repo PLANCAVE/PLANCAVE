@@ -54,6 +54,31 @@ def _build_app_url(path: str) -> str:
     return base + path
 
 
+def _wrap_email_html(title: str, body_html: str) -> str:
+    safe_title = (title or "Ramanicave").strip()
+    year = datetime.utcnow().year
+    return (
+        "<!doctype html>"
+        "<html><head><meta charset='utf-8' />"
+        "<meta name='viewport' content='width=device-width,initial-scale=1' />"
+        "</head>"
+        "<body style='margin:0;background:#f1f5f9;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial'>"
+        "<div style='max-width:640px;margin:0 auto;padding:28px 16px'>"
+        "<div style='background:#0b1f1f;border:1px solid rgba(13,148,136,.28);border-radius:18px;padding:18px 18px 14px;box-shadow:0 18px 50px -30px rgba(0,0,0,.6)'>"
+        "<div style='color:#e2e8f0;letter-spacing:.34em;font-family:Georgia,Times,serif;font-size:18px;line-height:1.1;'>RAMANICAVE</div>"
+        "<div style='margin-top:6px;color:rgba(226,232,240,.72);font-size:11px;letter-spacing:.32em;text-transform:uppercase'>Premium house plans</div>"
+        "</div>"
+        "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;margin-top:12px;overflow:hidden'>"
+        f"<div style='padding:22px 22px 0'><div style='color:#0f172a;font-size:18px;font-weight:800;letter-spacing:-.02em'>{safe_title}</div></div>"
+        f"<div style='padding:14px 22px 22px;color:#0f172a;font-size:14px;line-height:1.6'>{body_html}</div>"
+        "</div>"
+        "<div style='text-align:center;margin-top:14px;color:#64748b;font-size:12px'>"
+        f"© {year} Ramanicave. All rights reserved."
+        "</div>"
+        "</div></body></html>"
+    )
+
+
 def _send_email(to_email: str, subject: str, html_body: str) -> None:
     mail_server = os.getenv("MAIL_SERVER")
     mail_port = int(os.getenv("MAIL_PORT", "587"))
@@ -178,28 +203,27 @@ def submit_custom_plan_request():
 
         admin_email = 'admin@ramanicave.com'
         subject = 'New Custom Plan Request - Ramanicave'
-        html_body = f"""
-        <h2>New Custom Plan Request</h2>
-        <p><strong>User ID:</strong> {user_id}</p>
-        <p><strong>User role:</strong> {role}</p>
-        <p><strong>Full name:</strong> {payload['full_name'] or '-'}<br/>
-           <strong>Contact email:</strong> {payload['contact_email'] or '-'}<br/>
-           <strong>Phone:</strong> {payload['contact_phone'] or '-'}<br/>
-           <strong>Location:</strong> {(payload['city'] or '-')}, {(payload['country'] or '-')}
-        </p>
-        <p><strong>Bedrooms:</strong> {payload['bedrooms'] or '-'}<br/>
-           <strong>Floors:</strong> {payload['floors'] or '-'}<br/>
-           <strong>Style:</strong> {payload['style'] or '-'}<br/>
-           <strong>Land size:</strong> {payload['land_size'] or '-'}
-        </p>
-        <p><strong>Budget:</strong> {payload['budget_min'] or '-'} — {payload['budget_max'] or '-'}</p>
-        <p><strong>Deliverables:</strong>
-          BOQ={payload['needs_boq']} | Structural={payload['needs_structural']} | MEP={payload['needs_mep']}
-        </p>
-        <pre style="white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{payload['description']}</pre>
-        """
+        html_body = (
+            "<p style='margin:0 0 10px;color:#0f172a'>A new custom plan request has been submitted.</p>"
+            "<div style='margin:14px 0 0;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc'>"
+            f"<p style='margin:0 0 6px'><strong>User ID:</strong> {user_id}</p>"
+            f"<p style='margin:0 0 6px'><strong>User role:</strong> {role}</p>"
+            f"<p style='margin:0 0 6px'><strong>Full name:</strong> {payload['full_name'] or '-'}<br/>"
+            f"<strong>Contact email:</strong> {payload['contact_email'] or '-'}<br/>"
+            f"<strong>Phone:</strong> {payload['contact_phone'] or '-'}<br/>"
+            f"<strong>Location:</strong> {(payload['city'] or '-')}, {(payload['country'] or '-')}</p>"
+            f"<p style='margin:0 0 6px'><strong>Bedrooms:</strong> {payload['bedrooms'] or '-'}<br/>"
+            f"<strong>Floors:</strong> {payload['floors'] or '-'}<br/>"
+            f"<strong>Style:</strong> {payload['style'] or '-'}<br/>"
+            f"<strong>Land size:</strong> {payload['land_size'] or '-'}</p>"
+            f"<p style='margin:0 0 6px'><strong>Budget:</strong> {payload['budget_min'] or '-'} — {payload['budget_max'] or '-'}</p>"
+            f"<p style='margin:0'><strong>Deliverables:</strong> BOQ={payload['needs_boq']} | Structural={payload['needs_structural']} | MEP={payload['needs_mep']}</p>"
+            "</div>"
+            "<p style='margin:14px 0 6px;color:#0f172a'><strong>Project brief</strong></p>"
+            f"<pre style=\"margin:0;padding:12px 14px;border-radius:12px;background:#0b1220;color:#e2e8f0;white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;font-size:12px;line-height:1.6\">{payload['description']}</pre>"
+        )
         try:
-            _send_email(admin_email, subject, html_body)
+            _send_email(admin_email, subject, _wrap_email_html('New custom plan request', html_body))
         except Exception as e:
             try:
                 current_app.logger.error(f"Failed to send custom request email: {e}")
@@ -520,7 +544,8 @@ def _init_paystack_transaction(email: str, amount: float, plan_id: str, user_id:
         }
     }
     # Callback URL determines where Paystack redirects the user after payment.
-    # Default to the plan details page so users never see a dedicated callback UI.
+    # Default to the callback page so the Paystack tab can verify, notify the opener tab,
+    # and close itself cleanly.
     # Paystack will append `?reference=...` to this URL.
     callback_url = None
     if PAYSTACK_CALLBACK_URL:
@@ -531,8 +556,8 @@ def _init_paystack_transaction(email: str, amount: float, plan_id: str, user_id:
         except Exception:
             callback_url = None
 
-    if not callback_url and plan_id_str:
-        callback_url = _build_app_url(f"/plans/{plan_id_str}")
+    if not callback_url:
+        callback_url = _build_app_url("/paystack/callback")
 
     if callback_url:
         payload["callback_url"] = callback_url
@@ -1697,7 +1722,7 @@ def generate_download_link():
                 subject = f"Your download link {order_id_display}".strip()
                 html_parts = [
                     "<div style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial'>",
-                    "<h2 style='margin:0 0 12px'>Your download link is ready</h2>",
+                    "<p style='margin:0 0 10px'>Your one-time download link is ready.</p>",
                     f"<p style='margin:0 0 8px'>Order ID: <strong>{order_id_display}</strong></p>",
                     f"<p style='margin:0 0 8px'>Plan: <strong>{purchase_row.get('plan_name') or plan_id}</strong></p>",
                     f"<p style='margin:0 0 6px'>Amount paid: <strong>{total_display}</strong></p>",
@@ -1711,7 +1736,7 @@ def generate_download_link():
                     "</div>",
                 ]
                 html = "".join(html_parts)
-                _send_email(to_email, subject, html)
+                _send_email(to_email, subject, _wrap_email_html("Your download link", html))
                 if purchase_row.get('id'):
                     cur.execute(
                         """

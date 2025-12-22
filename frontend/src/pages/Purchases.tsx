@@ -60,6 +60,30 @@ export default function Purchases() {
   }, []);
 
   useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        if (event.origin !== window.location.origin) return;
+        const data: any = event.data;
+        if (!data || data.type !== 'RAMANICAVE_PAYSTACK_VERIFIED') return;
+        loadPurchases();
+      } catch {
+        // ignore
+      }
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== 'ramanicave_paystack_verified') return;
+      loadPurchases();
+    };
+    window.addEventListener('message', handleMessage);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('storage', handleStorage);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const shouldRefresh = Boolean((location.state as any)?.refresh);
     if (!shouldRefresh) return;
     loadPurchases();
@@ -123,7 +147,7 @@ export default function Purchases() {
       const resp = await retryPaystackPayment(purchase.id);
       const authUrl = resp.data?.authorization_url;
       if (authUrl) {
-        window.open(authUrl, '_blank', 'noopener');
+        window.open(authUrl, '_blank');
       }
       // After reinitialization, refresh purchases to get latest reference and status
       await loadPurchases();

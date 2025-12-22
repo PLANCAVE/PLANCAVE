@@ -513,7 +513,7 @@ def build_manifest_pdf_html(bundle, organized_files, customer=None):
       </head>
       <body>
         <div class='cover'>
-          <div class='brand'>PLANCAVE</div>
+          <div class='brand'>RAMANICAVE</div>
           <div class='title'>{esc(title)}</div>
           <div class='meta'>Plan ID: {esc(plan_id)} • Generated: {esc(generated_at)}</div>
 
@@ -642,7 +642,7 @@ def build_manifest_pdf_html(bundle, organized_files, customer=None):
           </div>
         </div>
 
-        <div class='footer'>PLANCAVE • Confidential technical package • Auto-generated manifest</div>
+        <div class='footer'>RAMANICAVE • Confidential technical package • Auto-generated manifest</div>
       </body>
     </html>
     """

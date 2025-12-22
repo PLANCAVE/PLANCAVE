@@ -7,6 +7,21 @@ export default function PaystackCallback() {
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState<string>('Verifying your payment…');
 
+  const notifyOpener = (payload: any) => {
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: 'RAMANICAVE_PAYSTACK_VERIFIED', ...payload }, window.location.origin);
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      window.localStorage.setItem('ramanicave_paystack_verified', JSON.stringify({ ...payload, ts: Date.now() }));
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const reference = params.get('reference');
@@ -37,8 +52,15 @@ export default function PaystackCallback() {
           if (cancelled) return;
 
           setStatus('success');
-          setMessage('Payment verified. Redirecting…');
+          setMessage('Payment verified. Finishing up…');
+          notifyOpener({ reference, planId: planId ? String(planId) : null });
           window.setTimeout(() => {
+            try {
+              window.close();
+            } catch {
+              // ignore
+            }
+            // If the browser blocks close(), provide a sane fallback.
             if (planId) {
               navigate(`/plans/${planId}`);
             } else {
@@ -94,6 +116,11 @@ export default function PaystackCallback() {
         <p className="text-xs tracking-[0.35em] uppercase text-gray-500">PAYMENT</p>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">Paystack Callback</h1>
         <p className={`mt-4 text-sm ${status === 'error' ? 'text-red-700' : 'text-gray-700'}`}>{message}</p>
+        {status === 'success' ? (
+          <div className="mt-6">
+            <p className="text-xs text-gray-500">You can close this tab if it doesn't close automatically.</p>
+          </div>
+        ) : null}
         {status === 'error' ? (
           <div className="mt-6 flex gap-3">
             <button

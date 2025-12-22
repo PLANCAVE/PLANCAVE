@@ -15,6 +15,7 @@ from flasgger import Swagger
 import psycopg
 from psycopg.rows import dict_row
 import os
+from datetime import datetime
 import sys
 import smtplib
 from email.message import EmailMessage
@@ -62,6 +63,32 @@ def _build_app_url(path: str) -> str:
     if not path.startswith("/"):
         path = "/" + path
     return base + path
+
+
+def _wrap_email_html(title: str, body_html: str) -> str:
+    """Wrap email content in a consistent, professional RAMANICAVE template."""
+    safe_title = (title or "Ramanicave").strip()
+    year = datetime.utcnow().year
+    return (
+        "<!doctype html>"
+        "<html><head><meta charset='utf-8' />"
+        "<meta name='viewport' content='width=device-width,initial-scale=1' />"
+        "</head>"
+        "<body style='margin:0;background:#f1f5f9;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial'>"
+        "<div style='max-width:640px;margin:0 auto;padding:28px 16px'>"
+        "<div style='background:#0b1f1f;border:1px solid rgba(13,148,136,.28);border-radius:18px;padding:18px 18px 14px;box-shadow:0 18px 50px -30px rgba(0,0,0,.6)'>"
+        "<div style='color:#e2e8f0;letter-spacing:.34em;font-family:Georgia,Times,serif;font-size:18px;line-height:1.1;'>RAMANICAVE</div>"
+        "<div style='margin-top:6px;color:rgba(226,232,240,.72);font-size:11px;letter-spacing:.32em;text-transform:uppercase'>Premium house plans</div>"
+        "</div>"
+        "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;margin-top:12px;overflow:hidden'>"
+        f"<div style='padding:22px 22px 0'><div style='color:#0f172a;font-size:18px;font-weight:800;letter-spacing:-.02em'>{safe_title}</div></div>"
+        f"<div style='padding:14px 22px 22px;color:#0f172a;font-size:14px;line-height:1.6'>{body_html}</div>"
+        "</div>"
+        "<div style='text-align:center;margin-top:14px;color:#64748b;font-size:12px'>"
+        f"© {year} Ramanicave. All rights reserved."
+        "</div>"
+        "</div></body></html>"
+    )
 
 
 def _send_email(to_email: str, subject: str, html_body: str) -> None:
@@ -276,15 +303,12 @@ def register_user(data, role):
             serializer = _get_email_serializer()
             token = serializer.dumps({"user_id": int(user_id), "email": username_lc, "purpose": "verify_email"})
             verify_url = _build_app_url(f"/verify-email?token={token}")
-            html = (
-                "<div style='font-family:Arial,sans-serif'>"
-                "<h2>Verify your email</h2>"
-                "<p>Please confirm your email address to activate your Ramanicave account.</p>"
-                f"<p><a href='{verify_url}' style='display:inline-block;padding:10px 14px;background:#0f766e;color:#fff;text-decoration:none;border-radius:8px'>Verify Email</a></p>"
-                "<p>If you did not create this account, you can ignore this email.</p>"
-                "</div>"
+            body = (
+                "<p style='margin:0 0 10px'>Please confirm your email address to activate your account.</p>"
+                f"<p style='margin:14px 0 14px'><a href='{verify_url}' style='display:inline-block;padding:12px 16px;background:#0f766e;color:#fff;text-decoration:none;border-radius:12px;font-weight:700'>Verify email</a></p>"
+                "<p style='margin:0;color:#475569;font-size:12px'>If you did not create this account, you can ignore this email.</p>"
             )
-            _send_email(username_lc, "Verify your Ramanicave email", html)
+            _send_email(username_lc, "Verify your Ramanicave email", _wrap_email_html("Verify your email", body))
         except Exception as e:
             app.logger.error(f"Failed to send verification email to {username_lc}: {e}")
 
@@ -574,14 +598,12 @@ def resend_verification_email():
             serializer = _get_email_serializer()
             token = serializer.dumps({"user_id": int(row['id']), "email": username_lc, "purpose": "verify_email"})
             verify_url = _build_app_url(f"/verify-email?token={token}")
-            html = (
-                "<div style='font-family:Arial,sans-serif'>"
-                "<h2>Verify your email</h2>"
-                "<p>Click the button below to verify your email.</p>"
-                f"<p><a href='{verify_url}' style='display:inline-block;padding:10px 14px;background:#0f766e;color:#fff;text-decoration:none;border-radius:8px'>Verify Email</a></p>"
-                "</div>"
+            body = (
+                "<p style='margin:0 0 10px'>Click the button below to verify your email.</p>"
+                f"<p style='margin:14px 0 14px'><a href='{verify_url}' style='display:inline-block;padding:12px 16px;background:#0f766e;color:#fff;text-decoration:none;border-radius:12px;font-weight:700'>Verify email</a></p>"
+                "<p style='margin:0;color:#475569;font-size:12px'>If you didn't request this email, you can ignore it.</p>"
             )
-            _send_email(username_lc, "Verify your Ramanicave email", html)
+            _send_email(username_lc, "Verify your Ramanicave email", _wrap_email_html("Verify your email", body))
         except Exception as e:
             app.logger.error(f"Failed to resend verification email to {username_lc}: {e}")
 
@@ -656,15 +678,12 @@ def request_password_reset():
             serializer = _get_email_serializer()
             token = serializer.dumps({"user_id": int(row['id']), "email": username_lc, "purpose": "reset_password"})
             reset_url = _build_app_url(f"/reset-password?token={token}")
-            html = (
-                "<div style='font-family:Arial,sans-serif'>"
-                "<h2>Reset your password</h2>"
-                "<p>Click the button below to set a new password.</p>"
-                f"<p><a href='{reset_url}' style='display:inline-block;padding:10px 14px;background:#111827;color:#fff;text-decoration:none;border-radius:8px'>Reset Password</a></p>"
-                "<p>If you didn't request this, you can ignore this email.</p>"
-                "</div>"
+            body = (
+                "<p style='margin:0 0 10px'>A password reset was requested for your account.</p>"
+                f"<p style='margin:14px 0 14px'><a href='{reset_url}' style='display:inline-block;padding:12px 16px;background:#111827;color:#fff;text-decoration:none;border-radius:12px;font-weight:700'>Reset password</a></p>"
+                "<p style='margin:0;color:#475569;font-size:12px'>If you didn't request this, you can safely ignore this email.</p>"
             )
-            _send_email(username_lc, "Reset your Ramanicave password", html)
+            _send_email(username_lc, "Reset your Ramanicave password", _wrap_email_html("Reset your password", body))
         except Exception as e:
             app.logger.error(f"Failed to send password reset email to {username_lc}: {e}")
 

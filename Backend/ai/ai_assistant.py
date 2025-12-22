@@ -21,6 +21,34 @@ def get_db():
     )
 
 
+def _is_top_selling_question(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+    return any(k in msg for k in [
+        'top-selling', 'top selling', 'best selling', 'bestselling', 'most sold', 'most popular'
+    ])
+
+
+def _top_selling_plans(conn, limit: int = 6) -> list[dict]:
+    limit = max(1, min(int(limit or 6), 10))
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            """
+            SELECT p.id, p.name, p.price
+            FROM plans p
+            WHERE (p.status IS NULL OR p.status ILIKE 'available' OR p.status ILIKE 'published' OR p.status ILIKE 'active')
+            ORDER BY COALESCE(p.sales_count, 0) DESC, p.created_at DESC
+            LIMIT %s
+            """,
+            (limit,)
+        )
+        return [dict(r) for r in (cur.fetchall() or [])]
+    finally:
+        cur.close()
+
+
 def _env_int(name: str, default: int) -> int:
     try:
         return int(os.getenv(name, str(default)))
@@ -51,19 +79,47 @@ def _call_local_llm(messages: list[dict], temperature: float = 0.4, max_tokens: 
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "stream": False,
     }
     try:
         resp = requests.post(url, json=payload, timeout=12)
         if resp.status_code != 200:
+            try:
+                current_app.logger.warning(f"LLM non-200: {resp.status_code} body={resp.text[:400]}")
+            except Exception:
+                pass
             return None
         data = resp.json() if resp.content else {}
         choices = data.get('choices') or []
         if not choices:
+            try:
+                current_app.logger.warning(f"LLM no choices. keys={list(data.keys())}")
+            except Exception:
+                pass
             return None
-        msg = (choices[0] or {}).get('message') or {}
+        first = choices[0] or {}
+
+        # OpenAI chat format
+        msg = first.get('message') or {}
         content = msg.get('content')
         if isinstance(content, str) and content.strip():
             return content.strip()
+
+        # Some servers use plain completion format
+        text = first.get('text')
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+
+        # Streaming-like delta format (when server misbehaves or proxies)
+        delta = first.get('delta') or {}
+        dcontent = delta.get('content')
+        if isinstance(dcontent, str) and dcontent.strip():
+            return dcontent.strip()
+
+        try:
+            current_app.logger.warning(f"LLM malformed choice: {json.dumps(first)[:400]}")
+        except Exception:
+            pass
     except Exception:
         return None
     return None
@@ -155,9 +211,10 @@ def _is_bedroom_comparison_question(message: str) -> bool:
         return False
     patterns = [
         r"choose between\s*2\s*bed", 
-        r"2\s*bedrooms\s*vs\s*3\s*bedrooms",
+        r"choose between\s*2\s*bedrooms?",
+        r"2\s*bedrooms?\s*vs\s*3\s*bedrooms?",
         r"2\s*bed\s*vs\s*3\s*bed",
-        r"2\s*bedroom\s*or\s*3\s*bedroom",
+        r"2\s*bedrooms?\s*or\s*3\s*bedrooms?",
     ]
     return any(re.search(p, msg) for p in patterns)
 
@@ -483,20 +540,7 @@ def chat():
             "llm_used": False,
         }), 200
 
-    if _is_bedroom_comparison_question(message) and not plan_id:
-        quick_replies = [
-            "2 bedroom single-storey under $300",
-            "I want a modern 3 bedroom house plan",
-            "Budget under $500",
-            "Must include BOQ",
-        ]
-        return jsonify({
-            "reply": _bedroom_comparison_reply(),
-            "suggested_plans": [],
-            "quick_replies": quick_replies,
-            "actions": [],
-            "llm_used": False,
-        }), 200
+    # Avoid hard-coded intent branching for comparisons; prefer LLM.
 
     limit = _env_int('AI_SUGGESTION_LIMIT', 8)
 
@@ -589,7 +633,7 @@ def chat():
             "content": f"Context JSON: {json.dumps(context, default=str)}\n\nUser message: {message}",
         })
 
-        llm_text = _call_local_llm(llm_messages, max_tokens=120)
+        llm_text = _call_local_llm(llm_messages, max_tokens=180)
         if not llm_text:
             if focused_plan_question:
                 return jsonify({
@@ -597,6 +641,31 @@ def chat():
                     "suggested_plans": plan_facts,
                     "quick_replies": quick_replies,
                     "actions": actions,
+                    "llm_used": False,
+                }), 200
+
+            if _is_top_selling_question(message):
+                top = _top_selling_plans(conn, limit=6)
+                top_facts = []
+                for p in top:
+                    pid = p.get('id')
+                    pid_str = str(pid) if pid is not None else None
+                    top_facts.append({
+                        "id": pid_str,
+                        "name": p.get('name'),
+                        "price": p.get('price'),
+                        "url": f"/plans/{pid_str}" if pid_str else None,
+                    })
+                return jsonify({
+                    "reply": "Here are some of our top-selling plans right now:",
+                    "suggested_plans": top_facts,
+                    "quick_replies": [
+                        "Must include BOQ",
+                        "Single storey (1 floor)",
+                        "Two storey (2 floors)",
+                        "Budget under $500",
+                    ],
+                    "actions": [],
                     "llm_used": False,
                 }), 200
 

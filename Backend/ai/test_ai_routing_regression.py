@@ -55,6 +55,26 @@ Recommendations (so I can pick the best matches)
         self.assertTrue(ai_assistant._is_focused_plan_question(routed))
         self.assertFalse(ai_assistant._is_recommendation_intent(routed))
 
+    def test_transcript_ending_with_assistant_prompt_routes_to_user_line(self):
+        transcript = """
+You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\". Ask me for pros and cons, suitability, what's included, BOQ, or any risks to watch for.
+tell me more about this plan
+Recommendations (so I can pick the best matches)
+
+- Budget range
+- Bedrooms + floors
+- Must-have: BOQ included or not
+- Any dealbreakers (stairs, parking, plot size)
+
+What budget + bedrooms + floors do you want, and must BOQ be included?
+""".strip("\n")
+
+        routed = ai_assistant._last_user_like_line(transcript)
+        self.assertEqual(routed, "tell me more about this plan")
+
+        self.assertTrue(ai_assistant._is_focused_plan_question(routed))
+        self.assertFalse(ai_assistant._is_recommendation_intent(routed))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -373,6 +373,48 @@ def _last_meaningful_line(text: str) -> str:
     return last
 
 
+def _last_user_like_line(text: str) -> str:
+    lines = [(ln or '').strip() for ln in (text or '').splitlines()]
+    lines = [ln for ln in lines if ln]
+    if not lines:
+        return ''
+
+    assistant_prefixes = (
+        "you're viewing",
+        "you are viewing",
+        "ask me for",
+        "recommendations (",
+        "utilities (",
+        "pros:",
+        "cons:",
+        "pros and cons",
+        "what budget",
+        "is your area",
+        "do you need",
+        "which do you need",
+    )
+
+    def _looks_like_assistant_line(s: str) -> bool:
+        sl = s.lower().strip()
+        if not sl:
+            return True
+        # checklist / bullets from assistant blocks
+        if sl.startswith('-'):
+            return True
+        # common assistant block headings / prompts
+        if any(sl.startswith(p) for p in assistant_prefixes):
+            return True
+        # assistant "label: value" lines in pasted transcripts
+        if re.match(r"^(pros|cons)\s*:\s*", sl):
+            return True
+        return False
+
+    for ln in reversed(lines):
+        if not _looks_like_assistant_line(ln):
+            return ln
+    return lines[-1]
+
+
 def _normalize_for_intent(text: str) -> str:
     t = (text or '').strip().lower()
     t = re.sub(r"\s+", " ", t)
@@ -1066,7 +1108,7 @@ def chat():
     history = data.get('messages') or []
 
     # Users sometimes paste a full transcript; route intents off the last meaningful line.
-    routed_message = (_last_meaningful_line(message) or message).strip()
+    routed_message = (_last_user_like_line(message) or message).strip()
 
     if not message:
         return jsonify(message="message is required"), 400

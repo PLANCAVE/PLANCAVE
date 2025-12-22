@@ -636,18 +636,6 @@ export default function BrowsePlans() {
 
       {/* Plans Grid */}
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
-        <div className="mb-6 md:mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/60 bg-white/70 px-4 py-1 text-xs font-semibold text-teal-800 shadow-sm">
-            Browse Plans
-          </div>
-          <h1 className="mt-4 text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
-            Find a plan that fits your style
-          </h1>
-          <p className="mt-2 text-slate-600 max-w-2xl">
-            Filter by size, style, budget, bedrooms, and floors—then save your favorites or add plans to your cart.
-          </p>
-        </div>
-
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-600"></div>
@@ -665,7 +653,7 @@ export default function BrowsePlans() {
           <>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
               <h2 className="text-base sm:text-lg font-semibold text-slate-800">
-                {pagination.total.toLocaleString()} plan{pagination.total === 1 ? '' : 's'} available
+                Over {pagination.total.toLocaleString()} Plans Available
               </h2>
               <div className="text-xs sm:text-sm text-slate-500 bg-white/70 border border-slate-200 px-3 py-1 rounded-full shadow-sm">
                 Page {pagination.current_page} of {pagination.total_pages}

@@ -715,6 +715,25 @@ def chat():
                 or 'alternatives to this' in t
             )
 
+        def _is_risks_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            if not t:
+                return False
+            return (
+                'risks' in t or 'risk' in t or 'watch for' in t or 'what are the risks' in t
+                or 'any risks' in t or 'potential issues' in t or 'problems' in t
+            )
+
+        def _is_build_location_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            if not t:
+                return False
+            return (
+                'where can i build' in t or 'where can i best build' in t
+                or 'best place to build' in t or 'where to build' in t
+                or 'suitable location' in t or 'best location' in t
+            )
+
         def _is_budget_only_message(text: str) -> bool:
             raw = (text or '').strip()
             if not raw:
@@ -1034,6 +1053,63 @@ def chat():
                 ),
                 "suggested_plans": [],
                 "quick_replies": ["Construction budget", "Plan purchase budget"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        # Focused-plan direct-answer handlers to avoid generic fallback.
+        if focused_plan and _is_risks_question(message):
+            name = focused_plan.get('name') or 'This plan'
+            floors = focused_plan.get('floors')
+            area = focused_plan.get('area')
+            includes_boq = bool(focused_plan.get('includes_boq'))
+
+            risks = []
+            if area:
+                risks.append(f"Large area ({area} m²) can increase build cost, finishing cost, and approval complexity")
+            if not includes_boq:
+                risks.append("BOQ is not included — you may need separate quantity surveying/estimation")
+            if floors and int(floors) >= 2:
+                risks.append("More stairs — consider accessibility and long-term mobility")
+            risks.append("Confirm local building codes, plot setbacks, and structural requirements before construction")
+            if not risks:
+                risks.append("Review site-specific conditions and local approvals before starting")
+
+            lines = [f"Risks to watch for: {name}", ""]
+            for r in risks[:6]:
+                lines.append(f"- {r}")
+            return jsonify({
+                "reply": "\n".join(lines),
+                "suggested_plans": [],
+                "quick_replies": ["Pros", "Cons", "Does it include BOQ?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        if focused_plan and _is_build_location_question(message):
+            name = focused_plan.get('name') or 'This plan'
+            floors = focused_plan.get('floors')
+            area = focused_plan.get('area')
+
+            tips = []
+            if floors and int(floors) >= 2:
+                tips.append("Multi-storey designs work best on plots with good access and stable soil; avoid very steep slopes.")
+            if area:
+                tips.append(f"Ensure the plot can accommodate at least {area} m² plus setbacks and driveway.")
+            tips.append("Check local zoning: some areas restrict multi-storey or minimum plot sizes.")
+            tips.append("Prefer sites with utility connections (water, electricity, sewage) nearby to reduce costs.")
+
+            lines = [f"Where to best build: {name}", ""]
+            for t in tips:
+                lines.append(f"- {t}")
+            lines.extend([
+                "",
+                "Tell me your city/region and I can give more specific guidance (soil type, climate, approvals)."
+            ])
+            return jsonify({
+                "reply": "\n".join(lines),
+                "suggested_plans": [],
+                "quick_replies": ["Pros", "Cons", "Does it include BOQ?"],
                 "actions": [],
                 "llm_used": False,
             }), 200

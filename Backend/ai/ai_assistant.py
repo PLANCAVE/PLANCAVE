@@ -476,7 +476,71 @@ def _is_price_question(text: str) -> bool:
 def _match_any(t: str, phrases: list[str]) -> bool:
     if not t:
         return False
-    return any(p in t for p in phrases)
+    tt = _normalize_for_intent(t)
+    for p in (phrases or []):
+        pl = _normalize_for_intent(p)
+        if not pl:
+            continue
+        # If it's a simple single-token phrase, require a word-boundary match to avoid
+        # false positives (e.g., "ac" matching "acre").
+        if re.fullmatch(r"[a-z0-9]+", pl):
+            if re.search(rf"\b{re.escape(pl)}\b", tt):
+                return True
+        else:
+            if pl in tt:
+                return True
+    return False
+
+
+def _parse_plot_size_sqm(text: str) -> float | None:
+    t = _normalize_for_intent(text)
+    if not t:
+        return None
+
+    # acres
+    m = re.search(r"\b(half|quarter)\s+an?\s+acre\b", t)
+    if m:
+        frac = 0.5 if m.group(1) == 'half' else 0.25
+        return frac * 4046.86
+
+    m = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:acres?|acre)\b", t)
+    if m:
+        try:
+            return float(m.group(1)) * 4046.86
+        except Exception:
+            return None
+
+    # square meters
+    m = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:sqm|sq\s*m|m2|square\s*meters?|square\s*metres?)\b", t)
+    if m:
+        try:
+            return float(m.group(1))
+        except Exception:
+            return None
+
+    # square feet
+    m = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:sq\s*ft|sqft|square\s*feet|square\s*ft)\b", t)
+    if m:
+        try:
+            return float(m.group(1)) * 0.092903
+        except Exception:
+            return None
+
+    return None
+
+
+def _last_assistant_text(history) -> str:
+    if not isinstance(history, list):
+        return ''
+    for m in reversed(history):
+        if not isinstance(m, dict):
+            continue
+        if m.get('role') != 'assistant':
+            continue
+        c = m.get('content')
+        if isinstance(c, str) and c.strip():
+            return c.strip()
+    return ''
 
 
 EDGE_CASE_INTENTS: list[dict] = [
@@ -1240,6 +1304,56 @@ def chat():
                 if s:
                     return s
             return ''
+
+        # Follow-up handler: if we just asked for plot size/location and the user replies with plot size,
+        # continue suitability instead of routing to unrelated edge-cases.
+        if focused_plan and (not is_recommendation):
+            last_a = _normalize_for_intent(_last_assistant_text(history))
+            plot_sqm = _parse_plot_size_sqm(routed_message)
+            if plot_sqm is not None and (('plot size' in last_a) or ('what’s your plot size' in last_a) or ('whats your plot size' in last_a)):
+                name = focused_plan.get('name') or 'This plan'
+                area = focused_plan.get('area')
+                floors = focused_plan.get('floors')
+                includes_boq = bool(focused_plan.get('includes_boq'))
+
+                plot_acres = plot_sqm / 4046.86
+                plot_text = f"~{plot_sqm:,.0f} m² ({plot_acres:.2f} acres)"
+
+                notes = []
+                if area is not None:
+                    try:
+                        area_sqm = float(area)
+                        # Very rough rule-of-thumb coverage guidance (not authoritative).
+                        # Encourage checking setbacks and local regs.
+                        coverage = (area_sqm / plot_sqm) if plot_sqm > 0 else None
+                        if coverage is not None:
+                            notes.append(f"Approx. gross floor area: {area_sqm:,.0f} m² vs plot {plot_text} (coverage ~{coverage*100:.0f}% before setbacks)")
+                    except Exception:
+                        pass
+                if floors is not None:
+                    notes.append(f"Floors: {floors} (stairs/accessibility matters in rural builds)" )
+                if not includes_boq:
+                    notes.append("BOQ isn’t included — for rural builds, get a local QS/contractor estimate (rates vary a lot)")
+
+                lines = [
+                    f"Suitability (rural): {name}",
+                    "",
+                    f"Plot size: {plot_text}",
+                ]
+                for n in notes[:5]:
+                    lines.append(f"- {n}")
+                lines.extend([
+                    "",
+                    "To confirm rural suitability, I need 1 more detail: what country/state (or nearest town) is the plot in?",
+                ])
+
+                return jsonify({
+                    "reply": "\n".join(lines),
+                    "suggested_plans": [],
+                    "quick_replies": ["Share location", "Pros", "Does it include BOQ?"],
+                    "actions": [],
+                    "llm_used": False,
+                }), 200
 
         # Hard guard: if the client didn't provide plan_id / we couldn't load focused_plan,
         # do NOT show recommendation prompts for plan-page quick picks.

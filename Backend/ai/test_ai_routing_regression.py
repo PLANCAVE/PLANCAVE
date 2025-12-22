@@ -100,6 +100,17 @@ What budget + bedrooms + floors do you want, and must BOQ be included?
         routed = ai_assistant._last_user_like_line(transcript)
         self.assertEqual(routed, "Does this plan include BOQ?")
 
+    def test_plot_size_parsing_half_acre(self):
+        sqm = ai_assistant._parse_plot_size_sqm("half an acre")
+        self.assertIsNotNone(sqm)
+        self.assertTrue(1900 < float(sqm) < 2200)  # ~2023 m²
+
+    def test_edge_case_match_does_not_match_acre_as_ac(self):
+        # Previously, utilities phrases included 'ac' and naive substring matching
+        # misclassified 'acre' as 'ac'. Word-boundary matching must prevent that.
+        key = ai_assistant._edge_case_intent_key("half an acre")
+        self.assertNotEqual(key, 'utilities')
+
     def test_message_with_appended_plan_context_snapshot(self):
         msg = """
 Does this plan include BOQ?

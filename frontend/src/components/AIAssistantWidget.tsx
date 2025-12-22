@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageCircle, Send, X } from 'lucide-react';
+import { MessageCircle, Send, Trash2, X } from 'lucide-react';
 import { aiChat } from '../api';
 
 type ChatMessage = {
@@ -36,6 +36,20 @@ export default function AIAssistantWidget() {
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [suggestedPlans, setSuggestedPlans] = useState<SuggestedPlan[]>([]);
   const [actions, setActions] = useState<ChatAction[]>([]);
+
+  const resetChat = () => {
+    setMessages([
+      {
+        role: 'assistant',
+        content: 'Tell me what you want to build (budget, bedrooms, floors, and BOQ). I will recommend the best plans.',
+      },
+    ]);
+    setInput('');
+    setError(null);
+    setQuickReplies([]);
+    setSuggestedPlans([]);
+    setActions([]);
+  };
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -205,14 +219,25 @@ export default function AIAssistantWidget() {
               <div className="text-sm font-semibold leading-tight">Ramani AI</div>
               <div className="text-[11px] text-white/80 leading-tight">House plans assistant</div>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="p-1 rounded-md hover:bg-white/10"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={resetChat}
+                className="p-1 rounded-md hover:bg-white/10"
+                aria-label="Clear chat"
+                title="Clear chat"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="p-1 rounded-md hover:bg-white/10"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <div ref={listRef} className="max-h-[55vh] sm:max-h-[420px] overflow-y-auto p-3 space-y-3 bg-gradient-to-b from-white to-slate-50/60">

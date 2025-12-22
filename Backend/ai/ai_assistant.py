@@ -138,6 +138,17 @@ def _wants_boq(message: str) -> bool:
     return 'boq' in msg or 'bill of quantities' in msg
 
 
+def _is_greeting(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+    # Keep it conservative; avoid classifying normal queries as greetings.
+    return msg in {
+        'hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening',
+        'hi there', 'hello there', 'hey there',
+    }
+
+
 def _is_stopword_token(t: str) -> bool:
     # Keep this small and practical: tokens that frequently appear in chat prompts
     # but do not help match plan names/descriptions.
@@ -381,8 +392,8 @@ def _fallback_response(message: str, plans: list[dict]) -> dict:
     if not plans:
         return {
             "reply": (
-                "I couldn't find matching plans with the details provided. "
-                "Tell me: budget (e.g. under $500), bedrooms, floors, and whether you need BOQ/MEP/Structural."
+                "I can help. Tell me your budget, bedrooms, floors (single/two storey), and whether BOQ is required. "
+                "You can also tap a Quick pick below."
             ),
             "suggested_plans": [],
         }
@@ -428,6 +439,21 @@ def chat():
 
     if not message:
         return jsonify(message="message is required"), 400
+
+    if _is_greeting(message) and not plan_id:
+        quick_replies = [
+            "Recommend 3 plans under $500 with BOQ",
+            "I want a modern 3 bedroom house plan",
+            "Single storey (1 floor)",
+            "Two storey (2 floors)",
+        ]
+        return jsonify({
+            "reply": "Hi! Tell me what you want to build (budget, bedrooms, floors, and BOQ) and I will recommend plans that fit.",
+            "suggested_plans": [],
+            "quick_replies": quick_replies,
+            "actions": [],
+            "llm_used": False,
+        }), 200
 
     limit = _env_int('AI_SUGGESTION_LIMIT', 8)
 

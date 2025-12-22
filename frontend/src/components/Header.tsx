@@ -84,18 +84,18 @@ export default function Header() {
   }, [avatarSrc]);
 
   return (
-    <header className="bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] border-b border-teal-500/30 sticky top-0 z-50 backdrop-blur-xl shadow-2xl shadow-black/30">
-      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-cyan-500/10 backdrop-blur-sm"></div>
+    <header className="bg-gradient-to-r from-[#284d4d] via-[#1b3a3a] to-[#102222] border-b border-teal-500/30 sticky top-0 z-50 backdrop-blur-xl shadow-[0_20px_45px_-25px_rgba(0,0,0,0.75)]">
+      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/15 via-transparent to-cyan-500/15 backdrop-blur-[2px]"></div>
       <div className="max-w-7xl mx-auto px-4 relative">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="group text-white hover:text-teal-200 transition-all">
             <div className="flex flex-col items-start leading-tight">
-              <span className="mt-1 text-2xl font-serif tracking-[0.45em] drop-shadow-lg">RAMANICAVE</span>
+              <span className="mt-1 text-[1.45rem] font-serif tracking-[0.42em] drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)]">RAMANICAVE</span>
               <div className="mt-1 flex items-center gap-2 opacity-70">
-                <div className="h-px w-8 bg-white"></div>
-                <div className="h-px w-6 bg-white/80"></div>
-                <div className="h-px w-8 bg-white"></div>
+                <div className="h-px w-8 bg-white/90"></div>
+                <div className="h-px w-6 bg-white/60"></div>
+                <div className="h-px w-8 bg-white/90"></div>
               </div>
             </div>
           </Link>

@@ -30,6 +30,47 @@ def _is_top_selling_question(message: str) -> bool:
     ])
 
 
+def _is_general_chat(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+
+    plan_tokens = {'plan', 'plans', 'bedroom', 'bedrooms', 'floor', 'floors', 'boq', 'budget'}
+    if any(token in msg for token in plan_tokens):
+        return False
+
+    general_keywords = {
+        'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'thank you',
+        'thanks', 'your name', 'who are you', 'what is your name', 'name', 'how are you',
+        'nice to meet you', 'are you there', 'help me', 'can you chat', 'talk to me',
+    }
+    if any(kw in msg for kw in general_keywords):
+        return True
+
+    # Short, non-plan prompts should feel conversational.
+    return len(msg) <= 120
+
+
+def _general_chat_reply(message: str) -> str:
+    msg = (message or '').strip().lower()
+    if 'name' in msg:
+        return (
+            "I'm Ramani AI — your house-plan assistant. I can chat with you about ideas, answer questions, and help "
+            "find or customise plans. Tell me what you're looking for or ask anything you like."
+        )
+    if any(greet in msg for greet in ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening']):
+        return (
+            "Hey there! I'm Ramani AI. I can chat normally and also guide you through finding, customising, or "
+            "understanding house plans. What would you like to talk about?"
+        )
+    if 'how are you' in msg:
+        return "I'm doing great and ready to help! What would you like to discuss about homes or designs today?"
+    return (
+        "I'm Ramani AI. Happy to chat! Ask me anything — from general design questions to detailed help with house "
+        "plans, budgets, BOQs, or custom projects."
+    )
+
+
 def _top_selling_plans(conn, limit: int = 6) -> list[dict]:
     limit = max(1, min(int(limit or 6), 10))
     cur = conn.cursor(row_factory=dict_row)
@@ -666,6 +707,15 @@ def chat():
                         "Budget under $500",
                     ],
                     "actions": [],
+                    "llm_used": False,
+                }), 200
+
+            if _is_general_chat(message):
+                return jsonify({
+                    "reply": _general_chat_reply(message),
+                    "suggested_plans": plan_facts,
+                    "quick_replies": quick_replies,
+                    "actions": actions,
                     "llm_used": False,
                 }), 200
 

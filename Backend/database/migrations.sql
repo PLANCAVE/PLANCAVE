@@ -52,18 +52,6 @@ WHERE order_id IS NULL;
 -- Ensure uniqueness for order references
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_purchases_order_id ON purchases(order_id);
 
--- Ensure uniqueness of user/plan purchases
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'uniq_purchases_user_plan'
-    ) THEN
-        ALTER TABLE purchases
-            ADD CONSTRAINT uniq_purchases_user_plan UNIQUE (user_id, plan_id);
-    END IF;
-END$$;
-
 -- Allow multiple purchases per plan/user to support upgrading deliverables (partial purchases).
 DO $$
 BEGIN

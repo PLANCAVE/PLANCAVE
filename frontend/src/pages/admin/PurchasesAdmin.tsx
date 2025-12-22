@@ -689,6 +689,8 @@ export default function PurchasesAdmin() {
           onSelectReference={setSelectedPaystackReference}
           onVerifyReference={(ref) => handleCompletePayment(ref)}
           onConfirmReference={(ref) => handleConfirmPayment(ref)}
+          onDeletePurchase={() => handleDeletePurchase(selectedPurchase.id)}
+          deletingPurchase={deletingPurchaseId === selectedPurchase.id}
           verifyingReference={verifyingPayment}
           confirmingReference={confirmingPayment}
           errorMessage={error}
@@ -719,6 +721,8 @@ function PurchaseDetailModal({
   onSelectReference,
   onVerifyReference,
   onConfirmReference,
+  onDeletePurchase,
+  deletingPurchase,
   verifyingReference,
   confirmingReference,
   errorMessage,
@@ -730,6 +734,8 @@ function PurchaseDetailModal({
   onSelectReference: (ref: string | null) => void;
   onVerifyReference: (ref: string) => void;
   onConfirmReference: (ref: string) => void;
+  onDeletePurchase: () => void;
+  deletingPurchase: boolean;
   verifyingReference: string | null;
   confirmingReference: string | null;
   errorMessage: string | null;
@@ -787,14 +793,35 @@ function PurchaseDetailModal({
               <span className="text-sm text-white/50 font-normal">#{purchase.plan_id}</span>
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white p-2 transition-colors"
-            aria-label="Close purchase details"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onDeletePurchase}
+              disabled={deletingPurchase}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-rose-400/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-100 text-xs font-semibold transition-colors disabled:opacity-50"
+            >
+              {deletingPurchase ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white p-2 transition-colors"
+              aria-label="Close purchase details"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </header>
 
         <div className="p-6 space-y-6 text-white/90 text-sm overflow-y-auto">

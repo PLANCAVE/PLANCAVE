@@ -1018,6 +1018,19 @@ def _is_focused_plan_question(message: str) -> bool:
     return any(k in msg for k in keywords)
 
 
+def _is_plan_summary_request(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+    keywords = [
+        'tell me more', 'explain', 'summarize', 'summarise', 'summary',
+        'summarize this plan', 'summarise this plan',
+        'what is included', "what's included", 'whats included',
+        'included', 'deliverables', 'files', 'what do i get', 'what comes with',
+    ]
+    return any(k in msg for k in keywords)
+
+
 def _focused_plan_fallback_reply(focused_plan: dict) -> str:
     name = focused_plan.get('name') or 'This plan'
     price = focused_plan.get('price')
@@ -2030,9 +2043,9 @@ def chat():
                 "llm_used": False,
             }), 200
 
-        # If the user is asking to understand the open plan ("tell me more", "explain this"),
+        # If the user is asking to understand the open plan ("tell me more", "summarize", "what's included"),
         # respond with a focused plan summary instead of generic recommendation prompts.
-        if focused_plan and (not is_recommendation) and _is_focused_plan_question(routed_message):
+        if focused_plan and (not is_recommendation) and _is_plan_summary_request(routed_message):
             return jsonify({
                 "reply": _focused_plan_fallback_reply(focused_plan),
                 "suggested_plans": plan_facts,

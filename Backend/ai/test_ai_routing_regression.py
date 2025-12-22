@@ -111,6 +111,9 @@ What budget + bedrooms + floors do you want, and must BOQ be included?
         key = ai_assistant._edge_case_intent_key("half an acre")
         self.assertNotEqual(key, 'utilities')
 
+    def test_risks_question_is_not_summary_request(self):
+        self.assertFalse(ai_assistant._is_plan_summary_request("Any risks to watch for?"))
+
     def test_message_with_appended_plan_context_snapshot(self):
         msg = """
 Does this plan include BOQ?

@@ -202,6 +202,67 @@ def _get_plan_public_details(conn, plan_id: str) -> dict | None:
         cur.close()
 
 
+def _is_focused_plan_question(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+    patterns = [
+        r"tell me more",
+        r"more about (this|the) plan",
+        r"explain (this|the) plan",
+        r"summari[sz]e (this|the) plan",
+        r"what is included",
+        r"what's included",
+        r"does (this|the) plan include",
+        r"pros and cons",
+        r"is (this|the) plan suitable",
+    ]
+    return any(re.search(p, msg) for p in patterns)
+
+
+def _focused_plan_fallback_reply(focused_plan: dict) -> str:
+    name = focused_plan.get('name') or 'This plan'
+    price = focused_plan.get('price')
+    bedrooms = focused_plan.get('bedrooms')
+    bathrooms = focused_plan.get('bathrooms')
+    floors = focused_plan.get('floors')
+    area = focused_plan.get('area')
+    includes_boq = focused_plan.get('includes_boq')
+    desc = (focused_plan.get('description') or '').strip()
+
+    bits = []
+    if bedrooms is not None:
+        bits.append(f"Bedrooms: {bedrooms}")
+    if bathrooms is not None:
+        bits.append(f"Bathrooms: {bathrooms}")
+    if floors is not None:
+        bits.append(f"Floors: {floors}")
+    if area is not None:
+        bits.append(f"Area: {area}")
+    if price is not None:
+        try:
+            bits.append(f"Price: $ {float(price):,.0f}")
+        except Exception:
+            bits.append(f"Price: {price}")
+
+    boq_text = "Yes" if includes_boq else "No"
+    lines = [
+        f"{name}",
+        "", 
+        "Key details:",
+        *(f"- {b}" for b in bits),
+        f"- BOQ included: {boq_text}",
+    ]
+    if desc:
+        lines.extend(["", "Description:", desc])
+
+    lines.extend([
+        "",
+        "If you tell me your budget and desired style (modern/classic/minimal), I can also suggest similar alternatives.",
+    ])
+    return "\n".join(lines).strip()
+
+
 def _search_plans(conn, message: str, limit: int = 8) -> list[dict]:
     """DB-only plan retrieval.
 
@@ -398,6 +459,7 @@ def chat():
         )
 
         focused_plan = _get_plan_public_details(conn, plan_id) if plan_id else None
+        focused_plan_question = bool(focused_plan and _is_focused_plan_question(message))
 
         context = {
             "page": page,
@@ -420,14 +482,23 @@ def chat():
                 "url": f"/plans/{plan_facts[0].get('id')}",
             })
 
-        quick_replies = [
-            "Budget under $500",
-            "2 bedrooms",
-            "3 bedrooms",
-            "Single storey (1 floor)",
-            "Two storey (2 floors)",
-            "Must include BOQ",
-        ]
+        if focused_plan:
+            quick_replies = [
+                "Summarize this plan",
+                "What is included?",
+                "Does it include BOQ?",
+                "Pros and cons",
+                "Show similar plans",
+            ]
+        else:
+            quick_replies = [
+                "Budget under $500",
+                "2 bedrooms",
+                "3 bedrooms",
+                "Single storey (1 floor)",
+                "Two storey (2 floors)",
+                "Must include BOQ",
+            ]
 
         llm_messages: list[dict] = [{"role": "system", "content": system}]
         if isinstance(history, list):
@@ -444,6 +515,15 @@ def chat():
 
         llm_text = _call_local_llm(llm_messages, max_tokens=120)
         if not llm_text:
+            if focused_plan_question:
+                return jsonify({
+                    "reply": _focused_plan_fallback_reply(focused_plan),
+                    "suggested_plans": plan_facts,
+                    "quick_replies": quick_replies,
+                    "actions": actions,
+                    "llm_used": False,
+                }), 200
+
             fallback = _fallback_response(message, plans)
             return jsonify({
                 "reply": fallback["reply"],

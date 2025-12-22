@@ -352,7 +352,7 @@ def _plan_has_deliverable(plan_row: dict, key: str) -> bool:
 
 
 def _deliverable_label(key: str) -> str:
-    mapping = {
+    return {
         'architectural': 'Architectural',
         'structural': 'Structural',
         'mep': 'MEP',
@@ -361,8 +361,16 @@ def _deliverable_label(key: str) -> str:
         'interior': 'Interior',
         'boq': 'BOQ',
         'renders': '3D Renders',
-    }
-    return mapping.get(key, key.replace('_', ' ').title())
+    }.get(key, key)
+
+
+def _last_meaningful_line(text: str) -> str:
+    last = ''
+    for line in (text or '').splitlines():
+        s = line.strip()
+        if s:
+            last = s
+    return last
 
 
 def _get_plan_public_details(conn, plan_id: str) -> dict | None:
@@ -607,10 +615,13 @@ def chat():
     plan_id = (data.get('plan_id') or '').strip()
     history = data.get('messages') or []
 
+    # Users sometimes paste a full transcript; route intents off the last meaningful line.
+    routed_message = (_last_meaningful_line(message) or message).strip()
+
     if not message:
         return jsonify(message="message is required"), 400
 
-    if _is_greeting(message) and not plan_id:
+    if _is_greeting(routed_message) and not plan_id:
         quick_replies = [
             "Recommend 3 plans under $500 with BOQ",
             "I want a modern 3 bedroom house plan",
@@ -634,8 +645,8 @@ def chat():
         # General AI edge-cases: only search plans if user is asking for recommendations.
         # For general advice/help questions, searching plans often creates irrelevant outputs.
         # IMPORTANT: even on a plan page, allow cross-plan recommendations if the user explicitly asks.
-        is_recommendation = _is_recommendation_intent(message)
-        plans = _search_plans(conn, message, limit=limit) if is_recommendation else []
+        is_recommendation = _is_recommendation_intent(routed_message)
+        plans = _search_plans(conn, routed_message, limit=limit) if is_recommendation else []
 
         plan_facts = []
         if is_recommendation:
@@ -669,7 +680,7 @@ def chat():
         )
 
         focused_plan = _get_plan_public_details(conn, plan_id) if plan_id else None
-        focused_plan_question = bool(focused_plan and _is_focused_plan_question(message))
+        focused_plan_question = bool(focused_plan and _is_focused_plan_question(routed_message))
 
         def _normalize_for_intent(text: str) -> str:
             # Lowercase + normalize whitespace for robust intent checks.
@@ -687,6 +698,18 @@ def chat():
                 if s:
                     return s
             return ''
+
+        def _is_price_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            if not t:
+                return False
+            if 'how much is this plan' in t or 'how much is the plan' in t:
+                return True
+            return (
+                _has_token(t, 'price')
+                or (_has_token(t, 'cost') and ('plan' in t or 'this' in t))
+                or 'how much' in t
+            )
 
         def _is_boq_question(text: str) -> bool:
             t = _normalize_for_intent(text)
@@ -1719,25 +1742,25 @@ def chat():
         )
 
         # If we're on a specific plan and the user asks for pros/cons, answer directly.
-        if focused_plan and _is_pros_cons_question(message):
+        if focused_plan and _is_pros_cons_question(routed_message):
             return jsonify({
                 "reply": _pros_cons_reply(focused_plan),
                 "suggested_plans": plan_facts,
-                "quick_replies": ["What is included?", "Does it include BOQ?", "Show similar plans"],
+                "quick_replies": ["Pros", "Cons", "Any risks to watch for?"],
                 "actions": [],
                 "llm_used": False,
             }), 200
 
-        if focused_plan and _is_pros_only_question(message):
+        if focused_plan and _is_pros_only_question(routed_message):
             return jsonify({
                 "reply": _pros_only_reply(focused_plan),
                 "suggested_plans": plan_facts,
-                "quick_replies": ["Cons", "Pros and cons", "What is included?"],
+                "quick_replies": ["Cons", "Pros and cons", "Any risks to watch for?"],
                 "actions": [],
                 "llm_used": False,
             }), 200
 
-        if focused_plan and _is_cons_only_question(message):
+        if focused_plan and _is_cons_only_question(routed_message):
             return jsonify({
                 "reply": _cons_only_reply(focused_plan),
                 "suggested_plans": plan_facts,
@@ -1746,7 +1769,25 @@ def chat():
                 "llm_used": False,
             }), 200
 
-        edge_key = _edge_case_intent_key(message)
+        if focused_plan and _is_price_question(routed_message):
+            price = focused_plan.get('price')
+            name = focused_plan.get('name') or 'this plan'
+            if price is None:
+                reply = f"Price: {name}\n\n- Price is not available for this plan yet."
+            else:
+                try:
+                    reply = f"Price: {name}\n\n- $ {float(price):,.0f}"
+                except Exception:
+                    reply = f"Price: {name}\n\n- {price}"
+            return jsonify({
+                "reply": reply,
+                "suggested_plans": plan_facts,
+                "quick_replies": ["What’s included?", "Does it include BOQ?", "Any risks to watch for?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        edge_key = _edge_case_intent_key(routed_message)
         # Don't override explicit recommendation searches (we want plan results in that case).
         if edge_key and not is_recommendation:
             return jsonify({

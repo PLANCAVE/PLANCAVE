@@ -137,6 +137,13 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 def _llm_url() -> str:
     return (os.getenv('LLAMA_SERVER_URL') or 'http://127.0.0.1:8080/v1/chat/completions').strip()
 
@@ -1110,6 +1117,15 @@ def chat():
     # Users sometimes paste a full transcript; route intents off the last meaningful line.
     routed_message = (_last_user_like_line(message) or message).strip()
 
+    if _env_bool('AI_ROUTING_DEBUG', False):
+        try:
+            current_app.logger.info(
+                f"ai.chat route_debug plan_id={plan_id!r} page={page!r} "
+                f"raw_len={len(message or '')} routed={routed_message!r}"
+            )
+        except Exception:
+            pass
+
     if not message:
         return jsonify(message="message is required"), 400
 
@@ -1174,12 +1190,37 @@ def chat():
         focused_plan = _get_plan_public_details(conn, plan_id) if plan_id else None
         focused_plan_question = bool(focused_plan and _is_focused_plan_question(routed_message))
 
+        if _env_bool('AI_ROUTING_DEBUG', False):
+            try:
+                current_app.logger.info(
+                    f"ai.chat route_debug focused_plan={'yes' if bool(focused_plan) else 'no'} "
+                    f"is_recommendation={'yes' if bool(is_recommendation) else 'no'}"
+                )
+            except Exception:
+                pass
+
         def _first_meaningful_line(text: str) -> str:
             for line in (text or '').splitlines():
                 s = line.strip().lower()
                 if s:
                     return s
             return ''
+
+        # Hard guard: if the client didn't provide plan_id / we couldn't load focused_plan,
+        # do NOT show recommendation prompts for plan-page quick picks.
+        short_tokens = {'pros', 'cons', 'boq', 'price', 'cost', 'included', 'include', 'suitable', 'suitability', 'risk', 'risks'}
+        if (not focused_plan) and (_normalize_for_intent(routed_message) in short_tokens) and (not is_recommendation):
+            return jsonify({
+                "reply": (
+                    "I can help — but I can’t see the plan you’re viewing right now. "
+                    "Please refresh/open the plan page so it sends the plan id (or paste the plan link/name), "
+                    "then I’ll answer pros/cons, BOQ, price, what’s included, suitability, and risks."
+                ),
+                "suggested_plans": [],
+                "quick_replies": ["Paste plan link", "Pros", "Does it include BOQ?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
 
         # If the user is asking about "this plan" but we couldn't load the plan context,
         # avoid misrouting into recommendation prompts.

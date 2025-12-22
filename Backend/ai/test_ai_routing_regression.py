@@ -77,6 +77,12 @@ What budget + bedrooms + floors do you want, and must BOQ be included?
         routed = ai_assistant._last_user_like_line(transcript)
         self.assertEqual(routed, "tell me more about this plan")
 
+    def test_quick_pick_tokens_are_not_recommendation_intent(self):
+        # These should be handled as focused-plan quick picks (when focused_plan exists),
+        # or should trigger a "can't see plan" guard if plan_id isn't available.
+        for t in ["Pros", "Cons", "BOQ", "price", "included"]:
+            self.assertFalse(ai_assistant._is_recommendation_intent(t))
+
     def test_transcript_ending_with_assistant_prompt_routes_to_user_line(self):
         transcript = """
 You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\". Ask me for pros and cons, suitability, what's included, BOQ, or any risks to watch for.

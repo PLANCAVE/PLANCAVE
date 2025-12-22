@@ -83,6 +83,40 @@ What budget + bedrooms + floors do you want, and must BOQ be included?
         for t in ["Pros", "Cons", "BOQ", "price", "included"]:
             self.assertFalse(ai_assistant._is_recommendation_intent(t))
 
+    def test_transcript_with_unbulleted_checklist_lines_routes_to_user_question(self):
+        transcript = """
+You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\".
+Does this plan include BOQ?
+Recommendations (so I can pick the best matches)
+
+Budget range
+Bedrooms + floors
+Must-have: BOQ included or not
+Any dealbreakers (stairs, parking, plot size)
+
+What budget + bedrooms + floors do you want, and must BOQ be included?
+""".strip("\n")
+
+        routed = ai_assistant._last_user_like_line(transcript)
+        self.assertEqual(routed, "Does this plan include BOQ?")
+
+    def test_transcript_with_unbulleted_utilities_lines_routes_to_user_question(self):
+        transcript = """
+You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\".
+Pros
+Utilities (planning checklist)
+
+Water source + storage (tank/borehole where needed)
+Sewage (public sewer vs septic + soakaway)
+Power plan (grid/solar/inverter/generator)
+Ventilation/AC strategy
+
+Is your area urban (utilities available) or rural (off-grid likely)?
+""".strip("\n")
+
+        routed = ai_assistant._last_user_like_line(transcript)
+        self.assertEqual(routed, "Pros")
+
     def test_transcript_ending_with_assistant_prompt_routes_to_user_line(self):
         transcript = """
 You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\". Ask me for pros and cons, suitability, what's included, BOQ, or any risks to watch for.

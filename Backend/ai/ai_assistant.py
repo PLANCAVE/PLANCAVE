@@ -386,6 +386,28 @@ def _last_user_like_line(text: str) -> str:
     if not lines:
         return ''
 
+    assistant_snippets = (
+        # recommendations block
+        "budget range",
+        "bedrooms + floors",
+        "must-have",
+        "must have",
+        "any dealbreakers",
+        "dealbreakers",
+        "what budget + bedrooms + floors",
+        "must boq be included",
+        # utilities block
+        "water source",
+        "sewage",
+        "power plan",
+        "grid/solar",
+        "ventilation",
+        "ac strategy",
+        "off-grid",
+        "off grid",
+        "is your area urban",
+    )
+
     assistant_prefixes = (
         "you're viewing",
         "you are viewing",
@@ -407,6 +429,12 @@ def _last_user_like_line(text: str) -> str:
             return True
         # checklist / bullets from assistant blocks
         if sl.startswith('-'):
+            return True
+        # sometimes the bullet marker is stripped; skip common assistant checklist fragments
+        if any(sn in sl for sn in assistant_snippets):
+            return True
+        # assistant checklists often contain + separators
+        if ' + ' in sl:
             return True
         # common assistant block headings / prompts
         if any(sl.startswith(p) for p in assistant_prefixes):

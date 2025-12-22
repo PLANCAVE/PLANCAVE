@@ -96,6 +96,7 @@ export default function PlanDetailsPage() {
   const [purchasedDeliverables, setPurchasedDeliverables] = useState<string[]>([]);
   const [fullPurchase, setFullPurchase] = useState(false);
   const autoVerifyRanRef = useRef(false);
+  const autoVerifyProcessingRef = useRef(false);
   const selectionTouchedRef = useRef(false);
   const lastPlanIdRef = useRef<string | null>(null);
   const hadPriorPurchasesRef = useRef(false);
@@ -157,6 +158,67 @@ export default function PlanDetailsPage() {
     handleVerifyPayment(ref);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
+
+  // Auto-verify when we have a pending reference (e.g. user paid in Paystack tab and returned).
+  // This avoids needing a manual "I have paid" click.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (purchaseStatus !== 'processing') {
+      autoVerifyProcessingRef.current = false;
+      return;
+    }
+    if (!pendingReference) return;
+    if (isPurchasing) return;
+    if (autoVerifyProcessingRef.current) return;
+
+    autoVerifyProcessingRef.current = true;
+
+    let cancelled = false;
+    const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+
+    const run = async () => {
+      const delays = [800, 1200, 2000, 3000, 4000];
+
+      for (let attempt = 0; attempt < delays.length; attempt++) {
+        if (cancelled) return;
+        setDownloadError(null);
+        setIsPurchasing(true);
+        try {
+          await verifyPaystackPayment(pendingReference);
+          if (cancelled) return;
+          setPurchaseStatus('purchased');
+          setPurchaseSuccess(true);
+          setPendingReference(null);
+          navigate('/purchases', { state: { refresh: true } });
+          return;
+        } catch (err: any) {
+          if (cancelled) return;
+          const httpStatus: number | undefined = err?.response?.status;
+          const serverMsg: string | undefined = err?.response?.data?.message;
+          const shouldRetry =
+            httpStatus === 202 ||
+            httpStatus === 429 ||
+            (typeof httpStatus === 'number' && httpStatus >= 500);
+
+          if (shouldRetry && attempt < delays.length - 1) {
+            setDownloadError(serverMsg || 'Payment is being confirmed…');
+            await sleep(delays[attempt]);
+            continue;
+          }
+
+          setDownloadError(serverMsg || 'Payment verification failed. If you just paid, please wait a moment and retry.');
+          return;
+        } finally {
+          if (!cancelled) setIsPurchasing(false);
+        }
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, purchaseStatus, pendingReference, isPurchasing, navigate]);
 
   // Helper functions to check cart and favorites status
   const isInCart = cartItems.some(item => item.id === id);
@@ -1366,26 +1428,29 @@ export default function PlanDetailsPage() {
                   </button>
                 ) : purchaseStatus === 'processing' ? (
                   <div className="space-y-2">
+                    <div className="w-full rounded-2xl border border-amber-200/40 bg-amber-50/15 px-4 py-3 text-amber-50">
+                      <div className="flex items-center justify-center gap-2 font-semibold">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Confirming your payment…
+                      </div>
+                      <p className="mt-2 text-[11px] text-amber-100/90 text-center">
+                        After completing Paystack, we will verify automatically and redirect you to Purchases.
+                      </p>
+                      {downloadError ? (
+                        <p className="mt-2 text-[11px] text-amber-100 text-center">{downloadError}</p>
+                      ) : null}
+                    </div>
                     <button
-                      onClick={() => handleVerifyPayment()}
+                      onClick={() => {
+                        autoVerifyProcessingRef.current = false;
+                        handleVerifyPayment();
+                      }}
                       disabled={isPurchasing}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-amber-400 text-slate-900 font-semibold hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-white/20 text-white/90 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                      {isPurchasing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Verifying payment...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="w-4 h-4" />
-                          I have paid — verify payment
-                        </>
-                      )}
+                      <CreditCard className="w-4 h-4" />
+                      Retry verification
                     </button>
-                    <p className="text-[11px] text-amber-100 text-center">
-                      Complete Paystack payment in the opened tab, then click “Verify payment”.
-                    </p>
                   </div>
                 ) : purchaseStatus === 'purchased' ? (
                   !fullPurchase && selectedDeliverables.length > 0 ? (

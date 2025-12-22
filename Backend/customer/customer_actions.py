@@ -519,8 +519,23 @@ def _init_paystack_transaction(email: str, amount: float, plan_id: str, user_id:
             "user_id": user_id_val,
         }
     }
+    # Callback URL determines where Paystack redirects the user after payment.
+    # Default to the plan details page so users never see a dedicated callback UI.
+    # Paystack will append `?reference=...` to this URL.
+    callback_url = None
     if PAYSTACK_CALLBACK_URL:
-        payload["callback_url"] = PAYSTACK_CALLBACK_URL
+        try:
+            callback_url = str(PAYSTACK_CALLBACK_URL)
+            if '{plan_id}' in callback_url and plan_id_str:
+                callback_url = callback_url.replace('{plan_id}', str(plan_id_str))
+        except Exception:
+            callback_url = None
+
+    if not callback_url and plan_id_str:
+        callback_url = _build_app_url(f"/plans/{plan_id_str}")
+
+    if callback_url:
+        payload["callback_url"] = callback_url
 
     resp = requests.post(
         "https://api.paystack.co/transaction/initialize",

@@ -91,8 +91,18 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="group text-white hover:text-teal-200 transition-all">
-            <div className="flex flex-col items-start leading-tight">
-              <span className="mt-1 text-[1.45rem] font-serif tracking-[0.42em] drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)]">RAMANICAVE</span>
+            <div className="flex flex-col items-start leading-none">
+              <div className="flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
+                <span className="h-px w-10 bg-white/70" />
+                <span className="h-px w-6 bg-white/40" />
+              </div>
+              <span className="mt-1 text-[1.25rem] sm:text-[1.45rem] font-serif tracking-[0.36em] drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
+                PLANCAVE
+              </span>
+              <div className="mt-1 flex items-center gap-2 opacity-75 group-hover:opacity-95 transition-opacity">
+                <span className="h-px w-6 bg-white/40" />
+                <span className="h-px w-10 bg-white/70" />
+              </div>
             </div>
           </Link>
 

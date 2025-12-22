@@ -195,30 +195,9 @@ export default function AIAssistantWidget() {
     el.scrollTop = el.scrollHeight;
   }, [open, messages, loading]);
 
-  const buildPlanSnapshotForPrompt = () => {
-    if (!pageContext.plan_id || !planContext) return '';
-    const parts: string[] = [];
-    parts.push(`Plan name: ${planContext.name || 'N/A'}`);
-    if (planContext.project_type) parts.push(`Project type: ${planContext.project_type}`);
-    if (planContext.category) parts.push(`Category: ${planContext.category}`);
-    if (planContext.package_level) parts.push(`Package level: ${planContext.package_level}`);
-    if (planContext.price !== undefined && planContext.price !== null && String(planContext.price) !== '') {
-      parts.push(`Price: ${String(planContext.price)}`);
-    }
-    if (planContext.area !== undefined && planContext.area !== null) parts.push(`Area: ${String(planContext.area)} m²`);
-    if (planContext.bedrooms !== undefined && planContext.bedrooms !== null) parts.push(`Bedrooms: ${String(planContext.bedrooms)}`);
-    if (planContext.bathrooms !== undefined && planContext.bathrooms !== null) parts.push(`Bathrooms: ${String(planContext.bathrooms)}`);
-    if (planContext.floors !== undefined && planContext.floors !== null) parts.push(`Floors: ${String(planContext.floors)}`);
-    if (planContext.includes_boq !== undefined) parts.push(`Includes BOQ: ${planContext.includes_boq ? 'Yes' : 'No'}`);
-    if (planContext.description) parts.push(`Description: ${String(planContext.description).slice(0, 600)}`);
-    return parts.length ? `\n\n[Current plan context]\n${parts.join('\n')}` : '';
-  };
-
   const send = async () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
-
-    const messageWithContext = pageContext.plan_id ? `${trimmed}${buildPlanSnapshotForPrompt()}` : trimmed;
 
     setError(null);
     setQuickReplies([]);
@@ -231,7 +210,7 @@ export default function AIAssistantWidget() {
     try {
       const history = messages.slice(-10);
       const resp = await aiChat({
-        message: messageWithContext,
+        message: trimmed,
         page: pageContext.page,
         plan_id: pageContext.plan_id,
         plan_context: planContext,
@@ -291,8 +270,6 @@ export default function AIAssistantWidget() {
     await (async () => {
       const trimmed = text.trim();
       if (!trimmed || loading) return;
-
-      const messageWithContext = pageContext.plan_id ? `${trimmed}${buildPlanSnapshotForPrompt()}` : trimmed;
       setError(null);
       setQuickReplies([]);
       setSuggestedPlans([]);
@@ -304,7 +281,7 @@ export default function AIAssistantWidget() {
       try {
         const history = messages.slice(-10);
         const resp = await aiChat({
-          message: messageWithContext,
+          message: trimmed,
           page: pageContext.page,
           plan_id: pageContext.plan_id,
           plan_context: planContext,

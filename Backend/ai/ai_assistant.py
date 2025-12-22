@@ -1142,6 +1142,13 @@ def chat():
     plan_id = (data.get('plan_id') or '').strip()
     history = data.get('messages') or []
 
+    # Some clients may append plan snapshots into the message. Strip them before routing.
+    if '[Current plan context]' in message:
+        try:
+            message = message.split('[Current plan context]', 1)[0].strip()
+        except Exception:
+            pass
+
     # Users sometimes paste a full transcript; route intents off the last meaningful line.
     routed_message = (_last_user_like_line(message) or message).strip()
 

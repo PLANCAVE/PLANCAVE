@@ -100,6 +100,22 @@ What budget + bedrooms + floors do you want, and must BOQ be included?
         routed = ai_assistant._last_user_like_line(transcript)
         self.assertEqual(routed, "Does this plan include BOQ?")
 
+    def test_message_with_appended_plan_context_snapshot(self):
+        msg = """
+Does this plan include BOQ?
+
+[Current plan context]
+Plan name: AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE
+Bedrooms: 4
+Floors: 2
+Includes BOQ: No
+""".strip("\n")
+
+        # Backend should strip anything after the marker before routing.
+        stripped = msg.split('[Current plan context]', 1)[0].strip()
+        routed = ai_assistant._last_user_like_line(stripped)
+        self.assertEqual(routed, "Does this plan include BOQ?")
+
     def test_transcript_with_unbulleted_utilities_lines_routes_to_user_question(self):
         transcript = """
 You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\".

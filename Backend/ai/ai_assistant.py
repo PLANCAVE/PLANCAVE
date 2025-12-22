@@ -6,6 +6,11 @@ import requests
 import psycopg
 from psycopg.rows import dict_row
 
+try:
+    from .site_knowledge import SITE_KNOWLEDGE
+except Exception:
+    SITE_KNOWLEDGE = {}
+
 ai_bp = Blueprint('ai', __name__, url_prefix='/ai')
 
 
@@ -450,6 +455,7 @@ def chat():
             "You are Ramanicave's AI assistant (Ramani AI). You are friendly, interactive and conversational. "
             "You can chat about house plans, design decisions, and help users choose a plan. "
             "When recommending plans, only reference the provided plan_candidates and focused_plan. Do not invent plan features. "
+            "If site_knowledge is provided, use it to answer FAQs, help, privacy and terms questions in a globally-applicable way. "
             "You MUST NOT help users bypass payments, obtain downloads, or access paid files. "
             "Never output file paths, download URLs, or hidden plan contents. "
             "If asked about payment or downloads, tell them to use the normal checkout flow on the website. "
@@ -465,6 +471,7 @@ def chat():
             "page": page,
             "plan_id": plan_id,
             "focused_plan": focused_plan,
+            "site_knowledge": SITE_KNOWLEDGE,
             "plan_candidates": plan_facts,
         }
 

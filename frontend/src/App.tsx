@@ -24,6 +24,11 @@ import AdminPlanView from './pages/admin/AdminPlanView';
 import UploadPlan from './pages/designer/UploadPlan';
 import MyPlans from './pages/designer/MyPlans';
 import AIAssistantWidget from './components/AIAssistantWidget';
+import Footer from './components/Footer';
+import FAQs from './pages/FAQs';
+import Help from './pages/Help';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Terms from './pages/Terms';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -61,6 +66,10 @@ function AppContent() {
           <Route path="/" element={<Landing />} />
           <Route path="/plans" element={<BrowsePlans />} />
           <Route path="/plans/:id" element={<PlanDetailsPage />} />
+          <Route path="/faqs" element={<FAQs />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
@@ -166,6 +175,7 @@ function AppContent() {
             }
           />
         </Routes>
+        <Footer />
       </div>
     </BrowserRouter>
   );

@@ -188,18 +188,18 @@ export default function AIAssistantWidget() {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-[70]">
+    <div className="fixed z-[70] bottom-4 right-4 left-4 sm:left-auto">
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white px-4 py-3 shadow-xl"
+          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white px-4 py-3 shadow-xl w-full sm:w-auto justify-center sm:justify-start"
         >
           <MessageCircle className="w-5 h-5" />
           <span className="text-sm font-semibold">Ramani AI</span>
         </button>
       ) : (
-        <div className="w-[380px] max-w-[94vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+        <div className="w-full sm:w-[380px] sm:max-w-[94vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-teal-700 to-cyan-700 text-white">
             <div>
               <div className="text-sm font-semibold leading-tight">Ramani AI</div>
@@ -215,7 +215,7 @@ export default function AIAssistantWidget() {
             </button>
           </div>
 
-          <div ref={listRef} className="max-h-[420px] overflow-y-auto p-3 space-y-3 bg-gradient-to-b from-white to-slate-50/60">
+          <div ref={listRef} className="max-h-[55vh] sm:max-h-[420px] overflow-y-auto p-3 space-y-3 bg-gradient-to-b from-white to-slate-50/60">
             {shouldShowOpenPrompts ? (
               <div className="mr-10 rounded-2xl bg-white border border-slate-200 p-2">
                 <div className="text-xs font-semibold text-slate-700 mb-2">Try one of these</div>

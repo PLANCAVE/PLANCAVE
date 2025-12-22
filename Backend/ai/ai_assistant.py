@@ -1769,6 +1769,17 @@ def chat():
                 "llm_used": False,
             }), 200
 
+        # If the user is asking to understand the open plan ("tell me more", "explain this"),
+        # respond with a focused plan summary instead of generic recommendation prompts.
+        if focused_plan and (not is_recommendation) and _is_focused_plan_question(routed_message):
+            return jsonify({
+                "reply": _focused_plan_fallback_reply(focused_plan),
+                "suggested_plans": plan_facts,
+                "quick_replies": ["Pros", "Cons", "Does it include BOQ?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
         if focused_plan and _is_price_question(routed_message):
             price = focused_plan.get('price')
             name = focused_plan.get('name') or 'this plan'

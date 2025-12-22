@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getAdminPurchases, adminVerifyPaystackPayment, adminConfirmPaystackPayment } from '../../api';
-import { Loader2, RefreshCw, Filter, DollarSign, Users, FileText, ShoppingCart, AlertTriangle, CheckCircle, Eye, X } from 'lucide-react';
+import { getAdminPurchases, adminVerifyPaystackPayment, adminConfirmPaystackPayment, deleteAdminPurchase } from '../../api';
+import { Loader2, RefreshCw, Filter, DollarSign, Users, FileText, ShoppingCart, AlertTriangle, CheckCircle, Eye, X, Trash2 } from 'lucide-react';
 
 interface PurchaseRow {
   id: string;
@@ -141,6 +141,7 @@ export default function PurchasesAdmin() {
   const [metadata, setMetadata] = useState<PurchasesResponse['metadata'] | null>(null);
   const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(null);
+  const [deletingPurchaseId, setDeletingPurchaseId] = useState<string | null>(null);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRow | null>(null);
   const [selectedPaystackReference, setSelectedPaystackReference] = useState<string | null>(null);
 
@@ -283,6 +284,30 @@ export default function PurchasesAdmin() {
       setSuccess(null);
     } finally {
       setConfirmingPayment(null);
+    }
+  };
+
+  const handleDeletePurchase = async (purchaseId: string) => {
+    if (!purchaseId) return;
+    const ok = window.confirm(
+      'Delete this purchase history? This will remove it for the customer too and they will be able to repurchase the plan.'
+    );
+    if (!ok) return;
+    setDeletingPurchaseId(purchaseId);
+    try {
+      await deleteAdminPurchase(purchaseId);
+      await loadPurchases({ reset: true });
+      setSuccess('Purchase deleted successfully.');
+      setError(null);
+      if (selectedPurchase?.id === purchaseId) {
+        setSelectedPurchase(null);
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to delete purchase.';
+      setError(msg);
+      setSuccess(null);
+    } finally {
+      setDeletingPurchaseId(null);
     }
   };
 
@@ -605,6 +630,28 @@ export default function PurchasesAdmin() {
                         >
                           <Eye className="w-3 h-3" />
                           View details
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeletePurchase(purchase.id);
+                          }}
+                          disabled={deletingPurchaseId === purchase.id}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-rose-400/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-100 text-xs font-medium transition-colors disabled:opacity-50"
+                        >
+                          {deletingPurchaseId === purchase.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-3 h-3" />
+                              Delete
+                            </>
+                          )}
                         </button>
                       </div>
                     </td>

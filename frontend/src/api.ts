@@ -255,6 +255,9 @@ export const adminRemovePlanFile = (planId: string, file_path: string) =>
 export const getAdminPurchases = (params?: Record<string, any>) =>
   api.get('/admin/purchases', { params });
 
+export const deleteAdminPurchase = (purchaseId: string) =>
+  api.delete(`/admin/purchases/${purchaseId}`);
+
 // Admin Analytics
 export const getDesignerAnalytics = () =>
   api.get('/admin/analytics/designers');

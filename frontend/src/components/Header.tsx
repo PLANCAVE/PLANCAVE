@@ -86,7 +86,7 @@ export default function Header() {
   return (
     <header className="bg-gradient-to-r from-[#284d4d] via-[#1b3a3a] to-[#102222] border-b border-teal-500/30 sticky top-0 z-50 backdrop-blur-xl shadow-[0_20px_45px_-25px_rgba(0,0,0,0.75)]">
       <div className="absolute inset-0 bg-gradient-to-r from-teal-500/15 via-transparent to-cyan-500/15 backdrop-blur-[2px]"></div>
-      <div className="max-w-7xl mx-auto px-4 relative">
+      <div className="w-full px-4 relative">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="group text-white hover:text-teal-200 transition-all">

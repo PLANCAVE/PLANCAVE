@@ -87,6 +87,56 @@ def admin_list_custom_plan_requests():
         conn.close()
 
 
+@admin_bp.route('/purchases/<string:purchase_id>', methods=['DELETE'])
+@jwt_required()
+@require_admin
+def delete_purchase(purchase_id: str):
+    """Delete a purchase record (and related download tokens) so the user can repurchase."""
+    if not purchase_id:
+        return jsonify(message="purchase_id is required"), 400
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute("BEGIN")
+        cur.execute(
+            """
+            SELECT id, user_id, plan_id, payment_status
+            FROM purchases
+            WHERE id = %s
+            """,
+            (purchase_id,),
+        )
+        purchase = cur.fetchone()
+        if not purchase:
+            conn.rollback()
+            return jsonify(message="Purchase not found"), 404
+
+        # Defensive cleanup; DB schema also has ON DELETE CASCADE.
+        try:
+            cur.execute("DELETE FROM download_tokens WHERE purchase_id = %s", (purchase_id,))
+        except Exception:
+            pass
+
+        cur.execute("DELETE FROM purchases WHERE id = %s", (purchase_id,))
+        conn.commit()
+        return jsonify(
+            message="Purchase deleted",
+            purchase_id=str(purchase.get('id')),
+            user_id=purchase.get('user_id'),
+            plan_id=str(purchase.get('plan_id')) if purchase.get('plan_id') is not None else None,
+        ), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify(message=str(e)), 500
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
 @admin_bp.route('/custom-plan-requests/<request_id>', methods=['GET'])
 @jwt_required()
 @require_admin

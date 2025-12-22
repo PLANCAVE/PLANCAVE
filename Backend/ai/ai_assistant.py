@@ -926,6 +926,27 @@ def chat():
                 "llm_used": False,
             }), 200
 
+        # Cross-plan recommendations: if user asks for recommendations/similar/budget/alternatives, search and return plans
+        # even if we're on a plan page. This must come before the plan-specific quick-reply handlers.
+        if is_recommendation:
+            # We already have 'plans' and 'plan_facts' populated from earlier.
+            # If no results, return a helpful fallback.
+            if not plans:
+                return jsonify({
+                    "reply": "I couldn’t find matches for that. Try adjusting budget, bedrooms, floors, or tell me what you want to change.",
+                    "suggested_plans": [],
+                    "quick_replies": ["Budget under $500", "3 bedrooms", "Must include BOQ"],
+                    "actions": [],
+                    "llm_used": False,
+                }), 200
+            return jsonify({
+                "reply": _fallback_response("", plans)["reply"],
+                "suggested_plans": plan_facts,
+                "quick_replies": ["Pros", "Cons", "Does it include BOQ?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
         # Focused-plan quick replies that should not echo the plan details block.
         if focused_plan and _is_boq_question(message):
             includes_boq = bool(focused_plan.get('includes_boq'))

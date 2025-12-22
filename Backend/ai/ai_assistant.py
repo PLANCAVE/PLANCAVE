@@ -110,6 +110,15 @@ def _extract_bedrooms(message: str) -> int | None:
 
 def _extract_floors(message: str) -> int | None:
     msg = (message or '').lower()
+    # Handle common phrases that don't include explicit numbers.
+    if 'single storey' in msg or 'single story' in msg or 'one storey' in msg or 'one story' in msg:
+        return 1
+    if 'two storey' in msg or 'two story' in msg or 'double storey' in msg or 'double story' in msg:
+        return 2
+    if 'bungalow' in msg:
+        return 1
+    if 'duplex' in msg:
+        return 2
     m = re.search(r"(\d+)\s*(?:floor|floors|storey|storeys|story|stories)", msg)
     if not m:
         return None
@@ -130,6 +139,7 @@ def _is_stopword_token(t: str) -> bool:
     return t in {
         'must', 'include', 'including', 'with', 'without', 'need', 'needs', 'want', 'wants',
         'budget', 'under', 'below', 'less', 'than', 'max', 'minimum', 'maximum', 'price', 'cost',
+        'single', 'double', 'storey', 'storeys', 'story', 'stories', 'floor', 'floors', 'one', 'two',
         'show', 'me', 'any', 'some', 'plans', 'plan', 'please', 'only', 'also', 'the', 'a',
         'and', 'or', 'for', 'to', 'of', 'in', 'on', 'at', 'this', 'that', 'it', 'is',
         'boq',
@@ -414,8 +424,8 @@ def chat():
             "Budget under $500",
             "2 bedrooms",
             "3 bedrooms",
-            "Single storey",
-            "Two storey",
+            "Single storey (1 floor)",
+            "Two storey (2 floors)",
             "Must include BOQ",
         ]
 

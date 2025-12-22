@@ -92,11 +92,6 @@ export default function Header() {
           <Link to="/" className="group text-white hover:text-teal-200 transition-all">
             <div className="flex flex-col items-start leading-tight">
               <span className="mt-1 text-[1.45rem] font-serif tracking-[0.42em] drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)]">RAMANICAVE</span>
-              <div className="mt-1 flex items-center gap-2 opacity-70">
-                <div className="h-px w-8 bg-white/90"></div>
-                <div className="h-px w-6 bg-white/60"></div>
-                <div className="h-px w-8 bg-white/90"></div>
-              </div>
             </div>
           </Link>
 
@@ -104,7 +99,7 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-4">
             <Link
               to="/plans"
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/20 text-white/90 tracking-[0.2em] uppercase text-xs hover:bg-white/10 hover:text-white transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/20 text-white/90 tracking-[0.2em] uppercase text-xs hover:bg-white/10 hover:text-white hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200"
             >
               Browse More Plans
             </Link>
@@ -112,7 +107,7 @@ export default function Header() {
             {isAuthenticated ? (
               <Link
                 to="/custom-plan"
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 text-white tracking-[0.18em] uppercase text-xs font-semibold hover:from-teal-700 hover:to-cyan-700 transition-all shadow-lg shadow-cyan-900/20"
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 text-white tracking-[0.18em] uppercase text-xs font-semibold hover:from-teal-700 hover:to-cyan-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 shadow-lg shadow-cyan-900/20 hover:shadow-cyan-900/35"
               >
                 Custom Plan
               </Link>
@@ -123,7 +118,7 @@ export default function Header() {
                 <div className="flex items-center gap-2 text-white/80">
                   <button
                     type="button"
-                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    className="p-2 rounded-lg border border-white/15 bg-white/5 text-teal-200 hover:bg-white/10 hover:border-teal-200/70 hover:text-teal-100 hover:-translate-y-0.5 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-teal-500/20"
                     onClick={() => navigate('/plans')}
                     aria-label="Search plans"
                   >
@@ -131,7 +126,7 @@ export default function Header() {
                   </button>
                   <button
                     type="button"
-                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    className="p-2 rounded-lg border border-white/15 bg-white/5 text-rose-200 hover:bg-white/10 hover:border-rose-200/70 hover:text-rose-100 hover:-translate-y-0.5 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-rose-500/20"
                     onClick={() => navigate('/favorites')}
                     aria-label="Saved plans"
                   >
@@ -139,7 +134,7 @@ export default function Header() {
                   </button>
                   <button
                     type="button"
-                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    className="p-2 rounded-lg border border-white/15 bg-white/5 text-amber-200 hover:bg-white/10 hover:border-amber-200/70 hover:text-amber-100 hover:-translate-y-0.5 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-amber-500/20"
                     onClick={() => navigate('/cart')}
                     aria-label="Cart"
                   >
@@ -150,7 +145,7 @@ export default function Header() {
                 <div className="flex items-center gap-1 ml-4">
                   <Link
                     to="/dashboard"
-                    className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-2"
+                    className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 rounded-lg transition-all duration-200 flex items-center gap-2"
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     <span>Dashboard</span>
@@ -159,7 +154,7 @@ export default function Header() {
                   {canSeePurchases ? (
                     <Link
                       to="/purchases"
-                      className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                      className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 rounded-lg transition-all duration-200"
                     >
                       <span>Purchases</span>
                     </Link>
@@ -169,7 +164,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => navigate('/profile')}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-teal-300/60 bg-white/5 hover:bg-white/15 transition-all ml-auto overflow-hidden"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-teal-300/60 bg-white/5 hover:bg-white/15 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-teal-900/30 active:translate-y-0 transition-all duration-200 ml-auto overflow-hidden"
                 >
                   {avatarSrc && !avatarError ? (
                     <img
@@ -189,7 +184,7 @@ export default function Header() {
               <div className="flex items-center gap-2 text-white/80">
                 <button
                   type="button"
-                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-lg border border-white/15 bg-white/5 text-teal-200 hover:bg-white/10 hover:border-teal-200/70 hover:text-teal-100 hover:-translate-y-0.5 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-teal-500/20"
                   onClick={() => navigate('/plans')}
                   aria-label="Search plans"
                 >
@@ -197,7 +192,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-lg border border-white/15 bg-white/5 text-rose-200 hover:bg-white/10 hover:border-rose-200/70 hover:text-rose-100 hover:-translate-y-0.5 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-rose-500/20"
                   onClick={() => navigate('/favorites')}
                   aria-label="Saved plans"
                 >
@@ -205,7 +200,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-lg border border-white/15 bg-white/5 text-amber-200 hover:bg-white/10 hover:border-amber-200/70 hover:text-amber-100 hover:-translate-y-0.5 hover:scale-[1.03] active:translate-y-0 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-amber-500/20"
                   onClick={() => navigate('/cart')}
                   aria-label="Cart"
                 >
@@ -213,7 +208,7 @@ export default function Header() {
                 </button>
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all border border-white/20"
+                  className="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 rounded-lg transition-all duration-200 border border-white/20 hover:border-teal-200/50"
                 >
                   Sign In
                 </Link>
@@ -257,7 +252,7 @@ export default function Header() {
               <div className="flex items-center gap-3 text-white/80">
                 <button
                   type="button"
-                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-full border border-white/15 bg-white/5 text-rose-200 hover:bg-white/10 hover:border-rose-200/70 hover:text-rose-100 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
                   onClick={() => {
                     navigate('/favorites');
                     setMobileMenuOpen(false);
@@ -268,7 +263,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-full border border-white/15 bg-white/5 text-teal-200 hover:bg-white/10 hover:border-teal-200/70 hover:text-teal-100 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
                   onClick={() => {
                     navigate('/plans');
                     setMobileMenuOpen(false);
@@ -279,7 +274,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-full border border-white/15 bg-white/5 text-cyan-200 hover:bg-white/10 hover:border-cyan-200/70 hover:text-cyan-100 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
                   onClick={() => {
                     navigate(isAuthenticated ? '/profile' : '/login');
                     setMobileMenuOpen(false);
@@ -290,7 +285,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-full border border-white/15 bg-white/5 text-amber-200 hover:bg-white/10 hover:border-amber-200/70 hover:text-amber-100 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
                   onClick={() => {
                     navigate('/cart');
                     setMobileMenuOpen(false);

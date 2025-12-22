@@ -61,7 +61,7 @@ function CreatorRoute({ children }: { children: React.ReactNode }) {
 function AppContent() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50 pb-24 sm:pb-0">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 pb-24 sm:pb-0">
         <Header />
         <AIAssistantWidget />
         <Routes>

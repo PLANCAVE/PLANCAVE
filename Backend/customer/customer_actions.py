@@ -90,6 +90,142 @@ def _send_email(to_email: str, subject: str, html_body: str) -> None:
             pass
 
 
+@customer_bp.route('/custom-plan-requests', methods=['POST'])
+@jwt_required()
+def submit_custom_plan_request():
+    data = request.get_json(silent=True) or {}
+
+    user_id, role = get_current_user()
+    if not user_id:
+        return jsonify(message="Authentication required"), 401
+
+    description = (data.get('description') or '').strip()
+    if not description:
+        return jsonify(message="description is required"), 400
+
+    def _num(val):
+        try:
+            if val is None or val == '':
+                return None
+            return float(val)
+        except Exception:
+            return None
+
+    def _int(val):
+        try:
+            if val is None or val == '':
+                return None
+            return int(val)
+        except Exception:
+            return None
+
+    payload = {
+        'full_name': (data.get('full_name') or None),
+        'contact_email': (data.get('contact_email') or None),
+        'contact_phone': (data.get('contact_phone') or None),
+        'country': (data.get('country') or None),
+        'city': (data.get('city') or None),
+        'budget_min': _num(data.get('budget_min')),
+        'budget_max': _num(data.get('budget_max')),
+        'bedrooms': _int(data.get('bedrooms')),
+        'floors': _int(data.get('floors')),
+        'style': (data.get('style') or None),
+        'land_size': (data.get('land_size') or None),
+        'needs_boq': bool(data.get('needs_boq')),
+        'needs_structural': bool(data.get('needs_structural')),
+        'needs_mep': bool(data.get('needs_mep')),
+        'description': description,
+    }
+
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            """
+            INSERT INTO custom_plan_requests (
+                user_id, full_name, contact_email, contact_phone, country, city,
+                budget_min, budget_max, bedrooms, floors, style, land_size,
+                needs_boq, needs_structural, needs_mep, description
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s
+            )
+            RETURNING id, created_at
+            """,
+            (
+                user_id,
+                payload['full_name'],
+                payload['contact_email'],
+                payload['contact_phone'],
+                payload['country'],
+                payload['city'],
+                payload['budget_min'],
+                payload['budget_max'],
+                payload['bedrooms'],
+                payload['floors'],
+                payload['style'],
+                payload['land_size'],
+                payload['needs_boq'],
+                payload['needs_structural'],
+                payload['needs_mep'],
+                payload['description'],
+            ),
+        )
+        row = cur.fetchone() or {}
+        conn.commit()
+
+        admin_email = 'admin@ramanicave.com'
+        subject = 'New Custom Plan Request - Ramanicave'
+        html_body = f"""
+        <h2>New Custom Plan Request</h2>
+        <p><strong>User ID:</strong> {user_id}</p>
+        <p><strong>User role:</strong> {role}</p>
+        <p><strong>Full name:</strong> {payload['full_name'] or '-'}<br/>
+           <strong>Contact email:</strong> {payload['contact_email'] or '-'}<br/>
+           <strong>Phone:</strong> {payload['contact_phone'] or '-'}<br/>
+           <strong>Location:</strong> {(payload['city'] or '-')}, {(payload['country'] or '-')}
+        </p>
+        <p><strong>Bedrooms:</strong> {payload['bedrooms'] or '-'}<br/>
+           <strong>Floors:</strong> {payload['floors'] or '-'}<br/>
+           <strong>Style:</strong> {payload['style'] or '-'}<br/>
+           <strong>Land size:</strong> {payload['land_size'] or '-'}
+        </p>
+        <p><strong>Budget:</strong> {payload['budget_min'] or '-'} — {payload['budget_max'] or '-'}</p>
+        <p><strong>Deliverables:</strong>
+          BOQ={payload['needs_boq']} | Structural={payload['needs_structural']} | MEP={payload['needs_mep']}
+        </p>
+        <pre style="white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{payload['description']}</pre>
+        """
+        try:
+            _send_email(admin_email, subject, html_body)
+        except Exception as e:
+            try:
+                current_app.logger.error(f"Failed to send custom request email: {e}")
+            except Exception:
+                pass
+
+        return jsonify({
+            'message': 'Request submitted',
+            'request_id': str(row.get('id')) if row.get('id') is not None else None,
+            'created_at': (row.get('created_at').isoformat() if row.get('created_at') else None),
+        }), 201
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        current_app.logger.error(f"Error creating custom plan request: {e}")
+        return jsonify(message="Failed to submit request"), 500
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
 def _generate_order_id() -> str:
     return 'ORD-' + uuid.uuid4().hex[:10].upper()
 

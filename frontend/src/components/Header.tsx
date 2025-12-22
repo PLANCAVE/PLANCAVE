@@ -84,37 +84,40 @@ export default function Header() {
   }, [avatarSrc]);
 
   return (
-    <header className="bg-gradient-to-r from-[#2C5F5F] via-[#1e4a4a] to-[#0f2a2a] border-b border-teal-500/30 sticky top-0 z-50 backdrop-blur-xl shadow-2xl shadow-black/30">
-      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-cyan-500/10 backdrop-blur-sm"></div>
-      <div className="max-w-7xl mx-auto px-4 relative">
+    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="group text-white hover:text-teal-200 transition-all">
-            <div className="flex flex-col items-start leading-tight">
-              <span className="mt-1 text-2xl font-serif tracking-[0.45em] drop-shadow-lg">RAMANICAVE</span>
-              <div className="mt-1 flex items-center gap-2 opacity-70">
-                <div className="h-px w-8 bg-white"></div>
-                <div className="h-px w-6 bg-white/80"></div>
-                <div className="h-px w-8 bg-white"></div>
-              </div>
+          <Link to="/" className="group flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-teal-600 to-cyan-600 shadow-sm" />
+            <div className="leading-tight">
+              <div className="text-[13px] sm:text-sm font-semibold tracking-[0.22em] text-slate-900">RAMANICAVE</div>
+              <div className="text-[11px] text-slate-600 hidden sm:block">House Plans & Custom Designs</div>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-5">
+          <nav className="hidden md:flex items-center gap-3">
             <Link
               to="/plans"
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/20 text-white/90 tracking-[0.2em] uppercase text-xs hover:bg-white/10 hover:text-white transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-slate-900 text-xs font-semibold tracking-wider hover:bg-slate-50 transition-all"
             >
               Browse More Plans
             </Link>
 
+            <Link
+              to="/custom-plan"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 text-white text-xs font-semibold tracking-wider hover:from-teal-700 hover:to-cyan-700 transition-all"
+            >
+              Request Custom Plan
+            </Link>
+
             {isAuthenticated ? (
               <>
-                <div className="flex items-center gap-2 text-white/80">
+                <div className="flex items-center gap-2 text-slate-700">
                   <button
                     type="button"
-                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-all"
                     onClick={() => navigate('/plans')}
                     aria-label="Search plans"
                   >
@@ -122,7 +125,7 @@ export default function Header() {
                   </button>
                   <button
                     type="button"
-                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-all"
                     onClick={() => navigate('/favorites')}
                     aria-label="Saved plans"
                   >
@@ -130,7 +133,7 @@ export default function Header() {
                   </button>
                   <button
                     type="button"
-                    className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                    className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-all"
                     onClick={() => navigate('/cart')}
                     aria-label="Cart"
                   >
@@ -138,10 +141,10 @@ export default function Header() {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-1 ml-4">
+                <div className="flex items-center gap-1 ml-3">
                   <Link
                     to="/dashboard"
-                    className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-2"
+                    className="px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-all flex items-center gap-2"
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     <span>Dashboard</span>
@@ -150,7 +153,7 @@ export default function Header() {
                   {canSeePurchases ? (
                     <Link
                       to="/purchases"
-                      className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                      className="px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-all"
                     >
                       <span>Purchases</span>
                     </Link>
@@ -160,7 +163,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => navigate('/profile')}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-teal-300/60 bg-white/5 hover:bg-white/15 transition-all ml-auto overflow-hidden"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all ml-auto overflow-hidden"
                 >
                   {avatarSrc && !avatarError ? (
                     <img
@@ -177,10 +180,10 @@ export default function Header() {
                 </button>
               </>
             ) : (
-              <div className="flex items-center gap-2 text-white/80">
+              <div className="flex items-center gap-2 text-slate-700">
                 <button
                   type="button"
-                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-all"
                   onClick={() => navigate('/plans')}
                   aria-label="Search plans"
                 >
@@ -188,7 +191,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-all"
                   onClick={() => navigate('/favorites')}
                   aria-label="Saved plans"
                 >
@@ -196,7 +199,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-lg border border-white/15 text-white/80 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-all"
                   onClick={() => navigate('/cart')}
                   aria-label="Cart"
                 >
@@ -204,7 +207,7 @@ export default function Header() {
                 </button>
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all border border-white/20"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-all"
                 >
                   Sign In
                 </Link>
@@ -214,7 +217,7 @@ export default function Header() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden text-white"
+            className="md:hidden text-slate-900"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? (
@@ -227,19 +230,26 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-teal-500/20">
+          <div className="md:hidden py-4 border-t border-slate-200">
             <nav className="flex flex-col gap-4">
               <Link
                 to="/plans"
-                className="text-gray-300 hover:text-white"
+                className="text-slate-700 hover:text-slate-900"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Explore Plans
               </Link>
-              <div className="flex items-center gap-3 text-white/80">
+              <Link
+                to="/custom-plan"
+                className="text-slate-700 hover:text-slate-900"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Request a Custom Plan
+              </Link>
+              <div className="flex items-center gap-3 text-slate-700">
                 <button
                   type="button"
-                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all text-slate-700"
                   onClick={() => {
                     navigate('/favorites');
                     setMobileMenuOpen(false);
@@ -250,7 +260,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all text-slate-700"
                   onClick={() => {
                     navigate('/plans');
                     setMobileMenuOpen(false);
@@ -261,7 +271,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all text-slate-700"
                   onClick={() => {
                     navigate(isAuthenticated ? '/profile' : '/login');
                     setMobileMenuOpen(false);
@@ -272,7 +282,7 @@ export default function Header() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full border border-white/15 hover:border-white/40 hover:text-white transition-all"
+                  className="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all text-slate-700"
                   onClick={() => {
                     navigate('/cart');
                     setMobileMenuOpen(false);
@@ -286,7 +296,7 @@ export default function Header() {
                 <>
                   <Link
                     to="/dashboard"
-                    className="text-gray-300 hover:text-white"
+                    className="text-slate-700 hover:text-slate-900"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Dashboard
@@ -295,21 +305,21 @@ export default function Header() {
                   {canSeePurchases ? (
                     <Link
                       to="/purchases"
-                      className="text-gray-300 hover:text-white"
+                      className="text-slate-700 hover:text-slate-900"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Purchases
                     </Link>
                   ) : null}
-                  <div className="pt-4 border-t border-teal-500/20">
+                  <div className="pt-4 border-t border-slate-200">
                     <button
                       onClick={() => {
                         navigate('/profile');
                         setMobileMenuOpen(false);
                       }}
-                      className="flex items-center gap-2 text-sm text-gray-200"
+                      className="flex items-center gap-2 text-sm text-slate-700"
                     >
-                      <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden ring-2 ring-teal-300/60">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-600 to-cyan-600 flex items-center justify-center text-white text-xs font-semibold overflow-hidden">
                         {user?.profile_picture_url ? (
                           <img
                             src={resolveAvatarUrl(user.profile_picture_url)}
@@ -321,8 +331,8 @@ export default function Header() {
                         )}
                       </div>
                       <div className="flex flex-col items-start">
-                        <span className="font-medium line-clamp-1 max-w-[160px]">{user?.email}</span>
-                        <span className="text-xs text-teal-300">{user?.role}</span>
+                        <span className="font-semibold line-clamp-1 max-w-[160px] text-slate-900">{user?.email}</span>
+                        <span className="text-xs text-slate-500">{user?.role}</span>
                       </div>
                     </button>
                   </div>
@@ -331,7 +341,7 @@ export default function Header() {
                 <>
                   <Link
                     to="/login"
-                    className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg transition-all border border-white/20 text-center"
+                    className="bg-slate-900 hover:bg-slate-800 text-white py-2 px-4 rounded-lg transition-all text-center font-semibold"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Sign In / Sign Up

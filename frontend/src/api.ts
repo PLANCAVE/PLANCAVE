@@ -188,6 +188,25 @@ export const removeCartItem = (plan_id: string) =>
 export const getCustomerDashboard = () =>
   api.get('/customer/dashboard');
 
+// Custom Plan Requests (login-only)
+export const submitCustomPlanRequest = (data: {
+  full_name?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  budget_min?: number | null;
+  budget_max?: number | null;
+  bedrooms?: number | null;
+  floors?: number | null;
+  style?: string | null;
+  land_size?: string | null;
+  needs_boq?: boolean;
+  needs_structural?: boolean;
+  needs_mep?: boolean;
+  description: string;
+}) => api.post('/customer/custom-plan-requests', data);
+
 // Designer/Creator
 export const getAnalyticsOverview = () =>
   api.get('/creator/analytics/overview');
@@ -245,6 +264,12 @@ export const getCustomerAnalytics = () =>
 
 export const getAdminPlanDetails = (planId: string) =>
   api.get(`/admin/analytics/plan-details/${planId}`);
+
+export const getAdminCustomPlanRequests = (params?: Record<string, any>) =>
+  api.get('/admin/custom-plan-requests', { params });
+
+export const getAdminCustomPlanRequest = (requestId: string) =>
+  api.get(`/admin/custom-plan-requests/${requestId}`);
 
 // Teams
 export const createTeam = (name: string, description?: string) =>

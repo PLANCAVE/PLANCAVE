@@ -29,6 +29,8 @@ import FAQs from './pages/FAQs';
 import Help from './pages/Help';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
+import CustomPlanRequest from './pages/CustomPlanRequest';
+import CustomPlanRequestsAdmin from './pages/admin/CustomPlanRequestsAdmin';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -59,13 +61,21 @@ function CreatorRoute({ children }: { children: React.ReactNode }) {
 function AppContent() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 pb-24 sm:pb-0">
         <Header />
         <AIAssistantWidget />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/plans" element={<BrowsePlans />} />
           <Route path="/plans/:id" element={<PlanDetailsPage />} />
+          <Route
+            path="/custom-plan"
+            element={
+              <ProtectedRoute>
+                <CustomPlanRequest />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/faqs" element={<FAQs />} />
           <Route path="/help" element={<Help />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -154,6 +164,14 @@ function AppContent() {
             element={
               <AdminRoute>
                 <Analytics />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/custom-requests"
+            element={
+              <AdminRoute>
+                <CustomPlanRequestsAdmin />
               </AdminRoute>
             }
           />

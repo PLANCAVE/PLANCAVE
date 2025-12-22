@@ -108,6 +108,32 @@ CREATE TABLE IF NOT EXISTS user_activity (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Custom Plan Requests (login-only submissions)
+CREATE TABLE IF NOT EXISTS custom_plan_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    full_name VARCHAR(255),
+    contact_email VARCHAR(255),
+    contact_phone VARCHAR(50),
+    country VARCHAR(120),
+    city VARCHAR(120),
+    budget_min DECIMAL(12, 2),
+    budget_max DECIMAL(12, 2),
+    bedrooms INTEGER,
+    floors INTEGER,
+    style VARCHAR(80),
+    land_size VARCHAR(120),
+    needs_boq BOOLEAN DEFAULT FALSE,
+    needs_structural BOOLEAN DEFAULT FALSE,
+    needs_mep BOOLEAN DEFAULT FALSE,
+    description TEXT NOT NULL,
+    status VARCHAR(40) DEFAULT 'new',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_plan_requests_user_id ON custom_plan_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_custom_plan_requests_created_at ON custom_plan_requests(created_at);
+
 -- User Quotas (for subscription limits)
 CREATE TABLE IF NOT EXISTS user_quotas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

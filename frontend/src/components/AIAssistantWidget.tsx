@@ -202,7 +202,7 @@ export default function AIAssistantWidget() {
   };
 
   return (
-    <div className="fixed z-[70] bottom-4 right-4 left-4 sm:left-auto">
+    <div className="fixed z-[70] bottom-20 sm:bottom-4 right-4 left-4 sm:left-auto">
       {!open ? (
         <button
           type="button"

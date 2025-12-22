@@ -22,6 +22,124 @@ def get_db():
     )
 
 
+@admin_bp.route('/custom-plan-requests', methods=['GET'])
+@jwt_required()
+@require_admin
+def admin_list_custom_plan_requests():
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        limit = request.args.get('limit', default=50, type=int)
+        limit = max(1, min(limit or 50, 200))
+        offset = request.args.get('offset', default=0, type=int)
+        offset = max(0, offset or 0)
+
+        cur.execute(
+            """
+            SELECT
+                cpr.id,
+                cpr.user_id,
+                u.email AS user_email,
+                cpr.full_name,
+                cpr.contact_email,
+                cpr.contact_phone,
+                cpr.country,
+                cpr.city,
+                cpr.bedrooms,
+                cpr.floors,
+                cpr.budget_min,
+                cpr.budget_max,
+                cpr.style,
+                cpr.land_size,
+                cpr.needs_boq,
+                cpr.needs_structural,
+                cpr.needs_mep,
+                cpr.description,
+                cpr.status,
+                cpr.created_at
+            FROM custom_plan_requests cpr
+            LEFT JOIN users u ON u.id = cpr.user_id
+            ORDER BY cpr.created_at DESC
+            LIMIT %s OFFSET %s
+            """,
+            (limit, offset),
+        )
+
+        rows = [dict(r) for r in (cur.fetchall() or [])]
+        for r in rows:
+            if r.get('id') is not None:
+                r['id'] = str(r['id'])
+            if r.get('created_at') is not None:
+                r['created_at'] = r['created_at'].isoformat()
+        return jsonify({
+            'requests': rows,
+            'metadata': {
+                'limit': limit,
+                'offset': offset,
+                'returned': len(rows),
+            }
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error listing custom plan requests: {e}")
+        return jsonify(message='Failed to load requests'), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
+@admin_bp.route('/custom-plan-requests/<request_id>', methods=['GET'])
+@jwt_required()
+@require_admin
+def admin_get_custom_plan_request(request_id):
+    conn = get_db()
+    cur = conn.cursor(row_factory=dict_row)
+    try:
+        cur.execute(
+            """
+            SELECT
+                cpr.id,
+                cpr.user_id,
+                u.email AS user_email,
+                cpr.full_name,
+                cpr.contact_email,
+                cpr.contact_phone,
+                cpr.country,
+                cpr.city,
+                cpr.bedrooms,
+                cpr.floors,
+                cpr.budget_min,
+                cpr.budget_max,
+                cpr.style,
+                cpr.land_size,
+                cpr.needs_boq,
+                cpr.needs_structural,
+                cpr.needs_mep,
+                cpr.description,
+                cpr.status,
+                cpr.created_at
+            FROM custom_plan_requests cpr
+            LEFT JOIN users u ON u.id = cpr.user_id
+            WHERE cpr.id = %s
+            """,
+            (request_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify(message='Request not found'), 404
+        r = dict(row)
+        if r.get('id') is not None:
+            r['id'] = str(r['id'])
+        if r.get('created_at') is not None:
+            r['created_at'] = r['created_at'].isoformat()
+        return jsonify({'request': r}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error fetching custom plan request: {e}")
+        return jsonify(message='Failed to load request'), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @admin_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 @require_admin

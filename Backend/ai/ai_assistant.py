@@ -149,6 +149,34 @@ def _is_greeting(message: str) -> bool:
     }
 
 
+def _is_bedroom_comparison_question(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+    patterns = [
+        r"choose between\s*2\s*bed", 
+        r"2\s*bedrooms\s*vs\s*3\s*bedrooms",
+        r"2\s*bed\s*vs\s*3\s*bed",
+        r"2\s*bedroom\s*or\s*3\s*bedroom",
+    ]
+    return any(re.search(p, msg) for p in patterns)
+
+
+def _bedroom_comparison_reply() -> str:
+    return (
+        "Choosing between 2 vs 3 bedrooms depends mostly on household size and how you plan to use the space:\n\n"
+        "2 bedrooms is best if:\n"
+        "- You have 1–3 people, or want a compact home\n"
+        "- You want lower build cost and easier maintenance\n"
+        "- You can use the living room as flex space\n\n"
+        "3 bedrooms is best if:\n"
+        "- You have 3–6 people (family home)\n"
+        "- You want a guest room / home office\n"
+        "- You want better resale value in many markets\n\n"
+        "Tell me your budget and whether you prefer single storey or two storey, and I’ll recommend the best options."
+    )
+
+
 def _is_stopword_token(t: str) -> bool:
     # Keep this small and practical: tokens that frequently appear in chat prompts
     # but do not help match plan names/descriptions.
@@ -449,6 +477,21 @@ def chat():
         ]
         return jsonify({
             "reply": "Hi! Tell me what you want to build (budget, bedrooms, floors, and BOQ) and I will recommend plans that fit.",
+            "suggested_plans": [],
+            "quick_replies": quick_replies,
+            "actions": [],
+            "llm_used": False,
+        }), 200
+
+    if _is_bedroom_comparison_question(message) and not plan_id:
+        quick_replies = [
+            "2 bedroom single-storey under $300",
+            "I want a modern 3 bedroom house plan",
+            "Budget under $500",
+            "Must include BOQ",
+        ]
+        return jsonify({
+            "reply": _bedroom_comparison_reply(),
             "suggested_plans": [],
             "quick_replies": quick_replies,
             "actions": [],

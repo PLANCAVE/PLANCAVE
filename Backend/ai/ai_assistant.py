@@ -734,6 +734,364 @@ def chat():
                 or 'suitable location' in t or 'best location' in t
             )
 
+        # === Comprehensive intent detection for 100+ edge cases ===
+        def _is_whats_included_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'what is included' in t or 'whats included' in t or 'what do i get' in t
+                or 'included files' in t or 'deliverables' in t or 'package contents' in t
+                or 'what comes with' in t or 'what files' in t
+            )
+
+        def _is_files_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'files' in t or 'drawings' in t or 'plans' in t or 'documents' in t
+                or 'pdf' in t or 'cad' in t or 'dwg' in t or 'sketchup' in t
+            )
+
+        def _is_deliverables_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'deliverables' in t or 'what deliverables' in t or 'package includes' in t
+                or 'what is in the package' in t
+            )
+
+        def _is_materials_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'materials' in t or 'material list' in t or 'what materials' in t
+                or 'cement' in t or 'steel' in t or 'brick' in t or 'blocks' in t
+                or 'finishes' in t or 'roofing' in t
+            )
+
+        def _is_labor_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'labor' in t or 'labour' in t or 'workers' in t or 'team' in t
+                or 'contractor' in t or 'builder' in t or 'trades' in t
+            )
+
+        def _is_timeline_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'timeline' in t or 'how long' in t or 'duration' in t or 'time to build' in t
+                or 'construction time' in t or 'build time' in t or 'schedule' in t
+            )
+
+        def _is_modification_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'modify' in t or 'custom' in t or 'customize' in t or 'change' in t
+                or 'alter' in t or 'adjust' in t or 'edit' in t or 'modification' in t
+            )
+
+        def _is_permit_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'permit' in t
+                or 'permits' in t
+                or 'approval' in t
+                or 'approvals' in t
+                or 'council' in t
+                or 'authority' in t
+                or 'building permit' in t
+                or 'planning permission' in t
+                or 'permit required' in t
+            )
+
+        def _is_code_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'code' in t or 'codes' in t or 'building code' in t or 'regulation' in t
+                or 'compliance' in t or 'standards' in t or 'zoning' in t
+            )
+
+        def _is_soil_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'soil' in t or 'ground' in t or 'foundation' in t or 'footing' in t
+                or 'bearing capacity' in t or 'soil test' in t or 'geotech' in t
+            )
+
+        def _is_climate_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'climate' in t or 'weather' in t or 'rain' in t or 'wind' in t
+                or 'temperature' in t or 'humidity' in t or 'seasonal' in t
+            )
+
+        def _is_accessibility_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'accessibility' in t or 'accessible' in t or 'wheelchair' in t
+                or 'disabled' in t or 'ramp' in t or 'handrail' in t or 'aging' in t
+            )
+
+        def _is_parking_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'parking' in t or 'garage' in t or 'car' in t or 'vehicle' in t
+                or 'driveway' in t or 'carport' in t
+            )
+
+        def _is_outdoor_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'outdoor' in t or 'garden' in t or 'yard' in t or 'patio' in t
+                or 'balcony' in t or 'terrace' in t or 'deck' in t
+            )
+
+        def _is_energy_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'energy' in t or 'solar' in t or 'power' in t or 'electricity' in t
+                or 'insulation' in t or 'efficiency' in t or 'sustainable' in t
+            )
+
+        def _is_water_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'water' in t or 'plumbing' in t or 'drainage' in t or 'sewage' in t
+                or 'septic' in t or 'rainwater' in t or 'tank' in t
+            )
+
+        def _is_vastu_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'vastu' in t or 'vaastu' in t or 'direction' in t or 'orientation' in t
+                or 'facing' in t or 'east facing' in t or 'north facing' in t
+            )
+
+        def _is_family_size_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'family' in t or 'children' in t or 'kids' in t or 'baby' in t
+                or 'elderly' in t or 'parents' in t or 'guests' in t or 'how many people' in t
+            )
+
+        def _is_future_proof_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'future' in t or 'expand' in t or 'extension' in t or 'add floor' in t
+                or 'renovate' in t or 'upgrade' in t or 'flexible' in t
+            )
+
+        def _is_maintenance_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'maintenance' in t or 'upkeep' in t or 'cleaning' in t or 'repair' in t
+                or 'durable' in t or 'long lasting' in t or 'wear' in t
+            )
+
+        def _is_resale_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'resale' in t or 'sell' in t or 'value' in t or 'investment' in t
+                or 'market' in t or 'appreciate' in t or 'demand' in t
+            )
+
+        def _is_payment_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'payment' in t or 'pay' in t or 'checkout' in t or 'buy' in t
+                or 'purchase' in t or 'card' in t or 'transaction' in t
+            )
+
+        def _is_download_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'download' in t or 'access' in t or 'link' in t or 'file' in t
+                or 'after purchase' in t or 'get files' in t or 'receive' in t
+            )
+
+        def _is_refund_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'refund' in t or 'money back' in t or 'cancel' in t or 'return' in t
+                or 'guarantee' in t or 'satisfaction' in t
+            )
+
+        def _is_support_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'support' in t or 'help' in t or 'contact' in t or 'assist' in t
+                or 'issue' in t or 'problem' in t or 'trouble' in t
+            )
+
+        def _is_comparison_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'compare' in t or 'vs' in t or 'versus' in t or 'difference' in t
+                or 'better' in t or 'which one' in t or 'choose' in t
+            )
+
+        def _is_measurement_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'size' in t or 'dimension' in t or 'measure' in t or 'area' in t
+                or 'square feet' in t or 'sq ft' in t or 'meters' in t or 'm²' in t
+            )
+
+        def _is_ceiling_height_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'ceiling' in t or 'height' in t or 'room height' in t or 'floor to ceiling' in t
+                or 'vertical space' in t
+            )
+
+        def _is_window_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'window' in t or 'windows' in t or 'natural light' in t or 'ventilation' in t
+                or 'opening' in t or 'glazing' in t
+            )
+
+        def _is_door_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'door' in t or 'doors' in t or 'entrance' in t or 'main door' in t
+                or 'door size' in t or 'door width' in t
+            )
+
+        def _is_stair_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'stair' in t or 'stairs' in t or 'staircase' in t or 'steps' in t
+                or 'rise' in t or 'tread' in t or 'landing' in t
+            )
+
+        def _is_roof_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'roof' in t or 'roofing' in t or 'roof type' in t or 'pitch' in t
+                or 'flat roof' in t or 'sloped roof' in t or 'terrace roof' in t
+            )
+
+        def _is_foundation_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'foundation' in t or 'footing' in t or 'base' in t or 'structural base' in t
+                or 'raft foundation' in t or 'strip foundation' in t
+            )
+
+        def _is_flooring_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'floor' in t or 'flooring' in t or 'floor finish' in t or 'tiles' in t
+                or 'marble' in t or 'wood' in t or 'vinyl' in t
+            )
+
+        def _is_kitchen_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'kitchen' in t or 'cooking' in t or 'cabinets' in t or 'counter' in t
+                or 'sink' in t or 'appliances' in t
+            )
+
+        def _is_bathroom_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'bathroom' in t or 'toilet' in t or 'shower' in t or 'bathtub' in t
+                or 'sanitary' in t or 'fixtures' in t
+            )
+
+        def _is_structural_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'structural' in t or 'structure' in t or 'load' in t or 'beam' in t
+                or 'column' in t or 'slab' in t or 'reinforcement' in t
+            )
+
+        def _is_electrical_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'electrical' in t or 'wiring' in t or 'outlet' in t or 'switch' in t
+                or 'panel' in t or 'circuit' in t or 'power' in t
+            )
+
+        def _is_hvac_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'hvac' in t
+                or 'air conditioning' in t
+                or 'ac' in t
+                or 'cooling' in t
+                or 'heating' in t
+                or 'ventilation' in t
+                or 'duct' in t
+            )
+
+        def _is_fire_safety_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'fire' in t or 'safety' in t or 'extinguish' in t or 'alarm' in t
+                or 'emergency' in t or 'exit' in t or 'sprinkler' in t
+            )
+
+        def _is_privacy_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'privacy' in t or 'policy' in t or 'data' in t or 'personal info' in t
+                or ' gdpr' in t or 'secure' in t
+            )
+
+        def _is_terms_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'terms' in t or 'conditions' in t or 'agreement' in t or 'license' in t
+                or 'usage rights' in t or 'copyright' in t
+            )
+
+        def _is_shipping_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'shipping' in t or 'delivery' in t or 'logistics' in t or 'courier' in t
+                or 'receive' in t or 'dispatch' in t
+            )
+
+        def _is_subscription_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'subscription' in t or 'member' in t or 'account' in t or 'renew' in t
+                or 'expire' in t or 'access period' in t
+            )
+
+        def _is_mobile_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'mobile' in t or 'phone' in t or 'app' in t or 'android' in t
+                or 'ios' in t or 'responsive' in t
+            )
+
+        def _is_language_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'language' in t or 'translate' in t or 'english' in t or 'local' in t
+                or 'multilingual' in t or 'region' in t
+            )
+
+        def _is_currency_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'currency' in t or 'price' in t or 'cost' in t or 'rate' in t
+                or 'exchange' in t or 'usd' in t or 'local currency' in t
+            )
+
+        def _is_tax_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'tax' in t or 'vat' in t or 'gst' in t or 'inclusive' in t
+                or 'taxable' in t or 'invoice' in t
+            )
+
+        def _is_discount_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
+            return (
+                'discount' in t or 'offer' in t or 'promotion' in t or 'sale' in t
+                or 'coupon' in t or 'code' in t or 'deal' in t
+            )
+
         def _is_budget_only_message(text: str) -> bool:
             raw = (text or '').strip()
             if not raw:

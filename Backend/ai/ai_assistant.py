@@ -692,8 +692,16 @@ def chat():
             t = _normalize_for_intent(text)
             if not t:
                 return False
-            # Covers: "Does it include BOQ?", "BOQ?", "Is BOQ included" etc.
-            return _has_token(t, 'boq') or ('bill of quantities' in t)
+            # Explicit BOQ questions only; avoid catching recommendation queries that happen to contain 'boq'.
+            # Patterns: "Does it include BOQ?", "Is BOQ included?", "BOQ?", "What about BOQ"
+            return (
+                ('does it include' in t and 'boq' in t) or
+                ('is boq' in t) or
+                ('boq included' in t) or
+                ('what about boq' in t) or
+                ('boq?' in t) or
+                ('bill of quantities' in t)
+            )
 
         def _is_show_similar_plans(text: str) -> bool:
             t = _normalize_for_intent(text)

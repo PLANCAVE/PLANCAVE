@@ -55,6 +55,28 @@ Recommendations (so I can pick the best matches)
         self.assertTrue(ai_assistant._is_focused_plan_question(routed))
         self.assertFalse(ai_assistant._is_recommendation_intent(routed))
 
+    def test_no_plan_id_tell_me_more_should_not_be_recommendations(self):
+        # When the frontend fails to send plan_id, we can't summarize a specific plan.
+        # Our routing input should still resolve to the user question (not the assistant prompt).
+        transcript = """
+Ramani AI
+House plans assistant
+
+You're viewing “AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE”. Ask me for pros and cons, suitability, what's included, BOQ, or any risks to watch for.
+tell me more about this plan
+Recommendations (so I can pick the best matches)
+
+- Budget range
+- Bedrooms + floors
+- Must-have: BOQ included or not
+- Any dealbreakers (stairs, parking, plot size)
+
+What budget + bedrooms + floors do you want, and must BOQ be included?
+""".strip("\n")
+
+        routed = ai_assistant._last_user_like_line(transcript)
+        self.assertEqual(routed, "tell me more about this plan")
+
     def test_transcript_ending_with_assistant_prompt_routes_to_user_line(self):
         transcript = """
 You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\". Ask me for pros and cons, suitability, what's included, BOQ, or any risks to watch for.

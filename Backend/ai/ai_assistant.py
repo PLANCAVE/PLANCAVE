@@ -1181,6 +1181,32 @@ def chat():
                     return s
             return ''
 
+        # If the user is asking about "this plan" but we couldn't load the plan context,
+        # avoid misrouting into recommendation prompts.
+        if (not focused_plan) and plan_id and _is_focused_plan_question(routed_message) and (not is_recommendation):
+            return jsonify({
+                "reply": (
+                    "I can help, but I couldn’t load the current plan details right now. "
+                    "Please refresh the plan page and try again — then I can summarize the plan and answer pros/cons, BOQ, price, suitability, and risks."
+                ),
+                "suggested_plans": [],
+                "quick_replies": ["Refresh plan page", "Pros", "Does it include BOQ?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        if (not focused_plan) and (not plan_id) and _is_focused_plan_question(routed_message) and (not is_recommendation):
+            return jsonify({
+                "reply": (
+                    "I can help — but I can’t see which plan you’re viewing right now. "
+                    "Please open the plan page (or paste the plan link/name), and I’ll summarize it and answer pros/cons, BOQ, price, suitability, and risks."
+                ),
+                "suggested_plans": [],
+                "quick_replies": ["Paste plan link", "Pros", "Does it include BOQ?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
         def _is_boq_question(text: str) -> bool:
             t = _normalize_for_intent(text)
             if not t:

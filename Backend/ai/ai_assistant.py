@@ -808,7 +808,6 @@ def chat():
 
         # If we're on a specific plan and the user asks for pros/cons, answer directly.
         if focused_plan and _is_pros_cons_question(message):
-            current_app.logger.info(f"[AI] Using pros_cons helper for plan {focused_plan.get('id')}")
             return jsonify({
                 "reply": _pros_cons_reply(focused_plan),
                 "suggested_plans": plan_facts,
@@ -818,7 +817,6 @@ def chat():
             }), 200
 
         if focused_plan and _is_pros_only_question(message):
-            current_app.logger.info(f"[AI] Using pros_only helper for plan {focused_plan.get('id')}")
             return jsonify({
                 "reply": _pros_only_reply(focused_plan),
                 "suggested_plans": plan_facts,
@@ -828,7 +826,6 @@ def chat():
             }), 200
 
         if focused_plan and _is_cons_only_question(message):
-            current_app.logger.info(f"[AI] Using cons_only helper for plan {focused_plan.get('id')}")
             return jsonify({
                 "reply": _cons_only_reply(focused_plan),
                 "suggested_plans": plan_facts,

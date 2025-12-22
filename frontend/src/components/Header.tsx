@@ -109,12 +109,14 @@ export default function Header() {
               Browse More Plans
             </Link>
 
-            <Link
-              to="/custom-plan"
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 text-white tracking-[0.18em] uppercase text-xs font-semibold hover:from-teal-700 hover:to-cyan-700 transition-all shadow-lg shadow-cyan-900/20"
-            >
-              Request Custom Plan
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                to="/custom-plan"
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 text-white tracking-[0.18em] uppercase text-xs font-semibold hover:from-teal-700 hover:to-cyan-700 transition-all shadow-lg shadow-cyan-900/20"
+              >
+                Custom Plan
+              </Link>
+            ) : null}
 
             {isAuthenticated ? (
               <>
@@ -243,13 +245,15 @@ export default function Header() {
               >
                 Explore Plans
               </Link>
-              <Link
-                to="/custom-plan"
-                className="text-gray-300 hover:text-white"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Request a Custom Plan
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  to="/custom-plan"
+                  className="text-gray-300 hover:text-white"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Custom Plan
+                </Link>
+              ) : null}
               <div className="flex items-center gap-3 text-white/80">
                 <button
                   type="button"

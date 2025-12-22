@@ -427,14 +427,23 @@ def _last_user_like_line(text: str) -> str:
         sl = s.lower().strip()
         if not sl:
             return True
+        # Many assistant prompts are questions (e.g. "What budget...?").
+        # If the line matches our known assistant patterns, treat it as assistant even with '?'.
+        if '?' in sl:
+            if any(sl.startswith(p) for p in assistant_prefixes):
+                return True
+            if any(sn in sl for sn in assistant_snippets):
+                return True
+            # Otherwise treat it as user-like.
+            return False
         # checklist / bullets from assistant blocks
         if sl.startswith('-'):
             return True
         # sometimes the bullet marker is stripped; skip common assistant checklist fragments
-        if any(sn in sl for sn in assistant_snippets):
+        if (len(sl) <= 90) and any(sn in sl for sn in assistant_snippets):
             return True
         # assistant checklists often contain + separators
-        if ' + ' in sl:
+        if (len(sl) <= 90) and (' + ' in sl):
             return True
         # common assistant block headings / prompts
         if any(sl.startswith(p) for p in assistant_prefixes):

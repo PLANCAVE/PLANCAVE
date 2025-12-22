@@ -51,7 +51,7 @@ export default function Footer() {
 
             <div className="mt-6 rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-3 shadow-sm hover:shadow-lg hover:shadow-teal-900/20 transition-all duration-200">
               <div className="text-xs font-semibold text-white">Support</div>
-              <div className="mt-1 text-sm text-slate-200">admin@ramanicave.com</div>
+              <div className="mt-1 text-sm text-slate-200">support@ramanicave.com</div>
             </div>
           </div>
         </div>

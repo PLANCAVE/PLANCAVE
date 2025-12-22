@@ -51,7 +51,7 @@ export default function Login() {
             setNeedsVerification(true);
             setError(msg || 'Please verify your email before login.');
           } else {
-            setError('Your account has been deactivated. Please contact admin@ramanicave.com.');
+            setError('Your account has been deactivated. Please contact support@ramanicave.com.');
           }
         } else {
           setError(message || 'Login failed. Please try again later.');

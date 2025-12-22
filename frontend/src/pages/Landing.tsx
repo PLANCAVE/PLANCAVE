@@ -723,10 +723,10 @@ export default function Landing() {
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3">Email Us</h3>
                 <a 
-                  href="mailto:admin@ramanicave.com"
+                  href="mailto:support@ramanicave.com"
                   className="text-teal-300 hover:text-teal-200 transition-colors text-lg break-words"
                 >
-                  admin@ramanicave.com
+                  support@ramanicave.com
                 </a>
               </div>
             </div>

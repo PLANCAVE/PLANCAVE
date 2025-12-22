@@ -129,6 +129,7 @@ def _is_stopword_token(t: str) -> bool:
     # but do not help match plan names/descriptions.
     return t in {
         'must', 'include', 'including', 'with', 'without', 'need', 'needs', 'want', 'wants',
+        'budget', 'under', 'below', 'less', 'than', 'max', 'minimum', 'maximum', 'price', 'cost',
         'show', 'me', 'any', 'some', 'plans', 'plan', 'please', 'only', 'also', 'the', 'a',
         'and', 'or', 'for', 'to', 'of', 'in', 'on', 'at', 'this', 'that', 'it', 'is',
         'boq',
@@ -210,6 +211,9 @@ def _search_plans(conn, message: str, limit: int = 8) -> list[dict]:
         tl = t.strip().lower()
         tl = re.sub(r"[^a-z0-9_]+", "", tl)
         if not tl or len(tl) < 3:
+            continue
+        # Avoid accidentally filtering with numbers like 500, 1000, etc.
+        if tl.isdigit():
             continue
         if _is_stopword_token(tl):
             continue

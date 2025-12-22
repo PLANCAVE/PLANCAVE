@@ -17,27 +17,75 @@ export default function PaystackCallback() {
       return;
     }
 
+    let cancelled = false;
+
+    const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+
     const run = async () => {
-      try {
-        const resp = await verifyPaystackPayment(reference);
-        const planId = resp.data?.plan_id;
-        setStatus('success');
-        setMessage('Payment verified. Redirecting…');
-        window.setTimeout(() => {
-          if (planId) {
-            navigate(`/plans/${planId}`);
-          } else {
-            navigate('/purchases');
+      // Paystack can be eventually consistent for a few seconds even after "success".
+      // Also, the backend may return 202 while waiting for paid_at.
+      const delays = [800, 1200, 2000, 3000, 4000];
+
+      for (let attempt = 0; attempt < delays.length; attempt++) {
+        if (cancelled) return;
+        try {
+          setStatus('verifying');
+          setMessage(attempt === 0 ? 'Verifying your payment…' : `Finalizing payment… (attempt ${attempt + 1}/${delays.length})`);
+
+          const resp = await verifyPaystackPayment(reference);
+          const planId = resp.data?.plan_id;
+          if (cancelled) return;
+
+          setStatus('success');
+          setMessage('Payment verified. Redirecting…');
+          window.setTimeout(() => {
+            if (planId) {
+              navigate(`/plans/${planId}`);
+            } else {
+              navigate('/purchases');
+            }
+          }, 700);
+          return;
+        } catch (err: any) {
+          if (cancelled) return;
+
+          const httpStatus: number | undefined = err?.response?.status;
+          const serverMsg: string | undefined = err?.response?.data?.message;
+
+          // If auth expired, send user to login; refresh flow may not be available on callback.
+          if (httpStatus === 401) {
+            setStatus('error');
+            setMessage('Please sign in again to complete verification.');
+            window.setTimeout(() => {
+              navigate('/login');
+            }, 900);
+            return;
           }
-        }, 800);
-      } catch (err: any) {
-        const msg = err?.response?.data?.message || 'Payment verification failed. If you just paid, please wait a moment and refresh.';
-        setStatus('error');
-        setMessage(msg);
+
+          // Retry on "not completed yet" (202), rate limiting, or transient server errors.
+          const shouldRetry =
+            httpStatus === 202 ||
+            httpStatus === 429 ||
+            (typeof httpStatus === 'number' && httpStatus >= 500);
+
+          if (shouldRetry && attempt < delays.length - 1) {
+            setStatus('verifying');
+            setMessage(serverMsg || 'Payment is being confirmed…');
+            await sleep(delays[attempt]);
+            continue;
+          }
+
+          setStatus('error');
+          setMessage(serverMsg || 'Payment verification failed. If you just paid, please wait a moment and retry.');
+          return;
+        }
       }
     };
 
     run();
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   return (

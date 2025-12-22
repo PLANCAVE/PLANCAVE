@@ -38,8 +38,13 @@ export default function CustomPlanRequest() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center px-4">
-        <div className="max-w-lg w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="min-h-[70vh] flex items-center justify-center px-4 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-teal-400/20 blur-3xl" />
+          <div className="absolute -bottom-28 -left-28 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
+        </div>
+
+        <div className="max-w-lg w-full rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur p-6 shadow-sm relative">
           <h1 className="text-2xl font-semibold text-slate-900">Request a Custom Plan</h1>
           <p className="mt-2 text-slate-600">
             Please sign in first so we can save your request and update you.
@@ -91,14 +96,19 @@ export default function CustomPlanRequest() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 via-white to-teal-50/40 py-10">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-gradient-to-b from-slate-50 via-white to-teal-50/30 py-10 relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-teal-400/20 blur-3xl" />
+        <div className="absolute -bottom-28 -left-28 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="mb-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/60 bg-white/70 px-4 py-2 text-xs font-semibold text-teal-800">
+          <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/60 bg-white/70 px-4 py-2 text-xs font-semibold text-teal-800 shadow-sm">
             <FileText className="w-4 h-4" />
             Custom Plan Request
           </div>
-          <h1 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
+          <h1 className="mt-4 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
             Tell us what you want to build
           </h1>
           <p className="mt-2 text-slate-600 max-w-2xl">
@@ -140,10 +150,10 @@ export default function CustomPlanRequest() {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="p-6 border-b border-slate-100">
+            <div className="lg:col-span-2 rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur shadow-sm">
+              <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-t-2xl">
                 <h2 className="text-lg font-semibold text-slate-900">Project details</h2>
-                <p className="mt-1 text-sm text-slate-600">The more detail you provide, the better our proposal.</p>
+                <p className="mt-1 text-sm text-white/80">The more detail you provide, the better our proposal.</p>
               </div>
               <div className="p-6 space-y-5">
                 <div>
@@ -152,7 +162,7 @@ export default function CustomPlanRequest() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={6}
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                     placeholder="Example: Modern 3-bedroom, single storey, open-plan kitchen, master ensuite, budget under $500, must include BOQ..."
                     required
                   />
@@ -165,7 +175,7 @@ export default function CustomPlanRequest() {
                       value={bedrooms}
                       onChange={(e) => setBedrooms(e.target.value)}
                       inputMode="numeric"
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                       placeholder="e.g. 3"
                     />
                   </div>
@@ -175,7 +185,7 @@ export default function CustomPlanRequest() {
                       value={floors}
                       onChange={(e) => setFloors(e.target.value)}
                       inputMode="numeric"
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                       placeholder="e.g. 1"
                     />
                   </div>
@@ -188,7 +198,7 @@ export default function CustomPlanRequest() {
                       value={budgetMin}
                       onChange={(e) => setBudgetMin(e.target.value)}
                       inputMode="decimal"
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                       placeholder="e.g. 300"
                     />
                   </div>
@@ -198,7 +208,7 @@ export default function CustomPlanRequest() {
                       value={budgetMax}
                       onChange={(e) => setBudgetMax(e.target.value)}
                       inputMode="decimal"
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                       placeholder="e.g. 500"
                     />
                   </div>
@@ -210,7 +220,7 @@ export default function CustomPlanRequest() {
                     <select
                       value={style}
                       onChange={(e) => setStyle(e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                     >
                       <option>Modern</option>
                       <option>Minimal</option>
@@ -224,13 +234,13 @@ export default function CustomPlanRequest() {
                     <input
                       value={landSize}
                       onChange={(e) => setLandSize(e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                       placeholder="e.g. 50ft x 100ft"
                     />
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-teal-50/40 p-4">
                   <div className="text-sm font-semibold text-slate-800">Deliverables</div>
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -256,10 +266,10 @@ export default function CustomPlanRequest() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm h-fit">
-              <div className="p-6 border-b border-slate-100">
+            <div className="rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur shadow-sm h-fit">
+              <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-t-2xl">
                 <h2 className="text-lg font-semibold text-slate-900">Contact</h2>
-                <p className="mt-1 text-sm text-slate-600">So we can reach you about pricing and timelines.</p>
+                <p className="mt-1 text-sm text-white/80">So we can reach you about pricing and timelines.</p>
               </div>
               <div className="p-6 space-y-4">
                 <div>
@@ -267,7 +277,7 @@ export default function CustomPlanRequest() {
                   <input
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                     placeholder="Your name"
                   />
                 </div>
@@ -276,7 +286,7 @@ export default function CustomPlanRequest() {
                   <input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                     placeholder="you@email.com"
                   />
                 </div>
@@ -285,7 +295,7 @@ export default function CustomPlanRequest() {
                   <input
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                     placeholder="+1 555 000 000"
                   />
                 </div>
@@ -296,7 +306,7 @@ export default function CustomPlanRequest() {
                     <input
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                       placeholder="Country"
                     />
                   </div>
@@ -305,7 +315,7 @@ export default function CustomPlanRequest() {
                     <input
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-300"
                       placeholder="City"
                     />
                   </div>

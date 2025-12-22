@@ -93,11 +93,11 @@ export default function Register() {
           <p className="text-gray-300 mt-2">Start buying or selling plans today</p>
         </div>
 
-        <div className="card">
-          <h2 className="text-2xl font-bold mb-6 text-center">Sign Up</h2>
+        <div className="rounded-2xl border border-white/15 bg-white/90 backdrop-blur-xl shadow-2xl shadow-black/30 p-6">
+          <h2 className="text-2xl font-bold mb-6 text-center text-slate-900">Sign Up</h2>
           
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl mb-4">
               {error}
             </div>
           )}
@@ -113,7 +113,7 @@ export default function Register() {
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="input-field"
+                  className="input-field bg-white"
                   required
                 />
               </div>
@@ -125,7 +125,7 @@ export default function Register() {
                   type="text"
                   value={middleName}
                   onChange={(e) => setMiddleName(e.target.value)}
-                  className="input-field"
+                  className="input-field bg-white"
                   placeholder="Optional"
                 />
               </div>
@@ -137,7 +137,7 @@ export default function Register() {
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="input-field"
+                  className="input-field bg-white"
                   required
                 />
               </div>
@@ -151,7 +151,7 @@ export default function Register() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
+                className="input-field bg-white"
                 placeholder="you@example.com"
                 required
               />
@@ -165,7 +165,7 @@ export default function Register() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
+                className="input-field bg-white"
                 required
                 minLength={6}
               />
@@ -179,7 +179,7 @@ export default function Register() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input-field"
+                className="input-field bg-white"
                 required
               />
               {confirmPassword && password && (
@@ -260,13 +260,13 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading || !termsAccepted}
-              className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-semibold py-3 px-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-6 text-center text-sm text-gray-700">
             Already have an account?{' '}
             <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
               Sign in

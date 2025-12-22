@@ -684,44 +684,49 @@ export default function PlanDetailsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-teal-50/30 p-4 sm:p-6 relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-teal-400/20 blur-3xl" />
+        <div className="absolute -bottom-28 -left-28 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
+      </div>
+
       {/* Back + title row */}
-      <div className="max-w-7xl mx-auto mb-6">
+      <div className="max-w-7xl mx-auto mb-6 relative">
         <button
           onClick={() => navigate('/plans')}
-          className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-950 rounded-full border border-slate-200 bg-white/70 px-4 py-2 shadow-sm transition-all hover:-translate-y-0.5"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to plans
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">Plan details</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-4 tracking-tight">Plan details</h1>
       </div>
 
       {/* Main layout */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
         {/* Left: image gallery and summary */}
         <div className="lg:col-span-2 space-y-6">
           {/* Gallery */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
             {mainImageUrl ? (
               <div className="relative">
                 <img
                   src={mainImageUrl}
                   alt={plan.name}
-                  className="w-full h-64 sm:h-80 lg:h-96 object-cover rounded-lg cursor-pointer"
+                  className="w-full h-64 sm:h-80 lg:h-96 object-cover rounded-2xl cursor-pointer shadow-sm"
                   onClick={() => setIsFullscreen(true)}
                 />
                 {/* Fullscreen button */}
                 <button
                   onClick={() => setIsFullscreen(true)}
-                  className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-2 bg-black/60 hover:bg-black/80 text-white text-sm rounded-full transition-colors"
+                  className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-2 bg-black/60 hover:bg-black/80 text-white text-sm rounded-full transition-colors backdrop-blur"
                 >
                   <Maximize2 className="w-4 h-4" />
                   <span>Fullscreen</span>
                 </button>
               </div>
             ) : (
-              <div className="w-full h-96 bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400">
+              <div className="w-full h-96 bg-slate-100 rounded-2xl flex flex-col items-center justify-center text-slate-400">
                 <ImageIcon className="w-12 h-12 mb-2" />
                 <p>No preview image available</p>
               </div>
@@ -746,10 +751,10 @@ export default function PlanDetailsPage() {
                   <button
                     key={idx}
                     onClick={() => handleThumbnailClick(idx)}
-                    className={`relative h-14 w-20 rounded-md overflow-hidden border transition-all flex-shrink-0 ${
+                    className={`relative h-14 w-20 rounded-xl overflow-hidden border transition-all flex-shrink-0 ${
                       idx === currentImageIndex
                         ? 'border-teal-600 ring-1 ring-teal-500'
-                        : 'border-gray-200 hover:border-teal-400'
+                        : 'border-slate-200 hover:border-teal-300'
                     }`}
                   >
                     <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
@@ -759,12 +764,36 @@ export default function PlanDetailsPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">{plan.name?.trim()}</h2>
-            <p className="text-gray-600 mb-4">
-              {plan.project_type}
-              {plan.category ? ` · ${plan.category}` : ''}
-            </p>
+          <div className="rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur shadow-sm p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2 tracking-tight">{plan.name?.trim()}</h2>
+                <p className="text-slate-600">
+                  {plan.project_type}
+                  {plan.category ? ` · ${plan.category}` : ''}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {plan.includes_boq ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                    <FileText className="w-4 h-4" />
+                    BOQ Included
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700">
+                    <FileText className="w-4 h-4 text-slate-500" />
+                    No BOQ
+                  </span>
+                )}
+                {plan.certifications && plan.certifications.length > 0 ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+                    <Award className="w-4 h-4" />
+                    {plan.certifications.length} Certification{plan.certifications.length > 1 ? 's' : ''}
+                  </span>
+                ) : null}
+              </div>
+            </div>
 
             {isAuthenticated && !isAdmin && purchaseStatus === 'purchased' ? (
               <div className="mb-4">
@@ -775,13 +804,13 @@ export default function PlanDetailsPage() {
               </div>
             ) : null}
 
-            <div className="text-sm text-gray-600 mb-6">
-              Designer: <span className="font-medium text-gray-900">{designerLabel}</span>
+            <div className="mt-5 text-sm text-slate-600 mb-6">
+              Designer: <span className="font-semibold text-slate-900">{designerLabel}</span>
             </div>
 
             <div className="mb-6">
-              <div className="text-sm text-gray-600 mb-1">Price</div>
-              <div className="text-3xl font-bold text-teal-600 mb-2">
+              <div className="text-xs font-semibold tracking-[0.25em] text-slate-500 uppercase mb-2">Price</div>
+              <div className="text-3xl sm:text-4xl font-bold text-teal-700 mb-2 tracking-tight">
                 {deliverablePrices
                   ? `$${Number(selectedTotal || 0).toLocaleString()}`
                   : priceNumber
@@ -796,7 +825,7 @@ export default function PlanDetailsPage() {
                 <button
                   onClick={handleAddToCart}
                   disabled={isAddingToCart || isInCart}
-                  className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5"
                   title={isInCart ? "In Cart" : "Add to Cart"}
                 >
                   {isAddingToCart ? (
@@ -811,7 +840,7 @@ export default function PlanDetailsPage() {
                 <button
                   onClick={handleToggleFavorite}
                   disabled={isAddingToFavorites}
-                  className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-2.5 rounded-xl bg-white border border-slate-200 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5"
                   title={isInFavorites ? "Remove from Favorites" : "Add to Favorites"}
                 >
                   {isAddingToFavorites ? (
@@ -832,31 +861,31 @@ export default function PlanDetailsPage() {
               </div>
             )}
 
-            <p className="text-gray-700 leading-relaxed">{plan.description}</p>
+            <p className="text-slate-700 leading-relaxed">{plan.description}</p>
 
             {/* Key metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
               {plan.area && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-sm text-gray-600">Area</div>
-                  <div className="text-lg font-semibold text-gray-900">{plan.area} m²</div>
+                <div className="bg-white/70 border border-slate-200 p-3 rounded-xl shadow-sm">
+                  <div className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase">Area</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-900">{plan.area} m²</div>
                 </div>
               )}
               {plan.bedrooms && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-sm text-gray-600">Bedrooms</div>
-                  <div className="text-lg font-semibold text-gray-900">{plan.bedrooms}</div>
+                <div className="bg-white/70 border border-slate-200 p-3 rounded-xl shadow-sm">
+                  <div className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase">Bedrooms</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-900">{plan.bedrooms}</div>
                 </div>
               )}
               {plan.bathrooms && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-sm text-gray-600">Bathrooms</div>
-                  <div className="text-lg font-semibold text-gray-900">{plan.bathrooms}</div>
+                <div className="bg-white/70 border border-slate-200 p-3 rounded-xl shadow-sm">
+                  <div className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase">Bathrooms</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-900">{plan.bathrooms}</div>
                 </div>
               )}
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-600">Floors</div>
-                <div className="text-lg font-semibold text-gray-900">{plan.floors}</div>
+              <div className="bg-white/70 border border-slate-200 p-3 rounded-xl shadow-sm">
+                <div className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase">Floors</div>
+                <div className="mt-1 text-lg font-semibold text-slate-900">{plan.floors}</div>
               </div>
             </div>
 

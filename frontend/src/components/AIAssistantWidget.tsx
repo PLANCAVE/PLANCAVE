@@ -27,7 +27,7 @@ export default function AIAssistantWidget() {
     {
       role: 'assistant',
       content:
-        'Tell me what you want to build (budget, bedrooms, floors, and whether you need BOQ/MEP/Structural). I will recommend plans that fit.',
+        'Tell me what you want to build (budget, bedrooms, floors, and BOQ). I will recommend the best plans.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -49,6 +49,32 @@ export default function AIAssistantWidget() {
       plan_id: m?.[1] || null,
     };
   }, [location.pathname]);
+
+  const openPrompts = useMemo(() => {
+    if (pageContext.plan_id) {
+      return [
+        'Summarize this plan in 3 bullet points',
+        'What is included in this plan?',
+        'Is this plan suitable for a 3-bedroom family home?',
+        'Does this plan include BOQ?',
+        'What are the pros and cons of this plan?',
+      ];
+    }
+    return [
+      'Recommend 3 plans under $500 with BOQ',
+      'I want a modern 3 bedroom house plan',
+      '2 bedroom single-storey under $300',
+      'Show top-selling plans',
+      'Help me choose between 2 bedrooms vs 3 bedrooms',
+    ];
+  }, [pageContext.plan_id]);
+
+  const shouldShowOpenPrompts = useMemo(() => {
+    if (!open) return false;
+    if (loading) return false;
+    // Show prompts until the user starts chatting (beyond the initial assistant message).
+    return messages.length <= 1;
+  }, [open, loading, messages.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -167,15 +193,18 @@ export default function AIAssistantWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 shadow-xl"
+          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white px-4 py-3 shadow-xl"
         >
           <MessageCircle className="w-5 h-5" />
           <span className="text-sm font-semibold">Ramani AI</span>
         </button>
       ) : (
-        <div className="w-[340px] max-w-[90vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+        <div className="w-[380px] max-w-[94vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-teal-700 to-cyan-700 text-white">
-            <div className="text-sm font-semibold">Ramani AI</div>
+            <div>
+              <div className="text-sm font-semibold leading-tight">Ramani AI</div>
+              <div className="text-[11px] text-white/80 leading-tight">House plans assistant</div>
+            </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -186,7 +215,26 @@ export default function AIAssistantWidget() {
             </button>
           </div>
 
-          <div ref={listRef} className="max-h-[360px] overflow-y-auto p-3 space-y-3">
+          <div ref={listRef} className="max-h-[420px] overflow-y-auto p-3 space-y-3 bg-gradient-to-b from-white to-slate-50/60">
+            {shouldShowOpenPrompts ? (
+              <div className="mr-10 rounded-2xl bg-white border border-slate-200 p-2">
+                <div className="text-xs font-semibold text-slate-700 mb-2">Try one of these</div>
+                <div className="flex flex-wrap gap-2">
+                  {openPrompts.map((t, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => sendQuickReply(t)}
+                      className="text-xs rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1"
+                      disabled={loading}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {messages.map((m, idx) => {
               const isUser = m.role === 'user';
               return (
@@ -248,20 +296,21 @@ export default function AIAssistantWidget() {
               <div className="mr-10 rounded-2xl bg-white border border-slate-200 p-2">
                 <div className="text-xs font-semibold text-slate-700 mb-2">Quick picks</div>
                 <div className="flex flex-wrap gap-2">
-                {quickReplies.map((t, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => sendQuickReply(t)}
-                    className="text-xs rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1"
-                    disabled={loading}
-                  >
-                    {t}
-                  </button>
-                ))}
+                  {quickReplies.map((t, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => sendQuickReply(t)}
+                      className="text-xs rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1"
+                      disabled={loading}
+                    >
+                      {t}
+                    </button>
+                  ))}
                 </div>
               </div>
             ) : null}
+
             {loading ? (
               <div className="rounded-2xl px-3 py-2 text-sm bg-slate-100 text-slate-700 mr-10">Thinking…</div>
             ) : null}

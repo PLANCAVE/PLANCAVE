@@ -19,6 +19,7 @@ export default function Header() {
   const [avatarError, setAvatarError] = useState(false);
 
   const canSeePurchases = isAuthenticated && (user?.role === 'designer' || user?.role === 'customer');
+  const canRequestCustomPlan = isAuthenticated && user?.role !== 'admin';
 
   const getInitials = () => {
     if (!user) return '';
@@ -104,7 +105,7 @@ export default function Header() {
               Browse More Plans
             </Link>
 
-            {isAuthenticated ? (
+            {canRequestCustomPlan ? (
               <Link
                 to="/custom-plan"
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 text-white tracking-[0.18em] uppercase text-xs font-semibold hover:from-teal-700 hover:to-cyan-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 shadow-lg shadow-cyan-900/20 hover:shadow-cyan-900/35"
@@ -240,7 +241,7 @@ export default function Header() {
               >
                 Explore Plans
               </Link>
-              {isAuthenticated ? (
+              {canRequestCustomPlan ? (
                 <Link
                   to="/custom-plan"
                   className="text-gray-300 hover:text-white"

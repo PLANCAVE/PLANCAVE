@@ -621,6 +621,62 @@ def chat():
         focused_plan = _get_plan_public_details(conn, plan_id) if plan_id else None
         focused_plan_question = bool(focused_plan and _is_focused_plan_question(message))
 
+        def _is_pros_cons_question(text: str) -> bool:
+            t = (text or '').strip().lower()
+            return (
+                'pros and cons' in t
+                or 'pros & cons' in t
+                or (('pros' in t or 'advantages' in t) and ('cons' in t or 'disadvantages' in t))
+            )
+
+        def _pros_cons_reply(plan: dict) -> str:
+            name = (plan.get('name') or 'This plan').strip()
+            beds = plan.get('bedrooms')
+            baths = plan.get('bathrooms')
+            floors = plan.get('floors')
+            area = plan.get('area')
+            includes_boq = bool(plan.get('includes_boq'))
+
+            pros = []
+            cons = []
+
+            if beds:
+                pros.append(f"{beds}-bedroom layout — good for family living")
+            if baths:
+                pros.append(f"{baths} bathrooms — strong convenience for guests and larger households")
+            if floors and int(floors) >= 2:
+                pros.append("Multi-storey design — good zoning (private bedrooms upstairs, living areas below)")
+            if area:
+                pros.append(f"Spacious total area ({area} m²)")
+                cons.append("Large area can increase build cost, finishing cost, and approval complexity")
+            if not includes_boq:
+                cons.append("BOQ is not included — you may need separate quantity surveying/estimation")
+            if floors and int(floors) >= 2:
+                cons.append("More stairs — consider accessibility and long-term mobility")
+
+            # Always add safe, globally applicable caveats.
+            cons.append("Confirm local building codes, plot setbacks, and structural requirements before construction")
+
+            if not pros:
+                pros.append("Clear plan concept with defined key specs")
+
+            lines = [f"Pros and cons: {name}", "", "Pros:"]
+            lines.extend([f"- {p}" for p in pros[:6]])
+            lines.append("\nCons:")
+            lines.extend([f"- {c}" for c in cons[:6]])
+            lines.append("\nIf you want, tell me your budget and preferred style and I can suggest 2–3 similar alternatives.")
+            return "\n".join(lines)
+
+        # If we're on a specific plan and the user asks for pros/cons, answer directly.
+        if focused_plan and _is_pros_cons_question(message):
+            return jsonify({
+                "reply": _pros_cons_reply(focused_plan),
+                "suggested_plans": plan_facts,
+                "quick_replies": ["What is included?", "Does it include BOQ?", "Show similar plans"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
         context = {
             "page": page,
             "plan_id": plan_id,

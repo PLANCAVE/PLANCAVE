@@ -165,7 +165,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => navigate('/profile')}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-teal-300/60 bg-white/5 hover:bg-white/15 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-teal-900/30 active:translate-y-0 transition-all duration-200 ml-auto overflow-hidden"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-teal-300/60 bg-white/5 hover:bg-white/15 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-teal-900/30 active:translate-y-0 transition-all duration-200 overflow-hidden"
                 >
                   {avatarSrc && !avatarError ? (
                     <img

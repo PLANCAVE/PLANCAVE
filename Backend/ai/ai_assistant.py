@@ -437,10 +437,6 @@ def _focused_plan_fallback_reply(focused_plan: dict) -> str:
     if desc:
         lines.extend(["", "Description:", desc])
 
-    lines.extend([
-        "",
-        "If you tell me your budget and desired style (modern/classic/minimal), I can also suggest similar alternatives.",
-    ])
     return "\n".join(lines).strip()
 
 
@@ -586,7 +582,7 @@ def _fallback_response(message: str, plans: list[dict]) -> dict:
         meta = (" · ".join(bits)) if bits else ""
         lines.append(f"- {p.get('name')} ($ {float(p.get('price') or 0):,.0f}){(' · ' + meta) if meta else ''}")
 
-    lines.append("\nIf you tell me your budget + bedrooms/floors, I can narrow it down to the best 3.")
+    lines.append("\nTell me more about what you need (budget, bedrooms, floors, BOQ) and I’ll refine the list.")
 
     return {
         "reply": "\n".join(lines),
@@ -613,7 +609,7 @@ def chat():
             "Two storey (2 floors)",
         ]
         return jsonify({
-            "reply": "Hi! Tell me what you want to build (budget, bedrooms, floors, and BOQ) and I will recommend plans that fit.",
+            "reply": "Hi! Tell me what you want to build (budget, bedrooms, floors, and BOQ) and I’ll recommend plans that fit.",
             "suggested_plans": [],
             "quick_replies": quick_replies,
             "actions": [],

@@ -826,27 +826,49 @@ def chat():
             return "\n".join(lines)
 
         def _pros_only_reply(plan: dict) -> str:
-            full = _pros_cons_reply(plan)
-            # Keep only header + Pros section.
-            parts = full.split("\nCons:\n", 1)
-            pros_part = parts[0].rstrip()
-            # Remove the upsell line if present
-            if "\nIf you want, tell me your budget" in pros_part:
-                pros_part = pros_part.split("\nIf you want, tell me your budget")[0].rstrip()
-            return pros_part + "\n"
+            name = (plan.get('name') or 'This plan').strip()
+            beds = plan.get('bedrooms')
+            baths = plan.get('bathrooms')
+            floors = plan.get('floors')
+            area = plan.get('area')
+            includes_boq = bool(plan.get('includes_boq'))
+
+            pros = []
+            if beds:
+                pros.append(f"{beds}-bedroom layout — good for family living")
+            if baths:
+                pros.append(f"{baths} bathrooms — strong convenience for guests and larger households")
+            if floors and int(floors) >= 2:
+                pros.append("Multi-storey design — good zoning (private bedrooms upstairs, living areas below)")
+            if area:
+                pros.append(f"Spacious total area ({area} m²)")
+            if not pros:
+                pros.append("Clear plan concept with defined key specs")
+
+            lines = [f"Pros: {name}", "", "Pros:"]
+            lines.extend([f"- {p}" for p in pros[:6]])
+            return "\n".join(lines) + "\n"
 
         def _cons_only_reply(plan: dict) -> str:
-            full = _pros_cons_reply(plan)
-            # Keep header + Cons section only.
-            if "\nCons:\n" not in full:
-                return full
-            header, rest = full.split("\nCons:\n", 1)
-            # Convert first line to "Cons:" for clarity.
-            header_line = (header.splitlines() or ['Cons'])[0]
-            cons_lines = [f"- {x.strip()[2:]}" if x.strip().startswith('- ') else x for x in rest.splitlines() if x.strip()]
-            # Remove the upsell line if present
-            cons_lines = [line for line in cons_lines if not line.startswith("If you want, tell me your budget")]
-            return "\n".join([header_line.replace('Pros and cons:', 'Cons:'), "", "Cons:", *cons_lines])
+            name = (plan.get('name') or 'This plan').strip()
+            floors = plan.get('floors')
+            area = plan.get('area')
+            includes_boq = bool(plan.get('includes_boq'))
+
+            cons = []
+            if area:
+                cons.append("Large area can increase build cost, finishing cost, and approval complexity")
+            if not includes_boq:
+                cons.append("BOQ is not included — you may need separate quantity surveying/estimation")
+            if floors and int(floors) >= 2:
+                cons.append("More stairs — consider accessibility and long-term mobility")
+            cons.append("Confirm local building codes, plot setbacks, and structural requirements before construction")
+            if not cons:
+                cons.append("Consider local approvals and site-specific requirements")
+
+            lines = [f"Cons: {name}", "", "Cons:"]
+            lines.extend([f"- {c}" for c in cons[:6]])
+            return "\n".join(lines) + "\n"
 
         def _should_prioritize_focused_plan(text: str) -> bool:
             if not focused_plan:

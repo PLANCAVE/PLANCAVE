@@ -614,7 +614,8 @@ def chat():
             "Never output file paths, download URLs, or hidden plan contents. "
             "If asked about payment or downloads, tell them to use the normal checkout flow on the website. "
             "If focused_plan is present and the user is asking about the open plan (e.g. 'tell me more', 'explain this', 'what is included'), prioritize summarizing focused_plan first. "
-            "Always ask 1-2 clarifying questions if key info is missing (budget, bedrooms, floors, BOQ). "
+            "If focused_plan is present and the user asks plan feasibility questions (location/codes/approvals/materials/cost), answer directly with assumptions and a short checklist; ask at most 1 clarifying question. "
+            "Only ask budget/bedrooms/floors/BOQ clarifying questions when the user is requesting recommendations or comparisons. "
             "Keep answers short, structured, and helpful."
         )
 
@@ -628,6 +629,44 @@ def chat():
                 or 'pros & cons' in t
                 or (('pros' in t or 'advantages' in t) and ('cons' in t or 'disadvantages' in t))
             )
+
+        def _is_pros_only_question(text: str) -> bool:
+            t = (text or '').strip().lower()
+            if not t:
+                return False
+            if _is_pros_cons_question(t):
+                return False
+            return t in {'pros', 'advantages'} or t.startswith('pros ') or t.startswith('advantages ')
+
+        def _is_cons_only_question(text: str) -> bool:
+            t = (text or '').strip().lower()
+            if not t:
+                return False
+            if _is_pros_cons_question(t):
+                return False
+            return t in {'cons', 'disadvantages'} or t.startswith('cons ') or t.startswith('disadvantages ')
+
+        def _is_similar_or_recommendation_question(text: str) -> bool:
+            t = (text or '').strip().lower()
+            if not t:
+                return False
+            triggers = [
+                'recommend', 'suggest', 'similar', 'alternatives', 'other plans', 'show plans',
+                'under $', 'below $', 'budget', 'top selling', 'top-selling',
+            ]
+            return any(x in t for x in triggers)
+
+        def _is_buildability_or_cost_question(text: str) -> bool:
+            t = (text or '').strip().lower()
+            if not t:
+                return False
+            triggers = [
+                'can i build', 'can we build', 'build this in', 'build in', 'in mumbai', 'in india',
+                'codes', 'code', 'permit', 'approval', 'local authority', 'regulation',
+                'materials', 'material', 'cement', 'steel', 'brick', 'block',
+                'cost', 'estimate', 'construction cost', 'material cost', 'labour', 'labor',
+            ]
+            return any(x in t for x in triggers)
 
         def _pros_cons_reply(plan: dict) -> str:
             name = (plan.get('name') or 'This plan').strip()
@@ -667,12 +706,64 @@ def chat():
             lines.append("\nIf you want, tell me your budget and preferred style and I can suggest 2–3 similar alternatives.")
             return "\n".join(lines)
 
+        def _pros_only_reply(plan: dict) -> str:
+            full = _pros_cons_reply(plan)
+            # Keep only header + Pros section.
+            parts = full.split("\nCons:\n", 1)
+            return parts[0].rstrip() + "\n"
+
+        def _cons_only_reply(plan: dict) -> str:
+            full = _pros_cons_reply(plan)
+            # Keep header + Cons section only.
+            if "\nCons:\n" not in full:
+                return full
+            header, rest = full.split("\nCons:\n", 1)
+            # Convert first line to "Cons:" for clarity.
+            header_line = (header.splitlines() or ['Cons'])[0]
+            return "\n".join([header_line.replace('Pros and cons:', 'Cons:'), "", "Cons:", *[f"- {x.strip()[2:]}" if x.strip().startswith('- ') else x for x in rest.splitlines() if x.strip()]])
+
+        def _should_prioritize_focused_plan(text: str) -> bool:
+            if not focused_plan:
+                return False
+            t = (text or '').strip().lower()
+            if not t:
+                return True
+            # If user explicitly wants other plans, allow recommendations.
+            if _is_similar_or_recommendation_question(t):
+                return False
+            # For short/ambiguous prompts ("pros", "cons", "boq", etc.) and buildability/cost questions,
+            # we should always answer about the focused plan.
+            short = len(t.split()) <= 3
+            if short:
+                return True
+            if _is_buildability_or_cost_question(t):
+                return True
+            return True
+
         # If we're on a specific plan and the user asks for pros/cons, answer directly.
         if focused_plan and _is_pros_cons_question(message):
             return jsonify({
                 "reply": _pros_cons_reply(focused_plan),
                 "suggested_plans": plan_facts,
                 "quick_replies": ["What is included?", "Does it include BOQ?", "Show similar plans"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        if focused_plan and _is_pros_only_question(message):
+            return jsonify({
+                "reply": _pros_only_reply(focused_plan),
+                "suggested_plans": plan_facts,
+                "quick_replies": ["Cons", "Pros and cons", "What is included?"],
+                "actions": [],
+                "llm_used": False,
+            }), 200
+
+        if focused_plan and _is_cons_only_question(message):
+            return jsonify({
+                "reply": _cons_only_reply(focused_plan),
+                "suggested_plans": plan_facts,
+                "quick_replies": ["Pros", "Pros and cons", "Any risks to watch for?"],
                 "actions": [],
                 "llm_used": False,
             }), 200
@@ -732,7 +823,7 @@ def chat():
 
         llm_text = _call_local_llm(llm_messages, max_tokens=180)
         if not llm_text:
-            if focused_plan_question:
+            if focused_plan and (_should_prioritize_focused_plan(message) or focused_plan_question):
                 return jsonify({
                     "reply": _focused_plan_fallback_reply(focused_plan),
                     "suggested_plans": plan_facts,

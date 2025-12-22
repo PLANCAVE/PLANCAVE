@@ -60,6 +60,7 @@ export default function AIAssistantWidget() {
   const [suggestedPlans, setSuggestedPlans] = useState<SuggestedPlan[]>([]);
   const [actions, setActions] = useState<ChatAction[]>([]);
   const [planContext, setPlanContext] = useState<PlanContext | null>(null);
+  const lastAnnouncedPlanIdRef = useRef<string | null>(null);
 
   const resetChat = () => {
     setMessages([
@@ -120,6 +121,7 @@ export default function AIAssistantWidget() {
     const loadPlanContext = async () => {
       if (!pageContext.plan_id) {
         setPlanContext(null);
+        lastAnnouncedPlanIdRef.current = null;
         return;
       }
 
@@ -150,15 +152,33 @@ export default function AIAssistantWidget() {
         };
         setPlanContext(ctx);
 
-        // If the chat hasn't started, swap the initial message to be plan-specific.
+        // If user switched plans mid-chat, insert a context marker message.
         setMessages((prev) => {
-          if (prev.length !== 1 || prev[0]?.role !== 'assistant') return prev;
-          return [
-            {
-              role: 'assistant',
-              content: `You're viewing “${String(ctx.name || 'this plan')}”. Ask me for pros and cons, suitability, what's included, BOQ, or any risks to watch for.`,
-            },
-          ];
+          const lastAnnounced = lastAnnouncedPlanIdRef.current;
+          const nextId = String(ctx.id);
+          const isPlanSwitch = Boolean(lastAnnounced && lastAnnounced !== nextId);
+          lastAnnouncedPlanIdRef.current = nextId;
+
+          if (prev.length <= 1) {
+            return [
+              {
+                role: 'assistant',
+                content: `You're viewing “${String(ctx.name || 'this plan')}”. Ask me for pros and cons, suitability, what's included, BOQ, or any risks to watch for.`,
+              },
+            ];
+          }
+
+          if (isPlanSwitch) {
+            return [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `Now viewing “${String(ctx.name || 'this plan')}”. Ask me about this plan (pros, cons, suitability, BOQ, buildability, or costs).`,
+              },
+            ];
+          }
+
+          return prev;
         });
       } catch {
         setPlanContext(null);

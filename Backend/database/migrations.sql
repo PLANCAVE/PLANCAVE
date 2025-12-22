@@ -404,6 +404,6 @@ CREATE INDEX IF NOT EXISTS idx_purchases_plan_id ON purchases(plan_id);
 CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_activity_type ON user_activity(activity_type);
 CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
-CREATE INDEX IF NOT_EXISTS idx_favorites_plan_id ON favorites(plan_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_plan_id ON favorites(plan_id);
 CREATE INDEX IF NOT EXISTS idx_plan_reviews_plan_id ON plan_reviews(plan_id);
 CREATE INDEX IF NOT EXISTS idx_plan_reviews_user_id ON plan_reviews(user_id);

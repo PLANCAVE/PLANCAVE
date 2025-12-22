@@ -373,6 +373,456 @@ def _last_meaningful_line(text: str) -> str:
     return last
 
 
+def _normalize_for_intent(text: str) -> str:
+    t = (text or '').strip().lower()
+    t = re.sub(r"\s+", " ", t)
+    return t
+
+
+def _has_token(text: str, token: str) -> bool:
+    return re.search(rf"\b{re.escape(token)}\b", text or '', flags=re.IGNORECASE) is not None
+
+
+def _is_price_question(text: str) -> bool:
+    t = _normalize_for_intent(text)
+    if not t:
+        return False
+    if 'how much is this plan' in t or 'how much is the plan' in t:
+        return True
+    return (
+        _has_token(t, 'price')
+        or (_has_token(t, 'cost') and ('plan' in t or 'this' in t))
+        or 'how much' in t
+    )
+
+
+def _match_any(t: str, phrases: list[str]) -> bool:
+    if not t:
+        return False
+    return any(p in t for p in phrases)
+
+
+EDGE_CASE_INTENTS: list[dict] = [
+    {
+        "key": "included",
+        "phrases": [
+            "what is included", "whats included", "what's included", "what do i get", "what do you include",
+            "what comes with", "package contents", "deliverables", "what will i receive", "what will i get",
+            "included in the plan", "included in this plan", "included files", "what files are included",
+            "what is in the package", "what is in the bundle", "plan package", "what do i receive",
+            "what's in it", "what is inside", "what am i buying", "what am i paying for",
+        ],
+    },
+    {
+        "key": "boq_general",
+        "phrases": [
+            "what is a boq", "boq meaning", "define boq", "bill of quantities", "what does boq include",
+            "boq breakdown", "boq list", "quantity survey", "quantity surveyor", "qs", "cost schedule",
+            "materials schedule", "pricing schedule", "takeoff", "take off", "material takeoff",
+            "cost estimate from drawings", "estimate from drawings", "bill quantities", "bill of quantity",
+        ],
+    },
+    {
+        "key": "cost_estimate",
+        "phrases": [
+            "how much to build", "how much does it cost to build", "construction cost", "build cost",
+            "estimate cost", "cost estimate", "rough cost", "ballpark cost", "budget to build",
+            "total cost", "overall cost", "material cost", "labour cost", "labor cost",
+            "cost per sqm", "cost per m2", "cost per square meter", "cost per square metre",
+            "cost per sq ft", "cost per square foot", "foundation cost", "finishing cost",
+            "cheap to build", "affordable to build", "expensive to build",
+        ],
+    },
+    {
+        "key": "permits",
+        "phrases": [
+            "permit", "permits", "approval", "approvals", "planning permission", "building permit",
+            "council approval", "local authority", "zoning", "setback", "setbacks", "plot setback",
+            "code compliance", "building code", "regulations", "regulation", "standards", "inspection",
+            "occupancy certificate", "cofo", "c of o", "certificate of occupancy",
+        ],
+    },
+    {
+        "key": "site_soil",
+        "phrases": [
+            "soil", "soil test", "soil testing", "geotech", "geotechnical", "bearing capacity",
+            "foundation", "footing", "raft foundation", "pile", "piles", "strip foundation",
+            "slope", "steep", "hilly", "flood", "flooding", "water table", "high water table",
+            "swamp", "swampy", "clay", "sandy", "rocky", "laterite",
+        ],
+    },
+    {
+        "key": "climate",
+        "phrases": [
+            "climate", "weather", "hot", "humid", "dry", "cold", "rain", "rainy", "storm",
+            "wind", "windy", "coastal", "salt air", "seaside", "harmattan", "dust",
+            "insulation", "ventilation", "cross ventilation", "natural ventilation", "heat",
+            "thermal", "cooling", "shading", "sun", "sunlight",
+        ],
+    },
+    {
+        "key": "timeline",
+        "phrases": [
+            "how long", "timeline", "duration", "time to build", "construction time", "build time",
+            "schedule", "phases", "stages", "how many months", "how many weeks",
+            "start to finish", "finish in", "complete in", "project timeline", "estimated time",
+            "how fast", "fast build", "quick build", "delays", "delay",
+        ],
+    },
+    {
+        "key": "contractor",
+        "phrases": [
+            "contractor", "builder", "engineer", "architect", "quantity surveyor", "qs",
+            "project manager", "site supervisor", "foreman", "labour", "labor", "workers",
+            "hire", "hiring", "tender", "quotation", "quote", "bids", "estimate from contractor",
+            "how to choose", "how to select", "recommend a contractor", "reliable contractor",
+        ],
+    },
+    {
+        "key": "customization",
+        "phrases": [
+            "customize", "customisation", "customization", "modify", "modification", "change the plan",
+            "edit the plan", "adjust the plan", "alter", "revise", "revision", "can i change",
+            "add a room", "remove a room", "add bathroom", "add toilet", "add garage", "add parking",
+            "change roof", "change elevation", "change facade", "mirror", "flip the plan",
+            "resize", "scale", "reduce size", "increase size",
+        ],
+    },
+    {
+        "key": "suitability",
+        "phrases": [
+            "suitable", "suitability", "is it good for", "is this good for", "family", "kids",
+            "elderly", "parents", "wheelchair", "accessible", "accessibility", "stairs",
+            "rural", "urban", "city", "village", "suburban", "estate", "gated",
+            "small plot", "big plot", "narrow plot", "wide plot", "corner plot",
+            "privacy", "noise", "security",
+        ],
+    },
+    {
+        "key": "utilities",
+        "phrases": [
+            "water", "plumbing", "sewage", "septic", "soakaway", "drainage", "stormwater",
+            "electricity", "power", "generator", "solar", "inverter", "battery", "wiring",
+            "hvac", "air conditioning", "ac", "cooling", "heating", "ventilation",
+            "internet", "network", "cctv", "security camera",
+        ],
+    },
+    {
+        "key": "payment_download",
+        "phrases": [
+            "payment", "pay", "checkout", "buy", "purchase", "card", "transaction",
+            "paystack", "failed payment", "pending payment", "verify payment", "receipt",
+            "download", "access", "link", "get files", "where is my download", "i can't download",
+            "download not working", "missing files", "send to email", "email link",
+            "refund", "cancel", "money back",
+        ],
+    },
+    {
+        "key": "file_formats",
+        "phrases": [
+            "pdf", "cad", "dwg", "dxf", "sketchup", "3d", "render", "renders",
+            "architectural", "structural", "mep", "electrical drawing", "plumbing drawing",
+            "foundation drawing", "section", "elevation", "floor plan", "site plan",
+            "dimensions", "dimension", "scale", "units", "meters", "square meters",
+            "sq ft", "square feet",
+        ],
+    },
+    {
+        "key": "compare_recommend",
+        "phrases": [
+            "compare", "vs", "versus", "difference", "which is better", "better plan",
+            "recommend", "suggest", "alternatives", "similar", "other plans", "best plan",
+            "top plans", "top selling", "popular", "best urban plans", "best rural plans",
+            "modern plans", "luxury plans", "cheap plans", "simple plans", "duplex", "bungalow",
+            "townhouse", "apartment",
+        ],
+    },
+    {"key": "structure", "phrases": ["structural", "structure", "beam", "column", "slab", "reinforcement", "rebar"]},
+    {"key": "mep", "phrases": ["electrical", "wiring", "outlet", "switch", "panel", "circuit", "plumbing", "drain", "pipes"]},
+    {"key": "roofing", "phrases": ["roof", "roofing", "roof type", "pitch", "flat roof", "gutter", "waterproof"]},
+    {"key": "openings", "phrases": ["window", "windows", "door", "doors", "natural light", "ventilation"]},
+    {"key": "stairs_access", "phrases": ["stairs", "stair", "staircase", "wheelchair", "accessible", "accessibility"]},
+    {"key": "maintenance_resale", "phrases": ["maintenance", "upkeep", "repair", "resale", "sell", "value"]},
+    {"key": "pricing_policies", "phrases": ["tax", "vat", "gst", "discount", "coupon", "promo", "promotion"]},
+    {"key": "legal_privacy", "phrases": ["privacy", "terms", "license", "licence", "copyright", "data"]},
+]
+
+
+def _edge_case_intent_key(text: str) -> str | None:
+    t = _normalize_for_intent(text)
+    for item in EDGE_CASE_INTENTS:
+        if _match_any(t, item.get('phrases') or []):
+            return item.get('key')
+    return None
+
+
+def _edge_case_reply(key: str, focused_plan: dict | None) -> str:
+    name = (focused_plan or {}).get('name') or 'this plan'
+    includes_boq = bool((focused_plan or {}).get('includes_boq'))
+    floors = (focused_plan or {}).get('floors')
+    area = (focused_plan or {}).get('area')
+
+    def _edge_style(title: str, bullets: list[str], question: str | None = None) -> str:
+        lines = [title, ""]
+        for b in (bullets or [])[:8]:
+            lines.append(f"- {b}")
+        if question:
+            lines.extend(["", question])
+        return "\n".join(lines)
+
+    if key == 'included':
+        return _edge_style(
+            f"What’s included: {name}",
+            [
+                "Architectural drawings (the core plan set)",
+                "Any extra deliverables listed on the plan page (structural/MEP/renders if available)",
+                "BOQ is included only when the plan explicitly says BOQ included",
+            ],
+            "Which do you need: architectural only, or a full set (architectural + structural/MEP)?"
+        )
+    if key == 'boq_general':
+        return _edge_style(
+            "BOQ (Bill of Quantities)",
+            [
+                "A quantity + cost breakdown used to estimate construction",
+                "Usually prepared by a Quantity Surveyor (QS) from the drawings",
+                "Varies by location because unit rates change",
+                "Best used together with a clear finish level (basic/standard/premium)",
+            ],
+            "Do you want BOQ for pricing only, or also for procurement (materials schedule)?"
+        )
+    if key == 'cost_estimate':
+        return _edge_style(
+            f"Build cost (how to estimate): {name}",
+            [
+                "Pick finish level: basic / standard / premium",
+                "Get a local QS or contractor estimate from the drawings",
+                "Add approvals + siteworks + utilities",
+                "Keep contingency (often 10–15%)",
+            ],
+            "What’s your city/region and finish level (basic/standard/premium)?"
+        )
+    if key == 'permits':
+        return _edge_style(
+            "Approvals / permits (typical checklist)",
+            [
+                "Planning/zoning compliance (use, setbacks, height)",
+                "Building permit approval",
+                "Structural review / engineer sign-off (often required)",
+                "Inspections during construction",
+            ],
+            "What city/region are you building in?"
+        )
+    if key == 'site_soil':
+        extra = False
+        if floors:
+            try:
+                extra = int(floors) >= 2
+            except Exception:
+                extra = False
+        bullets = [
+            "Do a soil test (bearing capacity + water table)",
+            "Check flood risk + confirm drainage plan",
+            "Foundation type must match the soil (engineer guidance)",
+        ]
+        if extra:
+            bullets.append("Multi-storey buildings are more sensitive to soil/foundation quality")
+        return _edge_style(
+            "Site & soil checks (before you build)",
+            bullets,
+            "Is your site flat or sloped, and do you have a soil test result already?"
+        )
+    if key == 'climate':
+        return _edge_style(
+            "Climate fit (quick checklist)",
+            [
+                "Hot/humid: cross-ventilation + shading + reflective roofing",
+                "Rainy/coastal: strong drainage + corrosion-resistant materials",
+                "Dry/dusty: good sealing + easy-clean finishes + filtered ventilation",
+            ],
+            "What’s your climate: hot-humid, dry, coastal, or cold?"
+        )
+    if key == 'timeline':
+        return _edge_style(
+            "Timeline (typical phases)",
+            [
+                "Approvals + planning",
+                "Foundation",
+                "Superstructure",
+                "Roofing",
+                "MEP (electrical/plumbing)",
+                "Finishes + external works",
+            ],
+            "Are you targeting basic, standard, or premium finish?"
+        )
+    if key == 'contractor':
+        return _edge_style(
+            "Contractor selection (quick checklist)",
+            [
+                "Verify past projects (photos + site visits if possible)",
+                "Written quote: scope + timeline + milestones",
+                "Clarify who supplies materials and who handles approvals",
+                "Define change-orders + contingency",
+            ],
+            "What city/region are you building in?"
+        )
+    if key == 'customization':
+        return _edge_style(
+            "Customization (what’s safe vs high-risk)",
+            [
+                "Safer: room sizing/layout tweaks, facade/finish changes",
+                "Medium: adding/removing bathrooms, reworking kitchen layouts",
+                "High-risk: adding floors, moving columns/beams, major roof changes (needs engineer)",
+            ],
+            "What exact change do you want (add room, reduce size, change roof, etc.)?"
+        )
+    if key == 'suitability':
+        bullets = [
+            "Plot size + setbacks (local rules)",
+            "Access needs (stairs vs accessibility)",
+            "Family/lifestyle (parking, outdoor space, privacy)",
+            "Budget for structure + finishes",
+        ]
+        if area:
+            bullets.append(f"Total area: {area} m² (check plot + setbacks)")
+        return _edge_style(
+            f"Suitability: {name}",
+            bullets,
+            "What’s your plot size and city/region?"
+        )
+    if key == 'utilities':
+        return _edge_style(
+            "Utilities (planning checklist)",
+            [
+                "Water source + storage (tank/borehole where needed)",
+                "Sewage (public sewer vs septic + soakaway)",
+                "Power plan (grid/solar/inverter/generator)",
+                "Ventilation/AC strategy",
+            ],
+            "Is your area urban (utilities available) or rural (off-grid likely)?"
+        )
+    if key == 'payment_download':
+        boq_line = "Yes" if includes_boq else "No"
+        return _edge_style(
+            f"Payments & downloads: {name}",
+            [
+                f"BOQ included: {boq_line}",
+                "Complete checkout on the website to access paid files",
+                "Download from your Purchases/download section",
+                "If payment is pending/failed, retry from Purchases so it can be verified",
+            ],
+            "Is this about a failed payment, or you can’t find your download after paying?"
+        )
+    if key == 'file_formats':
+        return _edge_style(
+            "File formats (what to expect)",
+            [
+                "Most plans are delivered as PDF drawings",
+                "Some plans include extra sets (structural/MEP/renders) if listed",
+                "CAD/DWG availability depends on the specific plan package",
+            ],
+            "Do you need PDF only, or CAD/DWG as well?"
+        )
+    if key == 'compare_recommend':
+        return _edge_style(
+            "Recommendations (so I can pick the best matches)",
+            [
+                "Budget range",
+                "Bedrooms + floors",
+                "Must-have: BOQ included or not",
+                "Any dealbreakers (stairs, parking, plot size)",
+            ],
+            "What budget + bedrooms + floors do you want, and must BOQ be included?"
+        )
+    if key == 'structure':
+        return _edge_style(
+            "Structure (what to confirm)",
+            [
+                "Have a structural engineer review the drawings for your soil + local code",
+                "Confirm column/beam layout isn’t changed during construction",
+                "Ensure reinforcement and concrete grades match the structural design",
+                "Account for site conditions (water table, slope, soil type)",
+            ],
+            "Are you building on clay/sandy soil, or do you already have a soil test?"
+        )
+    if key == 'mep':
+        return _edge_style(
+            "MEP (electrical/plumbing) planning",
+            [
+                "Confirm electrical load (AC, water heaters, cooking) before wiring",
+                "Plan plumbing routes early to avoid costly rework",
+                "Decide sewage system (sewer vs septic) and drainage strategy",
+                "Keep access points for maintenance (valves, cleanouts, panels)",
+            ],
+            "Do you want to run on-grid power only, or include solar/inverter as well?"
+        )
+    if key == 'roofing':
+        return _edge_style(
+            "Roofing (risk checklist)",
+            [
+                "Confirm roof type suits rainfall/wind in your area",
+                "Prioritize waterproofing details (flashings, valleys, gutters)",
+                "Ensure proper slope/drainage to prevent ponding",
+                "Coastal areas: use corrosion-resistant materials",
+            ],
+            "Is your area heavy-rain, coastal, or high-wind?"
+        )
+    if key == 'openings':
+        return _edge_style(
+            "Windows/doors (comfort + security)",
+            [
+                "Ventilation: place windows for cross-breeze where possible",
+                "Security: consider burglary-proofing where needed",
+                "Heat: use shading and reduce west-facing glazing in hot climates",
+                "Waterproofing: ensure proper sill detailing in rainy zones",
+            ],
+            "Do you care more about ventilation, security, or heat control?"
+        )
+    if key == 'stairs_access':
+        return _edge_style(
+            "Stairs & accessibility",
+            [
+                "Multi-storey means daily stairs—plan for long-term mobility",
+                "Keep stair width/handrails safe and code-compliant",
+                "If elderly/accessible needs: consider a ground-floor bedroom",
+                "Good lighting on stairs reduces fall risk",
+            ],
+            "Will elderly family members use the home daily?"
+        )
+    if key == 'maintenance_resale':
+        return _edge_style(
+            "Maintenance & resale",
+            [
+                "Simpler rooflines and durable finishes reduce long-term upkeep",
+                "Good ventilation and damp-proofing prevent mould/repairs",
+                "Parking + storage + practical layout help resale value",
+                "Avoid over-customizing for a very niche buyer profile",
+            ],
+            "Is your priority low-maintenance, or maximum resale value?"
+        )
+    if key == 'pricing_policies':
+        return _edge_style(
+            "Pricing, taxes & discounts",
+            [
+                "Prices/charges may vary by region and payment method",
+                "Tax/VAT applicability depends on your location",
+                "Discounts (if any) usually require a valid coupon or promo",
+            ],
+            "What country are you paying from, and are you using a promo code?"
+        )
+    if key == 'legal_privacy':
+        return _edge_style(
+            "Privacy & terms (high level)",
+            [
+                "Plans are typically licensed for use; don’t share paid files publicly",
+                "For privacy: use only official checkout/download flows",
+                "If you need a formal invoice/receipt, use the Purchases section",
+            ],
+            "Are you asking about usage rights (license), or personal data/privacy?"
+        )
+    return "Tell me a bit more (location, budget, and must-haves) and I’ll give a precise answer."
+
+
 def _get_plan_public_details(conn, plan_id: str) -> dict | None:
     if not plan_id:
         return None
@@ -682,34 +1132,12 @@ def chat():
         focused_plan = _get_plan_public_details(conn, plan_id) if plan_id else None
         focused_plan_question = bool(focused_plan and _is_focused_plan_question(routed_message))
 
-        def _normalize_for_intent(text: str) -> str:
-            # Lowercase + normalize whitespace for robust intent checks.
-            t = (text or '').strip().lower()
-            t = re.sub(r"\s+", " ", t)
-            return t
-
-        def _has_token(text: str, token: str) -> bool:
-            # Word-boundary match; handles punctuation/newlines.
-            return re.search(rf"\b{re.escape(token)}\b", text or '', flags=re.IGNORECASE) is not None
-
         def _first_meaningful_line(text: str) -> str:
             for line in (text or '').splitlines():
                 s = line.strip().lower()
                 if s:
                     return s
             return ''
-
-        def _is_price_question(text: str) -> bool:
-            t = _normalize_for_intent(text)
-            if not t:
-                return False
-            if 'how much is this plan' in t or 'how much is the plan' in t:
-                return True
-            return (
-                _has_token(t, 'price')
-                or (_has_token(t, 'cost') and ('plan' in t or 'this' in t))
-                or 'how much' in t
-            )
 
         def _is_boq_question(text: str) -> bool:
             t = _normalize_for_intent(text)
@@ -1115,440 +1543,6 @@ def chat():
                 or 'coupon' in t or 'code' in t or 'deal' in t
             )
 
-        def _match_any(t: str, phrases: list[str]) -> bool:
-            if not t:
-                return False
-            return any(p in t for p in phrases)
-
-        EDGE_CASE_INTENTS: list[dict] = [
-            {
-                "key": "included",
-                "phrases": [
-                    "what is included", "whats included", "what's included", "what do i get", "what do you include",
-                    "what comes with", "package contents", "deliverables", "what will i receive", "what will i get",
-                    "included in the plan", "included in this plan", "included files", "what files are included",
-                    "what is in the package", "what is in the bundle", "plan package", "what do i receive",
-                    "what's in it", "what is inside", "what am i buying", "what am i paying for",
-                ],
-            },
-            {
-                "key": "boq_general",
-                "phrases": [
-                    "what is a boq", "boq meaning", "define boq", "bill of quantities", "what does boq include",
-                    "boq breakdown", "boq list", "quantity survey", "quantity surveyor", "qs", "cost schedule",
-                    "materials schedule", "pricing schedule", "takeoff", "take off", "material takeoff",
-                    "cost estimate from drawings", "estimate from drawings", "bill quantities", "bill of quantity",
-                ],
-            },
-            {
-                "key": "cost_estimate",
-                "phrases": [
-                    "how much to build", "how much does it cost to build", "construction cost", "build cost",
-                    "estimate cost", "cost estimate", "rough cost", "ballpark cost", "budget to build",
-                    "total cost", "overall cost", "material cost", "labour cost", "labor cost",
-                    "cost per sqm", "cost per m2", "cost per square meter", "cost per square metre",
-                    "cost per sq ft", "cost per square foot", "foundation cost", "finishing cost",
-                    "cheap to build", "affordable to build", "expensive to build",
-                ],
-            },
-            {
-                "key": "permits",
-                "phrases": [
-                    "permit", "permits", "approval", "approvals", "planning permission", "building permit",
-                    "council approval", "local authority", "zoning", "setback", "setbacks", "plot setback",
-                    "code compliance", "building code", "regulations", "regulation", "standards", "inspection",
-                    "occupancy certificate", "cofo", "c of o", "certificate of occupancy",
-                ],
-            },
-            {
-                "key": "site_soil",
-                "phrases": [
-                    "soil", "soil test", "soil testing", "geotech", "geotechnical", "bearing capacity",
-                    "foundation", "footing", "raft foundation", "pile", "piles", "strip foundation",
-                    "slope", "steep", "hilly", "flood", "flooding", "water table", "high water table",
-                    "swamp", "swampy", "clay", "sandy", "rocky", "laterite",
-                ],
-            },
-            {
-                "key": "climate",
-                "phrases": [
-                    "climate", "weather", "hot", "humid", "dry", "cold", "rain", "rainy", "storm",
-                    "wind", "windy", "coastal", "salt air", "seaside", "harmattan", "dust",
-                    "insulation", "ventilation", "cross ventilation", "natural ventilation", "heat",
-                    "thermal", "cooling", "shading", "sun", "sunlight",
-                ],
-            },
-            {
-                "key": "timeline",
-                "phrases": [
-                    "how long", "timeline", "duration", "time to build", "construction time", "build time",
-                    "schedule", "phases", "stages", "how many months", "how many weeks",
-                    "start to finish", "finish in", "complete in", "project timeline", "estimated time",
-                    "how fast", "fast build", "quick build", "delays", "delay",
-                ],
-            },
-            {
-                "key": "contractor",
-                "phrases": [
-                    "contractor", "builder", "engineer", "architect", "quantity surveyor", "qs",
-                    "project manager", "site supervisor", "foreman", "labour", "labor", "workers",
-                    "hire", "hiring", "tender", "quotation", "quote", "bids", "estimate from contractor",
-                    "how to choose", "how to select", "recommend a contractor", "reliable contractor",
-                ],
-            },
-            {
-                "key": "customization",
-                "phrases": [
-                    "customize", "customisation", "customization", "modify", "modification", "change the plan",
-                    "edit the plan", "adjust the plan", "alter", "revise", "revision", "can i change",
-                    "add a room", "remove a room", "add bathroom", "add toilet", "add garage", "add parking",
-                    "change roof", "change elevation", "change facade", "mirror", "flip the plan",
-                    "resize", "scale", "reduce size", "increase size",
-                ],
-            },
-            {
-                "key": "suitability",
-                "phrases": [
-                    "suitable", "suitability", "is it good for", "is this good for", "family", "kids",
-                    "elderly", "parents", "wheelchair", "accessible", "accessibility", "stairs",
-                    "rural", "urban", "city", "village", "suburban", "estate", "gated",
-                    "small plot", "big plot", "narrow plot", "wide plot", "corner plot",
-                    "privacy", "noise", "security",
-                ],
-            },
-            {
-                "key": "utilities",
-                "phrases": [
-                    "water", "plumbing", "sewage", "septic", "soakaway", "drainage", "stormwater",
-                    "electricity", "power", "generator", "solar", "inverter", "battery", "wiring",
-                    "hvac", "air conditioning", "ac", "cooling", "heating", "ventilation",
-                    "internet", "network", "cctv", "security camera",
-                ],
-            },
-            {
-                "key": "payment_download",
-                "phrases": [
-                    "payment", "pay", "checkout", "buy", "purchase", "card", "transaction",
-                    "paystack", "failed payment", "pending payment", "verify payment", "receipt",
-                    "download", "access", "link", "get files", "where is my download", "i can't download",
-                    "download not working", "missing files", "send to email", "email link",
-                    "refund", "cancel", "money back",
-                ],
-            },
-            {
-                "key": "file_formats",
-                "phrases": [
-                    "pdf", "cad", "dwg", "dxf", "sketchup", "3d", "render", "renders",
-                    "architectural", "structural", "mep", "electrical drawing", "plumbing drawing",
-                    "foundation drawing", "section", "elevation", "floor plan", "site plan",
-                    "dimensions", "dimension", "scale", "units", "meters", "square meters",
-                    "sq ft", "square feet",
-                ],
-            },
-            {
-                "key": "compare_recommend",
-                "phrases": [
-                    "compare", "vs", "versus", "difference", "which is better", "better plan",
-                    "recommend", "suggest", "alternatives", "similar", "other plans", "best plan",
-                    "top plans", "top selling", "popular", "best urban plans", "best rural plans",
-                    "modern plans", "luxury plans", "cheap plans", "simple plans", "duplex", "bungalow",
-                    "townhouse", "apartment",
-                ],
-            },
-        ]
-
-        def _edge_case_intent_key(text: str) -> str | None:
-            t = _normalize_for_intent(text)
-            for item in EDGE_CASE_INTENTS:
-                if _match_any(t, item.get('phrases') or []):
-                    return item.get('key')
-            return None
-
-        def _edge_case_reply(key: str, focused_plan: dict | None) -> str:
-            name = (focused_plan or {}).get('name') or 'this plan'
-            includes_boq = bool((focused_plan or {}).get('includes_boq'))
-            floors = (focused_plan or {}).get('floors')
-            area = (focused_plan or {}).get('area')
-
-            def _edge_style(title: str, bullets: list[str], question: str | None = None) -> str:
-                lines = [title, ""]
-                for b in (bullets or [])[:8]:
-                    lines.append(f"- {b}")
-                if question:
-                    lines.extend(["", question])
-                return "\n".join(lines)
-
-            if key == 'included':
-                return _edge_style(
-                    f"What’s included: {name}",
-                    [
-                        "Architectural drawings (the core plan set)",
-                        "Any extra deliverables listed on the plan page (structural/MEP/renders if available)",
-                        "BOQ is included only when the plan explicitly says BOQ included",
-                    ],
-                    "Which do you need: architectural only, or a full set (architectural + structural/MEP)?"
-                )
-            if key == 'boq_general':
-                return _edge_style(
-                    "BOQ (Bill of Quantities)",
-                    [
-                        "A quantity + cost breakdown used to estimate construction",
-                        "Usually prepared by a Quantity Surveyor (QS) from the drawings",
-                        "Varies by location because unit rates change",
-                        "Best used together with a clear finish level (basic/standard/premium)",
-                    ],
-                    "Do you want BOQ for pricing only, or also for procurement (materials schedule)?"
-                )
-            if key == 'cost_estimate':
-                return _edge_style(
-                    f"Build cost (how to estimate): {name}",
-                    [
-                        "Pick finish level: basic / standard / premium",
-                        "Get a local QS or contractor estimate from the drawings",
-                        "Add approvals + siteworks + utilities",
-                        "Keep contingency (often 10–15%)",
-                    ],
-                    "What’s your city/region and finish level (basic/standard/premium)?"
-                )
-            if key == 'permits':
-                return _edge_style(
-                    "Approvals / permits (typical checklist)",
-                    [
-                        "Planning/zoning compliance (use, setbacks, height)",
-                        "Building permit approval",
-                        "Structural review / engineer sign-off (often required)",
-                        "Inspections during construction",
-                    ],
-                    "What city/region are you building in?"
-                )
-            if key == 'site_soil':
-                extra = ""
-                if floors:
-                    try:
-                        if int(floors) >= 2:
-                            extra = "\n- Multi-storey buildings are more sensitive to soil/foundation quality."
-                    except Exception:
-                        pass
-                return _edge_style(
-                    "Site & soil checks (before you build)",
-                    [
-                        "Do a soil test (bearing capacity + water table)",
-                        "Check flood risk + confirm drainage plan",
-                        "Foundation type must match the soil (engineer guidance)",
-                        *( ["Multi-storey buildings are more sensitive to soil/foundation quality"] if extra else [] ),
-                    ],
-                    "Is your site flat or sloped, and do you have a soil test result already?"
-                )
-            if key == 'climate':
-                return _edge_style(
-                    "Climate fit (quick checklist)",
-                    [
-                        "Hot/humid: cross-ventilation + shading + reflective roofing",
-                        "Rainy/coastal: strong drainage + corrosion-resistant materials",
-                        "Dry/dusty: good sealing + easy-clean finishes + filtered ventilation",
-                    ],
-                    "What’s your climate: hot-humid, dry, coastal, or cold?"
-                )
-            if key == 'timeline':
-                return _edge_style(
-                    "Timeline (typical phases)",
-                    [
-                        "Approvals + planning",
-                        "Foundation",
-                        "Superstructure",
-                        "Roofing",
-                        "MEP (electrical/plumbing)",
-                        "Finishes + external works",
-                    ],
-                    "Are you targeting basic, standard, or premium finish?"
-                )
-            if key == 'contractor':
-                return _edge_style(
-                    "Contractor selection (quick checklist)",
-                    [
-                        "Verify past projects (photos + site visits if possible)",
-                        "Written quote: scope + timeline + milestones",
-                        "Clarify who supplies materials and who handles approvals",
-                        "Define change-orders + contingency",
-                    ],
-                    "What city/region are you building in?"
-                )
-            if key == 'customization':
-                return _edge_style(
-                    "Customization (what’s safe vs high-risk)",
-                    [
-                        "Safer: room sizing/layout tweaks, facade/finish changes",
-                        "Medium: adding/removing bathrooms, reworking kitchen layouts",
-                        "High-risk: adding floors, moving columns/beams, major roof changes (needs engineer)",
-                    ],
-                    "What exact change do you want (add room, reduce size, change roof, etc.)?"
-                )
-            if key == 'suitability':
-                extra = ""
-                if area:
-                    extra = f"\n- Total area: {area} m² (ensure your plot + setbacks can accommodate it)."
-                bullets = [
-                    "Plot size + setbacks (local rules)",
-                    "Access needs (stairs vs accessibility)",
-                    "Family/lifestyle (parking, outdoor space, privacy)",
-                    "Budget for structure + finishes",
-                ]
-                if area:
-                    bullets.append(f"Total area: {area} m² (check plot + setbacks)")
-                return _edge_style(
-                    f"Suitability: {name}",
-                    bullets,
-                    "What’s your plot size and city/region?"
-                )
-            if key == 'utilities':
-                return _edge_style(
-                    "Utilities (planning checklist)",
-                    [
-                        "Water source + storage (tank/borehole where needed)",
-                        "Sewage (public sewer vs septic + soakaway)",
-                        "Power plan (grid/solar/inverter/generator)",
-                        "Ventilation/AC strategy",
-                    ],
-                    "Is your area urban (utilities available) or rural (off-grid likely)?"
-                )
-            if key == 'payment_download':
-                if focused_plan:
-                    boq_line = "Yes" if includes_boq else "No"
-                    return _edge_style(
-                        f"Payments & downloads: {name}",
-                        [
-                            f"BOQ included: {boq_line}",
-                            "Complete checkout on the website to access paid files",
-                            "Download from your Purchases/download section",
-                            "If payment is pending/failed, retry from Purchases so it can be verified",
-                        ],
-                        "Is this about a failed payment, or you can’t find your download after paying?"
-                    )
-                return _edge_style(
-                    "Payments & downloads",
-                    [
-                        "Complete checkout on the website",
-                        "Download from Purchases/download section",
-                        "If payment is pending/failed, retry from Purchases so it can be verified",
-                    ],
-                    "Is this about payment verification, or missing download files?"
-                )
-            if key == 'file_formats':
-                return _edge_style(
-                    "File formats (what to expect)",
-                    [
-                        "Most plans are delivered as PDF drawings",
-                        "Some plans include extra sets (structural/MEP/renders) if listed",
-                        "CAD/DWG availability depends on the specific plan package",
-                    ],
-                    "Do you need PDF only, or CAD/DWG as well?"
-                )
-            if key == 'compare_recommend':
-                return _edge_style(
-                    "Recommendations (so I can pick the best matches)",
-                    [
-                        "Budget range",
-                        "Bedrooms + floors",
-                        "Must-have: BOQ included or not",
-                        "Any dealbreakers (stairs, parking, plot size)",
-                    ],
-                    "What budget + bedrooms + floors do you want, and must BOQ be included?"
-                )
-
-            if key == 'structure':
-                return _edge_style(
-                    "Structure (what to confirm)",
-                    [
-                        "Have a structural engineer review the drawings for your soil + local code",
-                        "Confirm column/beam layout isn’t changed during construction",
-                        "Ensure reinforcement and concrete grades match the structural design",
-                        "Account for site conditions (water table, slope, soil type)",
-                    ],
-                    "Are you building on clay/sandy soil, or do you already have a soil test?"
-                )
-
-            if key == 'mep':
-                return _edge_style(
-                    "MEP (electrical/plumbing) planning",
-                    [
-                        "Confirm electrical load (AC, water heaters, cooking) before wiring",
-                        "Plan plumbing routes early to avoid costly rework",
-                        "Decide sewage system (sewer vs septic) and drainage strategy",
-                        "Keep access points for maintenance (valves, cleanouts, panels)",
-                    ],
-                    "Do you want to run on-grid power only, or include solar/inverter as well?"
-                )
-
-            if key == 'roofing':
-                return _edge_style(
-                    "Roofing (risk checklist)",
-                    [
-                        "Confirm roof type suits rainfall/wind in your area",
-                        "Prioritize waterproofing details (flashings, valleys, gutters)",
-                        "Ensure proper slope/drainage to prevent ponding",
-                        "Coastal areas: use corrosion-resistant materials",
-                    ],
-                    "Is your area heavy-rain, coastal, or high-wind?"
-                )
-
-            if key == 'openings':
-                return _edge_style(
-                    "Windows/doors (comfort + security)",
-                    [
-                        "Ventilation: place windows for cross-breeze where possible",
-                        "Security: consider burglary-proofing where needed",
-                        "Heat: use shading and reduce west-facing glazing in hot climates",
-                        "Waterproofing: ensure proper sill detailing in rainy zones",
-                    ],
-                    "Do you care more about ventilation, security, or heat control?"
-                )
-
-            if key == 'stairs_access':
-                return _edge_style(
-                    "Stairs & accessibility",
-                    [
-                        "Multi-storey means daily stairs—plan for long-term mobility",
-                        "Keep stair width/handrails safe and code-compliant",
-                        "If elderly/accessible needs: consider a ground-floor bedroom",
-                        "Good lighting on stairs reduces fall risk",
-                    ],
-                    "Will elderly family members use the home daily?"
-                )
-
-            if key == 'maintenance_resale':
-                return _edge_style(
-                    "Maintenance & resale",
-                    [
-                        "Simpler rooflines and durable finishes reduce long-term upkeep",
-                        "Good ventilation and damp-proofing prevent mould/repairs",
-                        "Parking + storage + practical layout help resale value",
-                        "Avoid over-customizing for a very niche buyer profile",
-                    ],
-                    "Is your priority low-maintenance, or maximum resale value?"
-                )
-
-            if key == 'pricing_policies':
-                return _edge_style(
-                    "Pricing, taxes & discounts",
-                    [
-                        "Prices/charges may vary by region and payment method",
-                        "Tax/VAT applicability depends on your location",
-                        "Discounts (if any) usually require a valid coupon or promo",
-                    ],
-                    "What country are you paying from, and are you using a promo code?"
-                )
-
-            if key == 'legal_privacy':
-                return _edge_style(
-                    "Privacy & terms (high level)",
-                    [
-                        "Plans are typically licensed for use; don’t share paid files publicly",
-                        "For privacy: use only official checkout/download flows",
-                        "If you need a formal invoice/receipt, use the Purchases section",
-                    ],
-                    "Are you asking about usage rights (license), or personal data/privacy?"
-                )
-            return "Tell me a bit more (location, budget, and must-haves) and I’ll give a precise answer."
 
         def _is_budget_only_message(text: str) -> bool:
             raw = (text or '').strip()

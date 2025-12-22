@@ -1,0 +1,60 @@
+import os
+import sys
+import unittest
+
+
+# Allow running this file from repo root without treating "Backend" as a Python package.
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+
+from ai import ai_assistant
+
+
+class TestAIRoutingRegression(unittest.TestCase):
+    def test_last_meaningful_line(self):
+        blob = """
+You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\".
+Utilities (planning checklist)
+- Water source
+
+how much is this plan
+""".strip("\n")
+        self.assertEqual(ai_assistant._last_meaningful_line(blob), "how much is this plan")
+
+    def test_price_intent(self):
+        self.assertTrue(ai_assistant._is_price_question("how much is this plan"))
+        self.assertTrue(ai_assistant._is_price_question("price?"))
+        self.assertTrue(ai_assistant._is_price_question("what is the cost of this plan"))
+        self.assertFalse(ai_assistant._is_price_question("tell me more"))
+
+    def test_recommendation_intent_does_not_trigger_on_tell_me_more(self):
+        self.assertFalse(ai_assistant._is_recommendation_intent("tell me more"))
+        self.assertFalse(ai_assistant._is_recommendation_intent("tell me more about this plan"))
+        self.assertTrue(ai_assistant._is_recommendation_intent("recommend 3 plans under $500"))
+
+    def test_edge_case_key_does_not_trigger_on_tell_me_more(self):
+        # We should not classify a pure 'tell me more' prompt as a generic recommendation edge-case.
+        self.assertIsNone(ai_assistant._edge_case_intent_key("tell me more"))
+        self.assertIsNone(ai_assistant._edge_case_intent_key("tell me more about this plan"))
+
+    def test_transcript_does_not_misroute_when_using_last_line(self):
+        transcript = """
+You're viewing \"AFFORDABLE+SIMPLE 4 BEDROOM TOWNHOUSE\".
+Recommendations (so I can pick the best matches)
+- Budget range
+- Bedrooms + floors
+
+ tell me more about this plan please
+""".strip("\n")
+
+        routed = ai_assistant._last_meaningful_line(transcript)
+        self.assertEqual(routed, "tell me more about this plan please")
+
+        # The last user line is focused-plan intent, not recommendation intent.
+        self.assertTrue(ai_assistant._is_focused_plan_question(routed))
+        self.assertFalse(ai_assistant._is_recommendation_intent(routed))
+
+
+if __name__ == '__main__':
+    unittest.main()

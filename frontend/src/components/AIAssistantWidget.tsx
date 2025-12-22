@@ -170,12 +170,12 @@ export default function AIAssistantWidget() {
           className="inline-flex items-center gap-2 rounded-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 shadow-xl"
         >
           <MessageCircle className="w-5 h-5" />
-          <span className="text-sm font-semibold">Ask AI</span>
+          <span className="text-sm font-semibold">Ramani AI</span>
         </button>
       ) : (
         <div className="w-[340px] max-w-[90vw] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-teal-700 to-cyan-700 text-white">
-            <div className="text-sm font-semibold">Plan Assistant</div>
+            <div className="text-sm font-semibold">Ramani AI</div>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -245,7 +245,9 @@ export default function AIAssistantWidget() {
             ) : null}
 
             {quickReplies.length ? (
-              <div className="mr-10 flex flex-wrap gap-2">
+              <div className="mr-10 rounded-2xl bg-white border border-slate-200 p-2">
+                <div className="text-xs font-semibold text-slate-700 mb-2">Quick picks</div>
+                <div className="flex flex-wrap gap-2">
                 {quickReplies.map((t, idx) => (
                   <button
                     key={idx}
@@ -257,6 +259,7 @@ export default function AIAssistantWidget() {
                     {t}
                   </button>
                 ))}
+                </div>
               </div>
             ) : null}
             {loading ? (
@@ -274,7 +277,7 @@ export default function AIAssistantWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Budget, bedrooms, floors, deliverables…"
+              placeholder="Ask about this plan, or tell me your budget + bedrooms…"
               className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               disabled={loading}
             />

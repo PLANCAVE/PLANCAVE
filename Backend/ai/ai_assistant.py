@@ -124,6 +124,17 @@ def _wants_boq(message: str) -> bool:
     return 'boq' in msg or 'bill of quantities' in msg
 
 
+def _is_stopword_token(t: str) -> bool:
+    # Keep this small and practical: tokens that frequently appear in chat prompts
+    # but do not help match plan names/descriptions.
+    return t in {
+        'must', 'include', 'including', 'with', 'without', 'need', 'needs', 'want', 'wants',
+        'show', 'me', 'any', 'some', 'plans', 'plan', 'please', 'only', 'also', 'the', 'a',
+        'and', 'or', 'for', 'to', 'of', 'in', 'on', 'at', 'this', 'that', 'it', 'is',
+        'boq',
+    }
+
+
 def _plan_has_deliverable(plan_row: dict, key: str) -> bool:
     prices = plan_row.get('deliverable_prices')
     if prices is None:
@@ -193,7 +204,16 @@ def _search_plans(conn, message: str, limit: int = 8) -> list[dict]:
     floors = _extract_floors(message)
     wants_boq = _wants_boq(message)
 
-    tokens = [t for t in re.split(r"\s+", (message or '').strip()) if len(t) >= 3]
+    raw_tokens = [t for t in re.split(r"\s+", (message or '').strip()) if len(t) >= 3]
+    tokens = []
+    for t in raw_tokens:
+        tl = t.strip().lower()
+        tl = re.sub(r"[^a-z0-9_]+", "", tl)
+        if not tl or len(tl) < 3:
+            continue
+        if _is_stopword_token(tl):
+            continue
+        tokens.append(tl)
     tokens = tokens[:6]
 
     where = ["(p.status IS NULL OR p.status ILIKE 'available' OR p.status ILIKE 'published' OR p.status ILIKE 'active')"]
@@ -245,7 +265,33 @@ def _search_plans(conn, message: str, limit: int = 8) -> list[dict]:
             tuple(params + [max_limit]),
         )
         rows = cur.fetchall() or []
-        return [dict(r) for r in rows]
+        results = [dict(r) for r in rows]
+        if results:
+            return results
+
+        # Fallback: if the user asked for BOQ, do not let noisy tokens eliminate results.
+        # Retry with BOQ filter + without text tokens.
+        if wants_boq and tokens:
+            cur.execute(
+                """
+                SELECT
+                    p.id, p.name, p.description, p.price, p.category, p.project_type,
+                    p.package_level, p.area, p.bedrooms, p.bathrooms, p.floors,
+                    p.includes_boq, p.deliverable_prices,
+                    COALESCE(p.sales_count, 0) AS sales_count,
+                    0 AS total_views
+                FROM plans p
+                WHERE (p.status IS NULL OR p.status ILIKE 'available' OR p.status ILIKE 'published' OR p.status ILIKE 'active')
+                  AND (p.includes_boq = TRUE)
+                ORDER BY COALESCE(p.sales_count, 0) DESC, p.created_at DESC NULLS LAST
+                LIMIT %s
+                """,
+                (max_limit,),
+            )
+            rows2 = cur.fetchall() or []
+            return [dict(r) for r in rows2]
+
+        return []
     finally:
         cur.close()
 
@@ -326,12 +372,13 @@ def chat():
             })
 
         system = (
-            "You are Ramanicave's AI assistant. You are friendly, interactive and conversational. "
+            "You are Ramanicave's AI assistant (Ramani AI). You are friendly, interactive and conversational. "
             "You can chat about house plans, design decisions, and help users choose a plan. "
             "When recommending plans, only reference the provided plan_candidates and focused_plan. Do not invent plan features. "
             "You MUST NOT help users bypass payments, obtain downloads, or access paid files. "
             "Never output file paths, download URLs, or hidden plan contents. "
             "If asked about payment or downloads, tell them to use the normal checkout flow on the website. "
+            "If focused_plan is present and the user is asking about the open plan (e.g. 'tell me more', 'explain this', 'what is included'), prioritize summarizing focused_plan first. "
             "Always ask 1-2 clarifying questions if key info is missing (budget, bedrooms, floors, BOQ). "
             "Keep answers short, structured, and helpful."
         )

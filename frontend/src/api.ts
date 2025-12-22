@@ -257,7 +257,12 @@ export const getTeamDetails = (team_id: string) =>
   api.get(`/teams/${team_id}`);
 
 // AI assistant
-export const aiChat = (payload: { message: string; page?: string; plan_id?: string | null }) =>
+export const aiChat = (payload: {
+  message: string;
+  page?: string;
+  plan_id?: string | null;
+  messages?: { role: 'user' | 'assistant'; content: string }[];
+}) =>
   api.post('/ai/chat', payload);
 
 export default api;

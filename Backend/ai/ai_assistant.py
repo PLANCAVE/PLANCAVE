@@ -270,6 +270,7 @@ def chat():
     message = (data.get('message') or '').strip()
     page = (data.get('page') or '').strip()
     plan_id = (data.get('plan_id') or '').strip()
+    history = data.get('messages') or []
 
     if not message:
         return jsonify(message="message is required"), 400
@@ -297,9 +298,12 @@ def chat():
             })
 
         system = (
-            "You are PLANCAVE's offline assistant. Your job is to help users find plans that suit them and help them decide. "
-            "Do not provide checkout/payment help. Do not invent plan features. Use only the provided plan facts. "
-            "Ask clarifying questions when needed. Be concise, but helpful."
+            "You are Ramanicave's AI assistant. You are friendly, interactive and conversational. "
+            "You can chat about house plans, design decisions, and help users choose a plan. "
+            "When recommending plans, only reference the provided plan_candidates. Do not invent plan features. "
+            "Do not provide payment/checkout instructions. If asked about payment, redirect to support. "
+            "Always ask 1-2 clarifying questions if key info is missing (budget, bedrooms, floors, BOQ). "
+            "Keep answers short, structured, and helpful."
         )
 
         context = {
@@ -308,10 +312,27 @@ def chat():
             "plan_candidates": plan_facts,
         }
 
-        llm_messages = [
-            {"role": "system", "content": system},
-            {"role": "user", "content": f"User request: {message}\n\nContext JSON: {json.dumps(context, default=str)}"},
+        quick_replies = [
+            "Budget under $500",
+            "2 bedrooms",
+            "3 bedrooms",
+            "Single storey",
+            "Two storey",
+            "Must include BOQ",
         ]
+
+        llm_messages: list[dict] = [{"role": "system", "content": system}]
+        if isinstance(history, list):
+            for m in history[-10:]:
+                role = (m or {}).get('role')
+                content = (m or {}).get('content')
+                if role in ('user', 'assistant') and isinstance(content, str) and content.strip():
+                    llm_messages.append({"role": role, "content": content.strip()})
+
+        llm_messages.append({
+            "role": "user",
+            "content": f"Context JSON: {json.dumps(context, default=str)}\n\nUser message: {message}",
+        })
 
         llm_text = _call_local_llm(llm_messages, max_tokens=120)
         if not llm_text:
@@ -319,12 +340,14 @@ def chat():
             return jsonify({
                 "reply": fallback["reply"],
                 "suggested_plans": fallback["suggested_plans"],
+                "quick_replies": quick_replies,
                 "llm_used": False,
             }), 200
 
         return jsonify({
             "reply": llm_text,
             "suggested_plans": plan_facts,
+            "quick_replies": quick_replies,
             "llm_used": True,
         }), 200
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { aiChat } from '../api';
@@ -6,6 +6,13 @@ import { aiChat } from '../api';
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
+};
+
+type SuggestedPlan = {
+  id?: string | null;
+  name?: string | null;
+  price?: number | string | null;
+  url?: string | null;
 };
 
 export default function AIAssistantWidget() {
@@ -20,6 +27,8 @@ export default function AIAssistantWidget() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quickReplies, setQuickReplies] = useState<string[]>([]);
+  const [suggestedPlans, setSuggestedPlans] = useState<SuggestedPlan[]>([]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -46,54 +55,34 @@ export default function AIAssistantWidget() {
     if (!trimmed || loading) return;
 
     setError(null);
+    setQuickReplies([]);
+    setSuggestedPlans([]);
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
     setInput('');
     setLoading(true);
 
     try {
+      const history = messages.slice(-10);
       const resp = await aiChat({
         message: trimmed,
         page: pageContext.page,
         plan_id: pageContext.plan_id,
+        messages: history,
       });
 
       const reply = String(resp.data?.reply || '').trim();
-      const suggested = Array.isArray(resp.data?.suggested_plans) ? resp.data.suggested_plans : [];
-
-      let suffix = '';
-      if (suggested.length) {
-        const top = suggested.slice(0, 5);
-        const lines = top
-          .map((p: any, idx: number) => {
-            const name = p?.name ? String(p.name) : 'Plan';
-            const id = p?.id ? String(p.id) : '';
-            const price = p?.price !== undefined && p?.price !== null ? Number(p.price) : null;
-            const priceText = price !== null && Number.isFinite(price) ? `$ ${price.toLocaleString()}` : '';
-            const link = id ? `\nOpen: /plans/${id}` : '';
-            return `${idx + 1}. ${name}${priceText ? ` (${priceText})` : ''}${link}`;
-          })
-          .join('\n');
-        suffix = `\n\nSuggested plans:\n${lines}`;
-      }
+      const suggested: SuggestedPlan[] = Array.isArray(resp.data?.suggested_plans) ? resp.data.suggested_plans : [];
+      const qr: string[] = Array.isArray(resp.data?.quick_replies) ? resp.data.quick_replies : [];
+      setSuggestedPlans(suggested.slice(0, 5));
+      setQuickReplies(qr.slice(0, 6));
 
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: (reply || 'I can help you find a plan. Tell me your budget, bedrooms, floors, and must-have deliverables.') + suffix,
+          content: reply || 'Tell me what you want to build, or ask me anything about house plans and design decisions.',
         },
       ]);
-
-      if (suggested.length && suggested[0]?.id) {
-        const id = String(suggested[0].id);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: `If you want, I can open the top match now: /plans/${id}`,
-          },
-        ]);
-      }
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || 'AI request failed';
       setError(String(msg));
@@ -109,19 +98,54 @@ export default function AIAssistantWidget() {
     }
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       send();
     }
   };
 
-  const handleMaybeOpenPlanLink = (text: string) => {
-    const m = text.match(/\/plans\/[a-zA-Z0-9-]+/);
-    if (!m) return;
-    const url = m[0];
+  const handleOpenPlanUrl = (url?: string | null) => {
+    if (!url) return;
     navigate(url);
     setOpen(false);
+  };
+
+  const sendQuickReply = async (text: string) => {
+    setInput(text);
+    await new Promise((r) => setTimeout(r, 0));
+    await (async () => {
+      const trimmed = text.trim();
+      if (!trimmed || loading) return;
+      setError(null);
+      setQuickReplies([]);
+      setSuggestedPlans([]);
+      setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
+      setInput('');
+      setLoading(true);
+
+      try {
+        const history = messages.slice(-10);
+        const resp = await aiChat({
+          message: trimmed,
+          page: pageContext.page,
+          plan_id: pageContext.plan_id,
+          messages: history,
+        });
+        const reply = String(resp.data?.reply || '').trim();
+        const suggested: SuggestedPlan[] = Array.isArray(resp.data?.suggested_plans) ? resp.data.suggested_plans : [];
+        const qr: string[] = Array.isArray(resp.data?.quick_replies) ? resp.data.quick_replies : [];
+        setSuggestedPlans(suggested.slice(0, 5));
+        setQuickReplies(qr.slice(0, 6));
+        setMessages((prev) => [...prev, { role: 'assistant', content: reply || 'OK.' }]);
+      } catch (e: any) {
+        const msg = e?.response?.data?.message || e?.message || 'AI request failed';
+        setError(String(msg));
+        setMessages((prev) => [...prev, { role: 'assistant', content: 'I could not respond right now. Please try again in a moment.' }]);
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   return (
@@ -159,14 +183,53 @@ export default function AIAssistantWidget() {
                     'rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap ' +
                     (isUser ? 'bg-slate-900 text-white ml-10' : 'bg-slate-100 text-slate-900 mr-10')
                   }
-                  onDoubleClick={() => {
-                    if (!isUser) handleMaybeOpenPlanLink(m.content);
-                  }}
                 >
                   {m.content}
                 </div>
               );
             })}
+
+            {suggestedPlans.length ? (
+              <div className="mr-10 rounded-2xl bg-slate-50 border border-slate-200 p-2">
+                <div className="text-xs font-semibold text-slate-700 mb-2">Suggested plans</div>
+                <div className="flex flex-col gap-2">
+                  {suggestedPlans.map((p, idx) => {
+                    const name = p?.name ? String(p.name) : `Plan ${idx + 1}`;
+                    const priceNum = p?.price !== undefined && p?.price !== null ? Number(p.price) : null;
+                    const priceText = priceNum !== null && Number.isFinite(priceNum) ? `$ ${priceNum.toLocaleString()}` : '';
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleOpenPlanUrl(p?.url)}
+                        className="text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3 py-2"
+                      >
+                        <div className="text-sm font-semibold text-slate-900">
+                          {name}{priceText ? ` (${priceText})` : ''}
+                        </div>
+                        {p?.url ? <div className="text-[11px] text-slate-500">Open plan</div> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {quickReplies.length ? (
+              <div className="mr-10 flex flex-wrap gap-2">
+                {quickReplies.map((t, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => sendQuickReply(t)}
+                    className="text-xs rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1"
+                    disabled={loading}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {loading ? (
               <div className="rounded-2xl px-3 py-2 text-sm bg-slate-100 text-slate-700 mr-10">Thinking…</div>
             ) : null}
@@ -195,10 +258,6 @@ export default function AIAssistantWidget() {
             >
               <Send className="w-4 h-4" />
             </button>
-          </div>
-
-          <div className="px-3 pb-3 text-[11px] text-slate-500">
-            Double-click an assistant message containing a /plans/... link to open it.
           </div>
         </div>
       )}

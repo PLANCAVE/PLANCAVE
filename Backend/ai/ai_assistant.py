@@ -1247,40 +1247,56 @@ def chat():
             floors = (focused_plan or {}).get('floors')
             area = (focused_plan or {}).get('area')
 
+            def _edge_style(title: str, bullets: list[str], question: str | None = None) -> str:
+                lines = [title, ""]
+                for b in (bullets or [])[:8]:
+                    lines.append(f"- {b}")
+                if question:
+                    lines.extend(["", question])
+                return "\n".join(lines)
+
             if key == 'included':
-                return (
-                    f"What’s included (typical): {name}\n\n"
-                    "- The plan drawings (architectural)\n"
-                    "- Any additional deliverables shown on the plan page (structural/MEP/renders, if available)\n"
-                    "- BOQ: included only if the plan says it includes BOQ\n\n"
-                    "If you tell me what you need (architectural only vs full set), I’ll confirm what to look for."
+                return _edge_style(
+                    f"What’s included: {name}",
+                    [
+                        "Architectural drawings (the core plan set)",
+                        "Any extra deliverables listed on the plan page (structural/MEP/renders if available)",
+                        "BOQ is included only when the plan explicitly says BOQ included",
+                    ],
+                    "Which do you need: architectural only, or a full set (architectural + structural/MEP)?"
                 )
             if key == 'boq_general':
-                return (
-                    "BOQ (Bill of Quantities) is a cost/quantity breakdown used to estimate construction.\n\n"
-                    "It typically lists:\n"
-                    "- Materials + quantities\n"
-                    "- Labour items\n"
-                    "- Unit rates + totals\n\n"
-                    "It’s usually prepared by a quantity surveyor from drawings, and it varies by location and market prices."
+                return _edge_style(
+                    "BOQ (Bill of Quantities)",
+                    [
+                        "A quantity + cost breakdown used to estimate construction",
+                        "Usually prepared by a Quantity Surveyor (QS) from the drawings",
+                        "Varies by location because unit rates change",
+                        "Best used together with a clear finish level (basic/standard/premium)",
+                    ],
+                    "Do you want BOQ for pricing only, or also for procurement (materials schedule)?"
                 )
             if key == 'cost_estimate':
-                return (
-                    f"Build cost depends on location, finishes, and site conditions. For {name}:\n\n"
-                    "Use this quick checklist to estimate reliably:\n"
-                    "- Confirm your target finish level (basic/standard/premium)\n"
-                    "- Get a local QS/contractor estimate from the drawings\n"
-                    "- Include permits, site works, utilities, and contingency (typically 10–15%)\n"
-                    "\nIf you tell me your city/region + finish level, I’ll give a tighter ballpark."
+                return _edge_style(
+                    f"Build cost (how to estimate): {name}",
+                    [
+                        "Pick finish level: basic / standard / premium",
+                        "Get a local QS or contractor estimate from the drawings",
+                        "Add approvals + siteworks + utilities",
+                        "Keep contingency (often 10–15%)",
+                    ],
+                    "What’s your city/region and finish level (basic/standard/premium)?"
                 )
             if key == 'permits':
-                return (
-                    "Approvals vary by city, but the usual checklist is:\n\n"
-                    "- Planning/zoning compliance (use, setbacks, height)\n"
-                    "- Building permit approval\n"
-                    "- Structural review/engineer sign-off (often required)\n"
-                    "- Inspections during construction\n\n"
-                    "Tell me your city/region and I’ll outline the most common documents required."
+                return _edge_style(
+                    "Approvals / permits (typical checklist)",
+                    [
+                        "Planning/zoning compliance (use, setbacks, height)",
+                        "Building permit approval",
+                        "Structural review / engineer sign-off (often required)",
+                        "Inspections during construction",
+                    ],
+                    "What city/region are you building in?"
                 )
             if key == 'site_soil':
                 extra = ""
@@ -1290,94 +1306,225 @@ def chat():
                             extra = "\n- Multi-storey buildings are more sensitive to soil/foundation quality."
                     except Exception:
                         pass
-                return (
-                    "Site/soil checks before building:\n\n"
-                    "- Do a soil test (bearing capacity + water table)\n"
-                    "- Confirm flood risk + drainage plan\n"
-                    "- Foundation type must match soil conditions (engineer/QS guidance)"
-                    f"{extra}"
+                return _edge_style(
+                    "Site & soil checks (before you build)",
+                    [
+                        "Do a soil test (bearing capacity + water table)",
+                        "Check flood risk + confirm drainage plan",
+                        "Foundation type must match the soil (engineer guidance)",
+                        *( ["Multi-storey buildings are more sensitive to soil/foundation quality"] if extra else [] ),
+                    ],
+                    "Is your site flat or sloped, and do you have a soil test result already?"
                 )
             if key == 'climate':
-                return (
-                    "Climate-fit checklist:\n\n"
-                    "- Hot/humid: prioritize cross-ventilation, shading, reflective roofing\n"
-                    "- Rainy/coastal: good drainage, corrosion-resistant materials, roof detailing\n"
-                    "- Dry/dusty: good sealing, easy-to-clean finishes, filtered ventilation\n\n"
-                    "Tell me your climate (hot-humid / dry / coastal / cold) and I’ll tailor recommendations."
+                return _edge_style(
+                    "Climate fit (quick checklist)",
+                    [
+                        "Hot/humid: cross-ventilation + shading + reflective roofing",
+                        "Rainy/coastal: strong drainage + corrosion-resistant materials",
+                        "Dry/dusty: good sealing + easy-clean finishes + filtered ventilation",
+                    ],
+                    "What’s your climate: hot-humid, dry, coastal, or cold?"
                 )
             if key == 'timeline':
-                return (
-                    "Typical build timeline depends on complexity, funding flow, and weather. A simple structure is:\n\n"
-                    "- Approvals + planning\n"
-                    "- Foundation\n"
-                    "- Superstructure\n"
-                    "- Roofing\n"
-                    "- MEP (electrical/plumbing)\n"
-                    "- Finishes + external works\n\n"
-                    "If you tell me your target finish (basic vs premium) I’ll estimate a realistic range."
+                return _edge_style(
+                    "Timeline (typical phases)",
+                    [
+                        "Approvals + planning",
+                        "Foundation",
+                        "Superstructure",
+                        "Roofing",
+                        "MEP (electrical/plumbing)",
+                        "Finishes + external works",
+                    ],
+                    "Are you targeting basic, standard, or premium finish?"
                 )
             if key == 'contractor':
-                return (
-                    "Contractor selection checklist:\n\n"
-                    "- Verify past projects (photos + site visits if possible)\n"
-                    "- Get a written quote with scope, timeline, and payment milestones\n"
-                    "- Confirm who provides materials and who handles approvals\n"
-                    "- Add a contingency and change-order process\n\n"
-                    "If you share your city/region, I can suggest what documents to request in your market."
+                return _edge_style(
+                    "Contractor selection (quick checklist)",
+                    [
+                        "Verify past projects (photos + site visits if possible)",
+                        "Written quote: scope + timeline + milestones",
+                        "Clarify who supplies materials and who handles approvals",
+                        "Define change-orders + contingency",
+                    ],
+                    "What city/region are you building in?"
                 )
             if key == 'customization':
-                return (
-                    "Yes—plans can usually be customized, but always keep it engineer-reviewed. Common safe changes:\n\n"
-                    "- Room sizing/layout tweaks\n"
-                    "- Adding/removing bathrooms\n"
-                    "- Adjusting facade/finishes\n\n"
-                    "Higher-risk changes (needs structural review): adding floors, moving columns, major roof changes.\n"
-                    "Tell me what you want to change and I’ll flag the risk level."
+                return _edge_style(
+                    "Customization (what’s safe vs high-risk)",
+                    [
+                        "Safer: room sizing/layout tweaks, facade/finish changes",
+                        "Medium: adding/removing bathrooms, reworking kitchen layouts",
+                        "High-risk: adding floors, moving columns/beams, major roof changes (needs engineer)",
+                    ],
+                    "What exact change do you want (add room, reduce size, change roof, etc.)?"
                 )
             if key == 'suitability':
                 extra = ""
                 if area:
                     extra = f"\n- Total area: {area} m² (ensure your plot + setbacks can accommodate it)."
-                return (
-                    f"Suitability checklist for {name}:\n\n"
-                    "- Plot size/setbacks (local rules)\n"
-                    "- Access needs (stairs vs accessibility)\n"
-                    "- Family size + lifestyle (parking, outdoor space, privacy)\n"
-                    "- Budget for structure + finishes\n"
-                    f"{extra}\n\n"
-                    "Tell me your plot size and city/region and I’ll give a direct yes/no with reasons."
+                bullets = [
+                    "Plot size + setbacks (local rules)",
+                    "Access needs (stairs vs accessibility)",
+                    "Family/lifestyle (parking, outdoor space, privacy)",
+                    "Budget for structure + finishes",
+                ]
+                if area:
+                    bullets.append(f"Total area: {area} m² (check plot + setbacks)")
+                return _edge_style(
+                    f"Suitability: {name}",
+                    bullets,
+                    "What’s your plot size and city/region?"
                 )
             if key == 'utilities':
-                return (
-                    "Utilities planning checklist:\n\n"
-                    "- Water source + storage (tank/borehole where needed)\n"
-                    "- Sewage (public sewer vs septic + soakaway)\n"
-                    "- Power plan (grid/solar/inverter/generator)\n"
-                    "- Ventilation/AC strategy\n\n"
-                    "If you tell me your area (urban vs rural) I’ll suggest the most practical setup."
+                return _edge_style(
+                    "Utilities (planning checklist)",
+                    [
+                        "Water source + storage (tank/borehole where needed)",
+                        "Sewage (public sewer vs septic + soakaway)",
+                        "Power plan (grid/solar/inverter/generator)",
+                        "Ventilation/AC strategy",
+                    ],
+                    "Is your area urban (utilities available) or rural (off-grid likely)?"
                 )
             if key == 'payment_download':
                 if focused_plan:
                     boq_line = "Yes" if includes_boq else "No"
-                    return (
-                        f"For {name}:\n\n"
-                        f"- BOQ included: {boq_line}\n"
-                        "- To access paid files, complete checkout on the website, then download from your Purchases/download section.\n"
-                        "- If a payment shows pending/failed, retry from Purchases so it can be verified."
+                    return _edge_style(
+                        f"Payments & downloads: {name}",
+                        [
+                            f"BOQ included: {boq_line}",
+                            "Complete checkout on the website to access paid files",
+                            "Download from your Purchases/download section",
+                            "If payment is pending/failed, retry from Purchases so it can be verified",
+                        ],
+                        "Is this about a failed payment, or you can’t find your download after paying?"
                     )
-                return (
-                    "For payments/downloads:\n\n"
-                    "- Complete checkout on the website\n"
-                    "- Download from your Purchases/download section\n"
-                    "- If payment is pending/failed, retry from Purchases so it can be verified"
+                return _edge_style(
+                    "Payments & downloads",
+                    [
+                        "Complete checkout on the website",
+                        "Download from Purchases/download section",
+                        "If payment is pending/failed, retry from Purchases so it can be verified",
+                    ],
+                    "Is this about payment verification, or missing download files?"
                 )
             if key == 'file_formats':
-                return (
-                    "File formats depend on the plan package. Common deliverables are PDF drawings, and sometimes extra sets (structural/MEP/renders).\n\n"
-                    "If you tell me what format you need (PDF vs CAD/DWG), I’ll tell you what to look for on the plan page before buying."
+                return _edge_style(
+                    "File formats (what to expect)",
+                    [
+                        "Most plans are delivered as PDF drawings",
+                        "Some plans include extra sets (structural/MEP/renders) if listed",
+                        "CAD/DWG availability depends on the specific plan package",
+                    ],
+                    "Do you need PDF only, or CAD/DWG as well?"
                 )
             if key == 'compare_recommend':
-                return "Tell me your budget + bedrooms + floors + whether BOQ is required, and I’ll recommend the closest matches."
+                return _edge_style(
+                    "Recommendations (so I can pick the best matches)",
+                    [
+                        "Budget range",
+                        "Bedrooms + floors",
+                        "Must-have: BOQ included or not",
+                        "Any dealbreakers (stairs, parking, plot size)",
+                    ],
+                    "What budget + bedrooms + floors do you want, and must BOQ be included?"
+                )
+
+            if key == 'structure':
+                return _edge_style(
+                    "Structure (what to confirm)",
+                    [
+                        "Have a structural engineer review the drawings for your soil + local code",
+                        "Confirm column/beam layout isn’t changed during construction",
+                        "Ensure reinforcement and concrete grades match the structural design",
+                        "Account for site conditions (water table, slope, soil type)",
+                    ],
+                    "Are you building on clay/sandy soil, or do you already have a soil test?"
+                )
+
+            if key == 'mep':
+                return _edge_style(
+                    "MEP (electrical/plumbing) planning",
+                    [
+                        "Confirm electrical load (AC, water heaters, cooking) before wiring",
+                        "Plan plumbing routes early to avoid costly rework",
+                        "Decide sewage system (sewer vs septic) and drainage strategy",
+                        "Keep access points for maintenance (valves, cleanouts, panels)",
+                    ],
+                    "Do you want to run on-grid power only, or include solar/inverter as well?"
+                )
+
+            if key == 'roofing':
+                return _edge_style(
+                    "Roofing (risk checklist)",
+                    [
+                        "Confirm roof type suits rainfall/wind in your area",
+                        "Prioritize waterproofing details (flashings, valleys, gutters)",
+                        "Ensure proper slope/drainage to prevent ponding",
+                        "Coastal areas: use corrosion-resistant materials",
+                    ],
+                    "Is your area heavy-rain, coastal, or high-wind?"
+                )
+
+            if key == 'openings':
+                return _edge_style(
+                    "Windows/doors (comfort + security)",
+                    [
+                        "Ventilation: place windows for cross-breeze where possible",
+                        "Security: consider burglary-proofing where needed",
+                        "Heat: use shading and reduce west-facing glazing in hot climates",
+                        "Waterproofing: ensure proper sill detailing in rainy zones",
+                    ],
+                    "Do you care more about ventilation, security, or heat control?"
+                )
+
+            if key == 'stairs_access':
+                return _edge_style(
+                    "Stairs & accessibility",
+                    [
+                        "Multi-storey means daily stairs—plan for long-term mobility",
+                        "Keep stair width/handrails safe and code-compliant",
+                        "If elderly/accessible needs: consider a ground-floor bedroom",
+                        "Good lighting on stairs reduces fall risk",
+                    ],
+                    "Will elderly family members use the home daily?"
+                )
+
+            if key == 'maintenance_resale':
+                return _edge_style(
+                    "Maintenance & resale",
+                    [
+                        "Simpler rooflines and durable finishes reduce long-term upkeep",
+                        "Good ventilation and damp-proofing prevent mould/repairs",
+                        "Parking + storage + practical layout help resale value",
+                        "Avoid over-customizing for a very niche buyer profile",
+                    ],
+                    "Is your priority low-maintenance, or maximum resale value?"
+                )
+
+            if key == 'pricing_policies':
+                return _edge_style(
+                    "Pricing, taxes & discounts",
+                    [
+                        "Prices/charges may vary by region and payment method",
+                        "Tax/VAT applicability depends on your location",
+                        "Discounts (if any) usually require a valid coupon or promo",
+                    ],
+                    "What country are you paying from, and are you using a promo code?"
+                )
+
+            if key == 'legal_privacy':
+                return _edge_style(
+                    "Privacy & terms (high level)",
+                    [
+                        "Plans are typically licensed for use; don’t share paid files publicly",
+                        "For privacy: use only official checkout/download flows",
+                        "If you need a formal invoice/receipt, use the Purchases section",
+                    ],
+                    "Are you asking about usage rights (license), or personal data/privacy?"
+                )
             return "Tell me a bit more (location, budget, and must-haves) and I’ll give a precise answer."
 
         def _is_budget_only_message(text: str) -> bool:

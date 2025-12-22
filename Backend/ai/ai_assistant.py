@@ -348,18 +348,17 @@ def _is_focused_plan_question(message: str) -> bool:
     msg = (message or '').strip().lower()
     if not msg:
         return False
-    patterns = [
-        r"tell me more",
-        r"more about (this|the) plan",
-        r"explain (this|the) plan",
-        r"summari[sz]e (this|the) plan",
-        r"what is included",
-        r"what's included",
-        r"does (this|the) plan include",
-        r"pros and cons",
-        r"is (this|the) plan suitable",
+
+    keywords = [
+        'tell me more', 'explain', 'summarize', 'summary', 'what is included', 'what\'s included',
+        'included', 'deliverables', 'files', 'boq', 'bill of quantities', 'suitable', 'suitability',
+        'risk', 'risks', 'price', 'cost', 'estimate', 'materials', 'material', 'construction',
+        'permit', 'approval', 'regulation', 'code', 'local authority', 'location', 'city', 'country',
+        'mumbai', 'india',
+        'area', 'plot', 'plot size', 'bedrooms', 'bathrooms', 'floors',
+        'license', 'licence', 'customize', 'customisation', 'customization', 'timeline', 'support',
     ]
-    return any(re.search(p, msg) for p in patterns)
+    return any(k in msg for k in keywords)
 
 
 def _focused_plan_fallback_reply(focused_plan: dict) -> str:
@@ -656,6 +655,16 @@ def chat():
             ]
             return any(x in t for x in triggers)
 
+        def _is_short_or_implicit_plan_query(text: str) -> bool:
+            t = (text or '').strip().lower()
+            if not t:
+                return True
+            # common single-word or short prompts on plan pages
+            short_tokens = {'pros', 'cons', 'boq', 'included', 'include', 'suitable', 'suitability', 'risks', 'risk', 'price', 'cost'}
+            if t in short_tokens:
+                return True
+            return len(t.split()) <= 3
+
         def _is_buildability_or_cost_question(text: str) -> bool:
             t = (text or '').strip().lower()
             if not t:
@@ -731,14 +740,18 @@ def chat():
             # If user explicitly wants other plans, allow recommendations.
             if _is_similar_or_recommendation_question(t):
                 return False
-            # For short/ambiguous prompts ("pros", "cons", "boq", etc.) and buildability/cost questions,
-            # we should always answer about the focused plan.
-            short = len(t.split()) <= 3
-            if short:
+            # For short/implicit prompts and feasibility/cost questions, always answer about the focused plan.
+            if _is_short_or_implicit_plan_query(t):
                 return True
             if _is_buildability_or_cost_question(t):
                 return True
+            # Default: focused plan wins on plan pages.
             return True
+
+        # If we're on a plan page, do not drive recommendations by default.
+        # Only include suggested_plans when the user explicitly asks for alternatives.
+        if plan_id and not _is_similar_or_recommendation_question(message):
+            plan_facts = []
 
         # If we're on a specific plan and the user asks for pros/cons, answer directly.
         if focused_plan and _is_pros_cons_question(message):
@@ -823,6 +836,16 @@ def chat():
 
         llm_text = _call_local_llm(llm_messages, max_tokens=180)
         if not llm_text:
+            # If the client indicates a plan_id but we couldn't load it, avoid irrelevant plan search fallbacks.
+            if plan_id and not focused_plan and _is_short_or_implicit_plan_query(message):
+                return jsonify({
+                    "reply": "I couldn’t load the current plan details right now. Please refresh the plan page and try again — then I can answer pros/cons, BOQ, suitability, costs, and location/approval questions for that plan.",
+                    "suggested_plans": [],
+                    "quick_replies": ["Pros", "Cons", "Pros and cons", "What is included?"],
+                    "actions": [],
+                    "llm_used": False,
+                }), 200
+
             if focused_plan and (_should_prioritize_focused_plan(message) or focused_plan_question):
                 return jsonify({
                     "reply": _focused_plan_fallback_reply(focused_plan),

@@ -6,6 +6,7 @@ export default function PaystackCallback() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState<string>('Verifying your payment…');
+  const [closeBlocked, setCloseBlocked] = useState(false);
 
   const notifyOpener = (payload: any) => {
     try {
@@ -54,19 +55,24 @@ export default function PaystackCallback() {
           setStatus('success');
           setMessage('Payment verified. Finishing up…');
           notifyOpener({ reference, planId: planId ? String(planId) : null });
+          // Try to close immediately (best UX: user never sees this page).
+          try {
+            window.close();
+          } catch {
+            // ignore
+          }
+
+          // If close() is blocked, show minimal info + redirect.
           window.setTimeout(() => {
-            try {
-              window.close();
-            } catch {
-              // ignore
+            if (!window.closed) {
+              setCloseBlocked(true);
+              if (planId) {
+                navigate(`/plans/${planId}`);
+              } else {
+                navigate('/purchases');
+              }
             }
-            // If the browser blocks close(), provide a sane fallback.
-            if (planId) {
-              navigate(`/plans/${planId}`);
-            } else {
-              navigate('/purchases');
-            }
-          }, 700);
+          }, 250);
           return;
         } catch (err: any) {
           if (cancelled) return;
@@ -110,15 +116,20 @@ export default function PaystackCallback() {
     };
   }, [navigate]);
 
+  // Keep callback UX invisible unless there's an error or the browser blocks closing.
+  if (status !== 'error' && !closeBlocked) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-teal-50/20 px-4">
       <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-lg w-full">
         <p className="text-xs tracking-[0.35em] uppercase text-gray-500">PAYMENT</p>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">Paystack Callback</h1>
         <p className={`mt-4 text-sm ${status === 'error' ? 'text-red-700' : 'text-gray-700'}`}>{message}</p>
-        {status === 'success' ? (
+        {closeBlocked ? (
           <div className="mt-6">
-            <p className="text-xs text-gray-500">You can close this tab if it doesn't close automatically.</p>
+            <p className="text-xs text-gray-500">Your payment is confirmed. You can close this tab.</p>
           </div>
         ) : null}
         {status === 'error' ? (

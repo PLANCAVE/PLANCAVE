@@ -633,7 +633,8 @@ def chat():
     try:
         # General AI edge-cases: only search plans if user is asking for recommendations.
         # For general advice/help questions, searching plans often creates irrelevant outputs.
-        is_recommendation = (not plan_id) and _is_recommendation_intent(message)
+        # IMPORTANT: even on a plan page, allow cross-plan recommendations if the user explicitly asks.
+        is_recommendation = _is_recommendation_intent(message)
         plans = _search_plans(conn, message, limit=limit) if is_recommendation else []
 
         plan_facts = []
@@ -865,8 +866,8 @@ def chat():
             return True
 
         # If we're on a plan page, do not drive recommendations by default.
-        # Only include suggested_plans when the user explicitly asks for alternatives.
-        if plan_id and not _is_similar_or_recommendation_question(message):
+        # Only include suggested_plans when the user explicitly asks for alternatives/recommendations.
+        if plan_id and not (_is_similar_or_recommendation_question(message) or _is_recommendation_intent(message)):
             plan_facts = []
 
         # If no plan is open and the user is asking general help/advice, prefer LLM over plan search.

@@ -661,29 +661,54 @@ def chat():
         focused_plan = _get_plan_public_details(conn, plan_id) if plan_id else None
         focused_plan_question = bool(focused_plan and _is_focused_plan_question(message))
 
-        def _is_pros_cons_question(text: str) -> bool:
+        def _normalize_for_intent(text: str) -> str:
+            # Lowercase + normalize whitespace for robust intent checks.
             t = (text or '').strip().lower()
+            t = re.sub(r"\s+", " ", t)
+            return t
+
+        def _has_token(text: str, token: str) -> bool:
+            # Word-boundary match; handles punctuation/newlines.
+            return re.search(rf"\b{re.escape(token)}\b", text or '', flags=re.IGNORECASE) is not None
+
+        def _first_meaningful_line(text: str) -> str:
+            for line in (text or '').splitlines():
+                s = line.strip().lower()
+                if s:
+                    return s
+            return ''
+
+        def _is_pros_cons_question(text: str) -> bool:
+            t = _normalize_for_intent(text)
             return (
                 'pros and cons' in t
                 or 'pros & cons' in t
-                or (('pros' in t or 'advantages' in t) and ('cons' in t or 'disadvantages' in t))
+                or ((_has_token(t, 'pros') or _has_token(t, 'advantages')) and (_has_token(t, 'cons') or _has_token(t, 'disadvantages')))
             )
 
         def _is_pros_only_question(text: str) -> bool:
-            t = (text or '').strip().lower()
+            t = _normalize_for_intent(text)
             if not t:
                 return False
             if _is_pros_cons_question(t):
                 return False
-            return t in {'pros', 'advantages'} or t.startswith('pros ') or t.startswith('advantages ')
+            first = _first_meaningful_line(text)
+            if first in {'pros', 'advantages'} or first.startswith('pros ') or first.startswith('advantages '):
+                return True
+            # Robust: allow pros token anywhere, as long as cons isn't also requested.
+            return (_has_token(t, 'pros') or _has_token(t, 'advantages')) and not (_has_token(t, 'cons') or _has_token(t, 'disadvantages'))
 
         def _is_cons_only_question(text: str) -> bool:
-            t = (text or '').strip().lower()
+            t = _normalize_for_intent(text)
             if not t:
                 return False
             if _is_pros_cons_question(t):
                 return False
-            return t in {'cons', 'disadvantages'} or t.startswith('cons ') or t.startswith('disadvantages ')
+            first = _first_meaningful_line(text)
+            if first in {'cons', 'disadvantages'} or first.startswith('cons ') or first.startswith('disadvantages '):
+                return True
+            # Robust: allow cons token anywhere, as long as pros isn't also requested.
+            return (_has_token(t, 'cons') or _has_token(t, 'disadvantages')) and not (_has_token(t, 'pros') or _has_token(t, 'advantages'))
 
         def _is_similar_or_recommendation_question(text: str) -> bool:
             t = (text or '').strip().lower()
@@ -752,7 +777,6 @@ def chat():
             lines.extend([f"- {p}" for p in pros[:6]])
             lines.append("\nCons:")
             lines.extend([f"- {c}" for c in cons[:6]])
-            lines.append("\nIf you want, tell me your budget and preferred style and I can suggest 2–3 similar alternatives.")
             return "\n".join(lines)
 
         def _pros_only_reply(plan: dict) -> str:

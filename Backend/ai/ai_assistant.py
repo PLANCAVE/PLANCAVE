@@ -48,7 +48,47 @@ def _is_general_chat(message: str) -> bool:
         return True
 
     # Short, non-plan prompts should feel conversational.
+    # Exclude common follow-up tokens; these should be handled by the LLM with history.
+    followups = {'yes', 'no', 'ok', 'okay', 'sure', 'more', 'continue', 'go on', 'why', 'how', 'what', 'which'}
+    if msg in followups:
+        return False
     return len(msg) <= 120
+
+
+def _is_recommendation_intent(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+    triggers = [
+        'recommend', 'suggest', 'find me', 'show me', 'give me plans', 'plans under', 'under $', 'below $',
+        'budget', 'looking for a plan', 'need a plan', 'similar plans', 'alternatives', 'top selling', 'top-selling',
+    ]
+    return any(t in msg for t in triggers)
+
+
+def _is_site_help_intent(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+    triggers = [
+        'help', 'support', 'contact', 'refund', 'returns', 'policy', 'privacy', 'terms', 'license', 'licence',
+        'payment', 'paystack', 'mpesa', 'download', 'invoice', 'receipt', 'account', 'login', 'signup', 'register',
+    ]
+    return any(t in msg for t in triggers)
+
+
+def _is_design_or_build_advice_intent(message: str) -> bool:
+    msg = (message or '').strip().lower()
+    if not msg:
+        return False
+    triggers = [
+        'foundation', 'structural', 'beam', 'column', 'slab', 'roof', 'truss', 'reinforcement',
+        'materials', 'cement', 'steel', 'concrete', 'brick', 'block', 'sand',
+        'cost', 'estimate', 'budgeting', 'boq', 'bill of quantities',
+        'climate', 'coastal', 'rain', 'hot', 'humid', 'wind', 'earthquake',
+        'mumbai', 'india', 'permit', 'approval', 'regulation', 'code',
+    ]
+    return any(t in msg for t in triggers)
 
 
 def _general_chat_reply(message: str) -> str:
@@ -586,23 +626,27 @@ def chat():
 
     conn = get_db()
     try:
-        plans = _search_plans(conn, message, limit=limit)
+        # General AI edge-cases: only search plans if user is asking for recommendations.
+        # For general advice/help questions, searching plans often creates irrelevant outputs.
+        is_recommendation = (not plan_id) and _is_recommendation_intent(message)
+        plans = _search_plans(conn, message, limit=limit) if is_recommendation else []
 
         plan_facts = []
-        for p in plans[:8]:
-            deliverable_keys = []
-            for k in ['architectural', 'structural', 'mep', 'civil', 'fire_safety', 'interior', 'boq', 'renders']:
-                if _plan_has_deliverable(p, k) or (k == 'boq' and p.get('includes_boq')):
-                    deliverable_keys.append(_deliverable_label(k))
+        if is_recommendation:
+            for p in plans[:8]:
+                deliverable_keys = []
+                for k in ['architectural', 'structural', 'mep', 'civil', 'fire_safety', 'interior', 'boq', 'renders']:
+                    if _plan_has_deliverable(p, k) or (k == 'boq' and p.get('includes_boq')):
+                        deliverable_keys.append(_deliverable_label(k))
 
-            pid = p.get('id')
-            pid_str = str(pid) if pid is not None else None
-            plan_facts.append({
-                "id": pid_str,
-                "name": p.get('name'),
-                "price": p.get('price'),
-                "url": f"/plans/{pid_str}" if pid_str else None,
-            })
+                pid = p.get('id')
+                pid_str = str(pid) if pid is not None else None
+                plan_facts.append({
+                    "id": pid_str,
+                    "name": p.get('name'),
+                    "price": p.get('price'),
+                    "url": f"/plans/{pid_str}" if pid_str else None,
+                })
 
         system = (
             "You are Ramanicave's AI assistant (Ramani AI). You are friendly, interactive and conversational. "
@@ -753,6 +797,12 @@ def chat():
         if plan_id and not _is_similar_or_recommendation_question(message):
             plan_facts = []
 
+        # If no plan is open and the user is asking general help/advice, prefer LLM over plan search.
+        # This also helps follow-ups like "yes"/"no" by leveraging chat history.
+        is_general_nonplan = (not plan_id) and (not is_recommendation) and (
+            _is_site_help_intent(message) or _is_design_or_build_advice_intent(message) or _is_general_chat(message)
+        )
+
         # If we're on a specific plan and the user asks for pros/cons, answer directly.
         if focused_plan and _is_pros_cons_question(message):
             return jsonify({
@@ -834,7 +884,7 @@ def chat():
             "content": f"Context JSON: {json.dumps(context, default=str)}\n\nUser message: {message}",
         })
 
-        llm_text = _call_local_llm(llm_messages, max_tokens=180)
+        llm_text = _call_local_llm(llm_messages, max_tokens=220 if is_general_nonplan else 180)
         if not llm_text:
             # If the client indicates a plan_id but we couldn't load it, avoid irrelevant plan search fallbacks.
             if plan_id and not focused_plan and _is_short_or_implicit_plan_query(message):
@@ -886,6 +936,16 @@ def chat():
                     "suggested_plans": plan_facts,
                     "quick_replies": quick_replies,
                     "actions": actions,
+                    "llm_used": False,
+                }), 200
+
+            # For general non-plan questions, don't fallback to plan recommendations.
+            if is_general_nonplan:
+                return jsonify({
+                    "reply": "I can help. Tell me what you’re trying to decide (location, climate, budget range, and any must-haves) and I’ll give a clear recommendation or next steps.",
+                    "suggested_plans": [],
+                    "quick_replies": ["What is a BOQ?", "Material cost estimate", "Approvals/permits checklist"],
+                    "actions": [],
                     "llm_used": False,
                 }), 200
 
